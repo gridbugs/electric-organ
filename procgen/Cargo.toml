@@ -14,8 +14,8 @@ rand = "0.8"
 vector = { path = "../util/vector" }
 
 [dev-dependencies]
-chargrid_ansi_terminal = "0.4"
-chargrid = "0.10"
+chargrid_ansi_terminal = "0.6"
+chargrid = "0.12"
 rgb_int = "0.1"
-meap = "0.5"
+meap = "0.8"
 rand_isaac = "0.3"

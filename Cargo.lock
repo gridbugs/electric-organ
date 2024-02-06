@@ -360,9 +360,9 @@ version = "0.1.0"
 dependencies = [
  "boat_journey_app",
  "boat_journey_native",
- "chargrid_ansi_terminal 0.6.0",
+ "chargrid_ansi_terminal",
  "env_logger",
- "meap 0.8.1",
+ "meap",
  "rand",
 ]
 
@@ -372,7 +372,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "boat_journey_game",
- "chargrid 0.12.0",
+ "chargrid",
  "coord_2d",
  "direction",
  "general_storage_static",
@@ -430,7 +430,7 @@ dependencies = [
  "general_storage_file",
  "general_storage_static",
  "log",
- "meap 0.8.1",
+ "meap",
 ]
 
 [[package]]
@@ -642,35 +642,12 @@ checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
 name = "chargrid"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "904f498b125e27fd820c1d90a558c3d9a65c1702575b42bc146bb8c49b9590e8"
-dependencies = [
- "chargrid_common 0.5.0",
- "chargrid_core 0.2.2",
-]
-
-[[package]]
-name = "chargrid"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7664b0f247cf6d27ef984a71b0c012d1aac65b83f6c33124331ef9f8a1040552"
 dependencies = [
- "chargrid_common 0.7.0",
- "chargrid_core 0.4.0",
-]
-
-[[package]]
-name = "chargrid_ansi_terminal"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6726c94fa5d119346f4904698e84878cf6ed123e95393529276a72e34c39f80"
-dependencies = [
- "chargrid_input 0.4.1",
- "chargrid_runtime 0.2.0",
- "grid_2d",
- "libc",
- "term",
+ "chargrid_common",
+ "chargrid_core",
 ]
 
 [[package]]
@@ -679,20 +656,11 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9952edded20ebea9e61ba82aa3ccbcfc2258349e16e78f43a8582ff2e571918e"
 dependencies = [
- "chargrid_input 0.6.1",
- "chargrid_runtime 0.4.0",
+ "chargrid_input",
+ "chargrid_runtime",
  "grid_2d",
  "libc",
  "term",
-]
-
-[[package]]
-name = "chargrid_common"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a23c85d5e88a5bf785dcfb1c5e1db790e6b336e3d79addc9cc339eca73bae0f"
-dependencies = [
- "chargrid_core 0.2.2",
 ]
 
 [[package]]
@@ -701,18 +669,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f4ef060ae4b68848540a36e12dfbf357c493ad4b8cb94166bb552f6155f13b3f"
 dependencies = [
- "chargrid_core 0.4.0",
-]
-
-[[package]]
-name = "chargrid_core"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "893e75344ae46b9f81af2d747a6267e3e415cdf5ec36d3b1f9a8ad9ddec42bea"
-dependencies = [
- "chargrid_input 0.4.1",
- "grid_2d",
- "rgb_int",
+ "chargrid_core",
 ]
 
 [[package]]
@@ -721,7 +678,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eaeac54993def494204bcf54033f086d7941db403d0a6224f3427a415f6aa2ab"
 dependencies = [
- "chargrid_input 0.6.1",
+ "chargrid_input",
  "grid_2d",
  "rgb_int",
  "serde",
@@ -733,19 +690,10 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba211ac05146fc12f6947a8e869a816b3d6d72220c286df3ecca7e3f3a6cd918"
 dependencies = [
- "chargrid_input 0.6.1",
- "chargrid_runtime 0.4.0",
+ "chargrid_input",
+ "chargrid_runtime",
  "ggez",
  "log",
-]
-
-[[package]]
-name = "chargrid_input"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74330cac8853bd7ec275138166dc00382a26159e6a642de120f73b701a18ff08"
-dependencies = [
- "coord_2d",
 ]
 
 [[package]]
@@ -760,20 +708,11 @@ dependencies = [
 
 [[package]]
 name = "chargrid_runtime"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebb84541fae18778194319c71039f383bd9ab4831f45772d6ee1ccae93078c3c"
-dependencies = [
- "chargrid_core 0.2.2",
-]
-
-[[package]]
-name = "chargrid_runtime"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c6b461de38ba7cdae4ada2f663b85cc5a6051a6104e6b84c9f1457f5add1bb4"
 dependencies = [
- "chargrid_core 0.4.0",
+ "chargrid_core",
 ]
 
 [[package]]
@@ -782,8 +721,8 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0cb1d8f8f6256e86758084910a153ee75994685a3e51bedf3b393fe458aad48"
 dependencies = [
- "chargrid_input 0.6.1",
- "chargrid_runtime 0.4.0",
+ "chargrid_input",
+ "chargrid_runtime",
  "sdl2",
 ]
 
@@ -793,8 +732,8 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6408e3dd3d34e6b450c902fc26fc1042cd3e0dd8eeafaf8d9b6f88a289585722"
 dependencies = [
- "chargrid_input 0.6.1",
- "chargrid_runtime 0.4.0",
+ "chargrid_input",
+ "chargrid_runtime",
  "grid_2d",
  "js-sys",
  "log",
@@ -808,8 +747,8 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52366042bb36ead08af340b3f28b8508d134d77b36b7e53c7183681ce66d9325"
 dependencies = [
- "chargrid_input 0.6.1",
- "chargrid_runtime 0.4.0",
+ "chargrid_input",
+ "chargrid_runtime",
  "grid_2d",
  "log",
  "pollster",
@@ -1842,7 +1781,7 @@ name = "image-to-text"
 version = "0.1.0"
 dependencies = [
  "image",
- "meap 0.5.2",
+ "meap",
 ]
 
 [[package]]
@@ -2235,12 +2174,6 @@ name = "maplit"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
-
-[[package]]
-name = "meap"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7b4c941b5e7c268433ddf986cc552eb6af6ebdd86eefa191ac8844c9f4709ad"
 
 [[package]]
 name = "meap"
@@ -2887,13 +2820,13 @@ dependencies = [
 name = "procgen"
 version = "0.1.0"
 dependencies = [
- "chargrid 0.10.1",
- "chargrid_ansi_terminal 0.4.0",
+ "chargrid",
+ "chargrid_ansi_terminal",
  "coord_2d",
  "direction",
  "grid_2d",
  "line_2d",
- "meap 0.5.2",
+ "meap",
  "perlin2",
  "rand",
  "rand_isaac",
