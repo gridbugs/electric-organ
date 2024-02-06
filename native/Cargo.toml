@@ -9,4 +9,4 @@ general_storage_file = "0.3"
 general_storage_static = { version = "0.3", features = ["file"] }
 log = "0.4"
 boat_journey_app = { path = "../app", features = ["native"] }
-meap = "0.5"
+meap = "0.8"

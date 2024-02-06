@@ -13,7 +13,7 @@ web = ["getrandom/js", "general_storage_static/web"]
 [dependencies]
 general_storage_static = { version = "0.3", features = ["bincode", "json"] }
 direction = "0.18"
-chargrid = { version = "0.10", features = ["serialize"] }
+chargrid = { version = "0.12", features = ["serialize"] }
 rgb_int = "0.1"
 perlin2 = { version = "0.1", features = ["serialize"] }
 coord_2d = "0.3"

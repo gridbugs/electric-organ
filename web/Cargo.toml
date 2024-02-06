@@ -8,7 +8,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-chargrid_web = "0.4"
+chargrid_web = "0.6"
 general_storage_web = "0.3"
 general_storage_static = "0.3"
 boat_journey_app = { path = "../app", features = ["web", "print_log"]}

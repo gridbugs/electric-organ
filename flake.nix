@@ -44,6 +44,7 @@
             libpulseaudio
             udev
             fontconfig
+            libxkbcommon
             xorg.libX11
             xorg.libXcursor
             xorg.libXrandr
