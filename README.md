@@ -1,7 +1,7 @@
 # Boat Journey
 
-[![dependency status](https://deps.rs/repo/github/gridbugs/boat-journey/status.svg)](https://deps.rs/repo/github/gridbugs/boat-journey)
-[![test status](https://github.com/gridbugs/boat-journey/actions/workflows/test.yml/badge.svg)](https://github.com/gridbugs/boat-journey/actions/workflows/test.yml)
+[![dependency status](https://deps.rs/repo/github/gridbugs/7drl-template-2024/status.svg)](https://deps.rs/repo/github/gridbugs/7drl-template-2024)
+[![test status](https://github.com/gridbugs/7drl-template-2024/actions/workflows/test.yml/badge.svg)](https://github.com/gridbugs/7drl-template-2024/actions/workflows/test.yml)
 
 ## HIDPI
 
