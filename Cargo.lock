@@ -1225,6 +1225,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "frontend_web"
+version = "0.1.0"
+dependencies = [
+ "app",
+ "chargrid_web",
+ "console_error_panic_hook",
+ "general_storage_static",
+ "general_storage_web",
+ "log",
+ "wasm-bindgen",
+ "wasm-logger",
+]
+
+[[package]]
 name = "frontend_wgpu"
 version = "0.1.0"
 dependencies = [
@@ -2670,20 +2684,6 @@ name = "pkg-config"
 version = "0.3.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2900ede94e305130c13ddd391e0ab7cbaeb783945ae07a279c268cb05109c6cb"
-
-[[package]]
-name = "placeholder_web"
-version = "0.1.0"
-dependencies = [
- "app",
- "chargrid_web",
- "console_error_panic_hook",
- "general_storage_static",
- "general_storage_web",
- "log",
- "wasm-bindgen",
- "wasm-logger",
-]
 
 [[package]]
 name = "png"
