@@ -1,12 +1,10 @@
 use boat_journey_game::Config;
 use chargrid::{control_flow::*, core::*};
 
-mod colour;
 mod controls;
 mod game_instance;
 mod game_loop;
 mod image;
-mod mist;
 mod text;
 
 pub use game_loop::{AppStorage, InitialRngSeed};

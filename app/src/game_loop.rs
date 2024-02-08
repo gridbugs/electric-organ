@@ -47,7 +47,7 @@ const MENU_FADE_SPEC: menu::identifier::fade_spec::FadeSpec = {
             to: To {
                 rgba32: Layers {
                     foreground: Rgba32::new_grey(255),
-                    background: crate::colour::MISTY_GREY.to_rgba32(255),
+                    background: Rgba32::new_grey(0),
                 },
                 bold: true,
                 underline: false,
@@ -381,12 +381,6 @@ impl GameLoopData {
                             running.walk(&mut instance.game, direction, &self.game_config)
                         }
                         AppInput::Wait => running.wait(&mut instance.game, &self.game_config),
-                        AppInput::DriveToggle => {
-                            running.drive_toggle(&mut instance.game, &self.game_config)
-                        }
-                        AppInput::Ability(i) => {
-                            running.ability(&mut instance.game, &self.game_config, i)
-                        }
                     };
                     witness
                 } else {
@@ -394,19 +388,6 @@ impl GameLoopData {
                 }
             }
             Event::Tick(since_previous) => {
-                instance.mist.tick();
-                let fade_speed = 8;
-                if instance.fade_state.player_fading {
-                    instance.fade_state.player_opacity = instance
-                        .fade_state
-                        .player_opacity
-                        .saturating_sub(fade_speed);
-                }
-                if instance.fade_state.boat_fading {
-                    instance.fade_state.boat_opacity =
-                        instance.fade_state.boat_opacity.saturating_sub(fade_speed);
-                }
-
                 running.tick(&mut instance.game, since_previous, &self.game_config)
             }
             _ => Witness::Running(running),
@@ -443,76 +424,6 @@ impl Component for GameInstanceComponent {
             GameLoopState::Paused(running)
         } else {
             state.update(event, running)
-        }
-    }
-
-    fn size(&self, _state: &Self::State, ctx: Ctx) -> Size {
-        ctx.bounding_box.size()
-    }
-}
-
-struct GameInstanceComponentAim;
-
-enum AimResult {
-    Coord(Coord),
-    Cancel,
-}
-
-impl Component for GameInstanceComponentAim {
-    type Output = Option<AimResult>;
-    type State = GameLoopData;
-
-    fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
-        state.render(ctx, fb);
-    }
-
-    fn update(&mut self, state: &mut Self::State, ctx: Ctx, event: Event) -> Self::Output {
-        let running = witness::Running::cheat(); // XXX
-        let cursor = if let Some(cursor) = state.cursor.as_mut() {
-            cursor
-        } else {
-            state.cursor = Some(ctx.bounding_box.size().to_coord().unwrap() / 2);
-            state.cursor.as_mut().unwrap()
-        };
-        match event {
-            Event::Tick(_) | Event::Peek => {
-                state.update(event, running);
-                None
-            }
-            Event::Input(input) => {
-                use chargrid::input::*;
-                match input {
-                    Input::Keyboard(key) => match key {
-                        keys::RETURN => {
-                            let ret = *cursor;
-                            state.cursor = None;
-                            let ret =
-                                state.screen_coord_to_game_coord(ret, ctx.bounding_box.size());
-                            return Some(AimResult::Coord(ret));
-                        }
-                        keys::ESCAPE => {
-                            state.cursor = None;
-                            return Some(AimResult::Cancel);
-                        }
-                        KeyboardInput::Left => *cursor += Coord::new(-1, 0),
-                        KeyboardInput::Right => *cursor += Coord::new(1, 0),
-                        KeyboardInput::Up => *cursor += Coord::new(0, -1),
-                        KeyboardInput::Down => *cursor += Coord::new(0, 1),
-                        _ => (),
-                    },
-                    Input::Mouse(mouse) => match mouse {
-                        MouseInput::MouseMove { button: _, coord } => *cursor = coord,
-                        MouseInput::MousePress { button: _, coord } => {
-                            state.cursor = None;
-                            let coord =
-                                state.screen_coord_to_game_coord(coord, ctx.bounding_box.size());
-                            return Some(AimResult::Coord(coord));
-                        }
-                        _ => (),
-                    },
-                }
-                None
-            }
         }
     }
 
@@ -574,45 +485,27 @@ enum MainMenuOutput {
 const MAIN_MENU_TEXT_WIDTH: u32 = 40;
 
 fn background() -> CF<(), State> {
-    render(|ctx, fb| {
-        for coord in ctx.bounding_box.size().coord_iter_row_major() {
-            fb.set_cell_relative_to_ctx(
-                ctx,
-                coord,
-                1,
-                RenderCell::default().with_background(crate::colour::MURKY_GREEN.to_rgba32(255)),
-            );
-        }
-    })
-    .ignore_state()
+    unit()
 }
 
 fn main_menu_loop() -> AppCF<MainMenuOutput> {
     use MainMenuEntry::*;
-    title_decorate(main_menu())
-        .add_x(12)
-        .add_y(12)
-        .overlay(
-            render_state(|state: &State, ctx, fb| state.images.boat.render(ctx, fb)),
-            1,
-        )
-        .repeat_unit(move |entry| match entry {
-            NewGame => text::loading(MAIN_MENU_TEXT_WIDTH)
-                .centre()
-                .overlay(background(), 1)
-                .then(|| {
-                    on_state(|state: &mut State| MainMenuOutput::NewGame {
-                        new_running: state.new_game(),
-                    })
+    title_decorate(main_menu()).repeat_unit(move |entry| match entry {
+        NewGame => text::loading(MAIN_MENU_TEXT_WIDTH)
+            .centre()
+            .overlay(background(), 1)
+            .then(|| {
+                on_state(|state: &mut State| MainMenuOutput::NewGame {
+                    new_running: state.new_game(),
                 })
-                .break_(),
-            Help => text::help(MAIN_MENU_TEXT_WIDTH)
-                .fill(crate::colour::MURKY_GREEN.to_rgba32(255))
-                .centre()
-                .overlay(background(), 1)
-                .continue_(),
-            Quit => val_once(MainMenuOutput::Quit).break_(),
-        })
+            })
+            .break_(),
+        Help => text::help(MAIN_MENU_TEXT_WIDTH)
+            .centre()
+            .overlay(background(), 1)
+            .continue_(),
+        Quit => val_once(MainMenuOutput::Quit).break_(),
+    })
 }
 
 #[derive(Clone)]
@@ -703,69 +596,8 @@ fn game_instance_component(running: witness::Running) -> AppCF<GameLoopState> {
     cf(GameInstanceComponent::new(running)).some().no_peek()
 }
 
-fn game_instance_component_aim() -> AppCF<AimResult> {
-    cf(GameInstanceComponentAim)
-}
-
 fn win(win_: witness::Win) -> AppCF<()> {
-    use chargrid::{
-        text::{StyledString, Text},
-        text_field::TextField,
-    };
-    // TODO: fading out the player and then the boat shouldn't be hard
-    on_state_then(|state: &mut State| {
-        if let Some(instance) = state.instance.as_mut() {
-            instance.fade_state.player_fading = true;
-        }
-        unit()
-    })
-    .delay(Duration::from_secs(1))
-    .then_side_effect(|state: &mut State| {
-        if let Some(instance) = state.instance.as_mut() {
-            instance.fade_state.boat_fading = true;
-        }
-        // TODO: understand why calling `.some()` on the below causes it not to work
-        unit().delay(Duration::from_secs(1))
-    })
-    .overlay(game_instance_component(win_.into_running()), 1)
-    .then(|| {
-        on_state_then(move |state: &mut State| {
-            state.clear_saved_game();
-            state.config.won = true;
-            state.save_config();
-            cf(TextField::with_initial_string(30, "".to_string()))
-                .border(BorderStyle::default())
-                .ignore_state()
-                .map_side_effect(|mut name: String, state: &mut State| {
-                    if name.is_empty() {
-                        name = "an unknown person".to_string();
-                    }
-                    if let Some(instance) = state.instance.as_ref() {
-                        let stats = instance.game.inner_ref().victory_stats().clone();
-                        let victory = Victory { name, stats };
-                        state.config.victories.push(victory);
-                        state.save_config();
-                    }
-                })
-                .with_title_vertical(
-                    Text::new(vec![StyledString {
-                        string:
-                            "The ocean welcomes your return.\n\nWhat was your name? (enter to confirm):"
-                                .to_string(),
-                        style: Style::plain_text(),
-                    }])
-                    .wrap_word()
-                    .cf()
-                    .set_width(MAIN_MENU_TEXT_WIDTH),
-                    1,
-                )
-        })
-        .centre()
-        .overlay(
-            render_state(|state: &State, ctx, fb| state.images.ocean.render(ctx, fb)),
-            1,
-        )
-    })
+    todo!()
 }
 
 fn game_over(reason: GameOverReason) -> AppCF<()> {
@@ -779,121 +611,7 @@ fn game_over(reason: GameOverReason) -> AppCF<()> {
 }
 
 fn game_menu(menu_witness: witness::Menu) -> AppCF<Witness> {
-    use chargrid::align::*;
-    use menu::builder::*;
-    let mut builder = menu_builder();
-    let mut add_item = |entry, name, ch: char| {
-        let identifier = MENU_FADE_SPEC.identifier(move |b| write!(b, "{}. {}", ch, name).unwrap());
-        builder.add_item_mut(item(entry, identifier).add_hotkey_char(ch));
-    };
-    for (i, choice) in menu_witness.menu.choices.iter().enumerate() {
-        let ch = std::char::from_digit(i as u32 + 1, 10).unwrap();
-        match choice {
-            GameMenuChoice::SayNothing => {
-                add_item(choice.clone(), "Say nothing...".to_string(), ch)
-            }
-            GameMenuChoice::Leave => add_item(choice.clone(), "Leave...".to_string(), ch),
-            GameMenuChoice::AddNpcToPassengers(_) => {
-                add_item(choice.clone(), "Welcome aboard".to_string(), ch)
-            }
-            GameMenuChoice::DontAddNpcToPassengers => {
-                add_item(choice.clone(), "Perhaps later".to_string(), ch)
-            }
-            GameMenuChoice::BuyCrewCapacity(cost) => add_item(
-                choice.clone(),
-                format!("Buy passenger space ({cost} junk)"),
-                ch,
-            ),
-            GameMenuChoice::BuyFuel { amount, cost } => add_item(
-                choice.clone(),
-                format!("Buy {amount} fuel ({cost} junk)"),
-                ch,
-            ),
-            GameMenuChoice::SleepUntilMorning(_) => add_item(
-                choice.clone(),
-                "Rest until morning (no charge)".to_string(),
-                ch,
-            ),
-            GameMenuChoice::StayAtInnForever => add_item(
-                choice.clone(),
-                "Stay at inn forever (abandon run)".to_string(),
-                ch,
-            ),
-            GameMenuChoice::AbandonQuest => add_item(
-                choice.clone(),
-                "Yes, I've made up my mind (end the game)".to_string(),
-                ch,
-            ),
-            GameMenuChoice::ChangeMind => add_item(
-                choice.clone(),
-                "No, I still want to go to the ocean".to_string(),
-                ch,
-            ),
-            GameMenuChoice::Okay => add_item(choice.clone(), "Okay".to_string(), ch),
-        }
-    }
-    let title = {
-        use chargrid::text::*;
-        Text::new(vec![StyledString {
-            string: menu_witness.menu.text.clone(),
-            style: Style::plain_text(),
-        }])
-        .wrap_word()
-        .cf::<State>()
-        .set_width(36)
-    };
-    let menu_cf = builder
-        .build_cf()
-        .menu_harness()
-        .add_x(2)
-        .with_title_vertical(title, 2)
-        .align(Alignment {
-            x: AlignmentX::Left,
-            y: AlignmentY::Centre,
-        })
-        .add_x(4)
-        .overlay(
-            render_state(move |state: &State, ctx, fb| {
-                state
-                    .images
-                    .image_from_menu_image(menu_witness.menu.image)
-                    .render(ctx, fb)
-            }),
-            1,
-        );
-    menu_cf.and_then_side_effect(|result, state: &mut State| {
-        let witness = match result {
-            Err(Close) => menu_witness.cancel(),
-            Ok(choice) => {
-                if let Some(instance) = state.instance.as_mut() {
-                    let witness = menu_witness.commit(&mut instance.game, choice.clone());
-                    if let GameMenuChoice::SleepUntilMorning(i) = choice {
-                        return text::sleep(MAIN_MENU_TEXT_WIDTH, i)
-                            .centre()
-                            .overlay(background(), 1)
-                            .map_val(|| witness);
-                    }
-                    witness
-                } else {
-                    menu_witness.cancel()
-                }
-            }
-        };
-        val_once(witness)
-    })
-}
-
-fn aim(aim_: witness::Aim) -> AppCF<Witness> {
-    game_instance_component_aim().map_side_effect(|result, state: &mut State| match result {
-        AimResult::Cancel => aim_.cancel(),
-        AimResult::Coord(coord) => {
-            if let Some(instance) = state.instance.as_mut() {
-                aim_.commit(&mut instance.game, coord)
-            } else {
-                aim_.cancel()
-            }
-        }
-    })
+    todo!()
 }
 
 pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
@@ -904,7 +622,6 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
             Witness::GameOver(reason) => game_over(reason).map_val(|| MainMenu).continue_(),
             Witness::Win(win_) => win(win_).map_val(|| MainMenu).continue_(),
             Witness::Menu(menu_) => game_menu(menu_).map(Playing).continue_(),
-            Witness::Aim(aim_) => aim(aim_).map(Playing).continue_(),
         },
         Paused(running) => pause(running).map(|pause_output| match pause_output {
             PauseOutput::ContinueGame { running } => {
