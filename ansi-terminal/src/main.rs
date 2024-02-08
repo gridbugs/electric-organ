@@ -1,6 +1,6 @@
-use boat_journey_app::{app, AppArgs, InitialRngSeed};
-use boat_journey_native::NativeCommon;
+use app::{app, AppArgs, InitialRngSeed};
 use chargrid_ansi_terminal::{col_encode, Context};
+use native::NativeCommon;
 use rand::Rng;
 
 enum ColEncodeChoice {

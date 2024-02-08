@@ -1,5 +1,5 @@
-use boat_journey_game::Config;
 use chargrid::{control_flow::*, core::*};
+use game::Config;
 
 mod controls;
 mod game_instance;
@@ -8,6 +8,8 @@ mod image;
 mod text;
 
 pub use game_loop::{AppStorage, InitialRngSeed};
+
+pub const NAME: &'static str = "Placeholder";
 
 struct AppState {
     game_loop_data: game_loop::GameLoopData,

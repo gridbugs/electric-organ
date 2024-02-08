@@ -1,5 +1,5 @@
-use boat_journey_game::MenuImage;
 use chargrid::prelude::*;
+use game::MenuImage;
 use grid_2d::Grid;
 
 pub struct Image {
@@ -12,27 +12,42 @@ impl Image {
             fb.set_cell_relative_to_ctx(ctx, coord, 0, cell);
         }
     }
+
+    fn load(data: &[u8]) -> Self {
+        Self {
+            grid: bincode::deserialize::<Grid<RenderCell>>(data).unwrap(),
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
-enum ImageName {}
+enum ImageName {
+    Placeholder,
+}
 
 impl ImageName {
     const fn data(self) -> &'static [u8] {
-        match self {}
+        use ImageName::*;
+        match self {
+            Placeholder => include_bytes!("images/placeholder.bin"),
+        }
     }
 
-    fn load_grid(self) -> Image {
-        let grid = bincode::deserialize::<Grid<RenderCell>>(self.data()).unwrap();
-        Image { grid }
+    fn load(self) -> Image {
+        Image::load(self.data())
     }
 }
 
-pub struct Images {}
+pub struct Images {
+    pub placeholder: Image,
+}
 
 impl Images {
     pub fn new() -> Self {
-        Self {}
+        use ImageName::*;
+        Self {
+            placeholder: Placeholder.load(),
+        }
     }
 
     pub fn image_from_menu_image(&self, menu_image: MenuImage) -> &Image {

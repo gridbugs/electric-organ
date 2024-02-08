@@ -1,4 +1,4 @@
-use boat_journey_app::{app, AppArgs, AppStorage, InitialRngSeed};
+use app::{app, AppArgs, AppStorage, InitialRngSeed};
 use chargrid_web::{Context, Size};
 use general_storage_static::StaticStorage;
 use general_storage_web::LocalStorage;

@@ -1,5 +1,5 @@
 {
-  description = "Boat Journey";
+  description = "Placeholder";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

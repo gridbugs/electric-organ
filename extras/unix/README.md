@@ -1,9 +1,9 @@
-# Boat Journey
+# Placeholder
 
 ## Package Contents
 
-- boat-journey-graphical: Graphical version of the game, rendering with metal on macos and vulkan on linux
-- boat-journey-terminal: Terminal version of the game, rendering as text in an ansi terminal
+- placeholder-graphical: Graphical version of the game, rendering with metal on macos and vulkan on linux
+- placeholder-terminal: Terminal version of the game, rendering as text in an ansi terminal
 
 ## HIDPI
 
@@ -12,7 +12,7 @@ The `WINIT_X11_SCALE_FACTOR` environment variable overrides the HIDPI scaling fa
 
 For example:
 ```
-WINIT_X11_SCALE_FACTOR=1 ./boat-journey-graphical
+WINIT_X11_SCALE_FACTOR=1 ./placeholder-graphical
 ```
 
 ## MacOS

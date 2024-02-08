@@ -8,9 +8,6 @@ use crate::{
 };
 use coord_2d::{Coord, Size};
 use entity_table::entity_data;
-use procgen::{
-    generate, generate_dungeon, Dungeon as DungeonGen, DungeonCell, Spec, WaterType, WorldCell3,
-};
 use rand::{seq::SliceRandom, Rng};
 use serde::{Deserialize, Serialize};
 

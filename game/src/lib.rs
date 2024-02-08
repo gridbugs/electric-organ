@@ -247,12 +247,7 @@ impl Game {
                                 return false;
                             }
                         }
-                        if let Layers {
-                            water: Some(_),
-                            floor: None,
-                            ..
-                        } = layers
-                        {
+                        if let Layers { floor: None, .. } = layers {
                             return false;
                         }
                     }

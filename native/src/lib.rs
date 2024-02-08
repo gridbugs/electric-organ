@@ -1,4 +1,4 @@
-use boat_journey_app::{AppStorage, InitialRngSeed};
+use app::{AppStorage, InitialRngSeed};
 use general_storage_file::{FileStorage, IfDirectoryMissing};
 use general_storage_static::StaticStorage;
 pub use meap;

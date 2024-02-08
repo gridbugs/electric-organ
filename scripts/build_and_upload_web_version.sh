@@ -2,7 +2,7 @@
 set -euxo pipefail
 
 BRANCH=$1
-NAME=boat_journey
+NAME=placeholder
 
 pushd web
 

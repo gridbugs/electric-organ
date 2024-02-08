@@ -1,5 +1,5 @@
 [package]
-name = "boat_journey_native"
+name = "native"
 version = "0.1.0"
 authors = ["Stephen Sherratt <stephen@sherra.tt>"]
 edition = "2021"
@@ -8,5 +8,5 @@ edition = "2021"
 general_storage_file = "0.3"
 general_storage_static = { version = "0.3", features = ["file"] }
 log = "0.4"
-boat_journey_app = { path = "../app", features = ["native"] }
+app = { path = "../app", features = ["native"] }
 meap = "0.8"

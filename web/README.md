@@ -1,4 +1,4 @@
-# Boat Journey Web
+# Placeholder Web
 
 ## Install
 ```

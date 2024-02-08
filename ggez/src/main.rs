@@ -1,7 +1,7 @@
 #![windows_subsystem = "windows"]
-use boat_journey_app::{app, AppArgs};
-use boat_journey_native::{meap, NativeCommon};
+use app::{app, AppArgs, NAME};
 use chargrid_ggez::*;
+use native::{meap, NativeCommon};
 
 const CELL_SIZE: f64 = 12.;
 
@@ -21,7 +21,7 @@ fn main() {
             normal: include_bytes!("./fonts/PxPlus_IBM_CGAthin-with-quadrant-blocks.ttf").to_vec(),
             bold: include_bytes!("./fonts/PxPlus_IBM_CGA-with-quadrant-blocks.ttf").to_vec(),
         },
-        title: "Boat Journey".to_string(),
+        title: NAME.to_string(),
         window_dimensions_px: Dimensions {
             width: 960.,
             height: 720.,

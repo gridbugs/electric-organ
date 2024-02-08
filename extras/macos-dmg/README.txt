@@ -1,8 +1,8 @@
-# Boat Journey
+# Placeholder
 
 ## Package Contents
 
-- BoatJourney.app: Graphical version of the game
+- Placeholder.app: Graphical version of the game
 
 ## Notes
 

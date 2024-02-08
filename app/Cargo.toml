@@ -1,5 +1,5 @@
 [package]
-name = "boat_journey_app"
+name = "app"
 version = "0.1.0"
 authors = ["Stephen Sherratt <stephen@sherra.tt>"]
 edition = "2021"
@@ -18,7 +18,7 @@ rgb_int = "0.1"
 perlin2 = { version = "0.1", features = ["serialize"] }
 coord_2d = "0.3"
 grid_2d = "0.15"
-boat_journey_game = { path = "../game" }
+game = { path = "../game" }
 log = "0.4"
 serde = { version = "1.0", features = ["serde_derive"] }
 rand = "0.8"

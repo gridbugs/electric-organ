@@ -1,8 +1,8 @@
-use boat_journey_game::{
+use chargrid::{prelude::*, text};
+use game::{
     witness::{self, Game, RunningGame},
     CellVisibility, Config, Layer, Tile, Victory,
 };
-use chargrid::{prelude::*, text};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -28,12 +28,10 @@ impl GameInstance {
 
     fn layer_to_depth(layer: Layer) -> i8 {
         match layer {
-            Layer::Character => 5,
-            Layer::Item => 4,
-            Layer::Feature => 3,
-            Layer::Boat => 2,
-            Layer::Floor => 1,
-            Layer::Water => 0,
+            Layer::Character => 3,
+            Layer::Item => 2,
+            Layer::Feature => 1,
+            Layer::Floor => 0,
         }
     }
 

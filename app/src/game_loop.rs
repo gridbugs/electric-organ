@@ -4,11 +4,11 @@ use crate::{
     image::Images,
     text,
 };
-use boat_journey_game::{
+use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
+use game::{
     witness::{self, Witness},
     Config as GameConfig, GameOverReason, MenuChoice as GameMenuChoice, Victory,
 };
-use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
 use general_storage_static::{self as storage, format, StaticStorage as Storage};
 use rand::{Rng, SeedableRng};
 use rand_isaac::Isaac64Rng;
@@ -454,11 +454,11 @@ fn title_decorate<T: 'static>(cf: AppCF<T>) -> AppCF<T> {
     let decoration = {
         let style = Style::plain_text();
         chargrid::many![styled_string(
-            "Boat Journey".to_string(),
+            "Placeholder".to_string(),
             style.with_bold(true)
         )]
     };
-    cf.with_title_vertical(decoration, 2)
+    cf.overlay(decoration, 0)
 }
 
 fn main_menu() -> AppCF<MainMenuEntry> {
@@ -490,7 +490,11 @@ fn background() -> CF<(), State> {
 
 fn main_menu_loop() -> AppCF<MainMenuOutput> {
     use MainMenuEntry::*;
-    title_decorate(main_menu()).repeat_unit(move |entry| match entry {
+    title_decorate(main_menu().centre().overlay(
+        render_state(|state: &State, ctx, fb| state.images.placeholder.render(ctx, fb)),
+        1,
+    ))
+    .repeat_unit(move |entry| match entry {
         NewGame => text::loading(MAIN_MENU_TEXT_WIDTH)
             .centre()
             .overlay(background(), 1)

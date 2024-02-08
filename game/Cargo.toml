@@ -1,5 +1,5 @@
 [package]
-name = "boat_journey_game"
+name = "game"
 version = "0.1.0"
 authors = ["Stephen Sherratt <stephen@sherra.tt>"]
 edition = "2021"
@@ -22,4 +22,3 @@ rand_isaac = { version = "0.3", features = ["serde1"] }
 vector = { path = "../util/vector" }
 rational = { path = "../util/rational" }
 rand_range = { path = "../util/rand-range" }
-procgen = { path = "../procgen" }
