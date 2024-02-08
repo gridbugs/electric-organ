@@ -46,4 +46,4 @@ jobs:
     - if: matrix.os == 'ubuntu-latest'
       run: cargo test --workspace
     - if: matrix.os != 'ubuntu-latest'
-      run: cargo test --workspace --exclude placeholder_sdl2
+      run: cargo test --workspace --exclude frontend_sdl2
