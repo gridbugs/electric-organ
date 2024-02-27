@@ -7,3 +7,4 @@ Cargo.lock
 .envrc
 *.zip
 *.dmg
+**/.DS_Store

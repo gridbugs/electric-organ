@@ -49,8 +49,4 @@ impl Images {
             placeholder: Placeholder.load(),
         }
     }
-
-    pub fn image_from_menu_image(&self, menu_image: MenuImage) -> &Image {
-        match menu_image {}
-    }
 }

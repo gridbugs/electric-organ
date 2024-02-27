@@ -45,10 +45,25 @@ impl GameInstance {
                         .with_foreground(Rgba32::new_grey(255)),
                 };
             }
-            Tile::Floor => '.',
-            Tile::Wall => '█',
+            Tile::Floor => {
+                return RenderCell {
+                    character: Some('.'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgba32::new_grey(127)),
+                };
+            }
+            Tile::Wall => '#',
             Tile::DoorClosed => '+',
             Tile::DoorOpen => '-',
+            Tile::StairsDown => {
+                return RenderCell {
+                    character: Some('>'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgba32::new_grey(255)),
+                };
+            }
         };
         RenderCell {
             character: Some(character),

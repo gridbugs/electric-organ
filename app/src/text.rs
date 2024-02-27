@@ -63,3 +63,17 @@ pub fn game_over(width: u32, reason: GameOverReason) -> AppCF<()> {
         .delay(Duration::from_secs(2))
         .then(move || game_over_text(width, reason).press_any_key())
 }
+
+fn win_text(width: u32) -> CF<(), State> {
+    let t = |s: &str| StyledString {
+        string: s.to_string(),
+        style: Style::plain_text(),
+    };
+    text_component(width, vec![t("You win!")])
+}
+pub fn win(width: u32) -> AppCF<()> {
+    // TODO: this is not ergonomic
+    win_text(width)
+        .delay(Duration::from_secs(2))
+        .then(move || win_text(width).press_any_key())
+}

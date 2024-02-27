@@ -64,4 +64,14 @@ impl World {
             },
         )
     }
+
+    pub fn spawn_stairs_down(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Feature),
+            entity_data! {
+                tile: Tile::StairsDown,
+                stairs_down: (),
+            },
+        )
+    }
 }

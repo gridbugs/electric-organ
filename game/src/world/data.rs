@@ -8,6 +8,7 @@ declare_entity_module! {
         solid: (),
         door_state: DoorState,
         opacity: u8,
+        stairs_down: (),
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -19,6 +20,7 @@ pub enum Tile {
     Wall,
     DoorClosed,
     DoorOpen,
+    StairsDown,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

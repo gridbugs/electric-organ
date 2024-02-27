@@ -1,5 +1,4 @@
 use crate::{ActionError, Config, GameControlFlow, GameOverReason, Input, Menu as GameMenu};
-use coord_2d::Coord;
 use direction::CardinalDirection;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -143,7 +142,7 @@ impl Game {
             Ok(Some(GameControlFlow::Menu(menu))) => {
                 (Witness::Menu(Menu { private, menu }), Ok(()))
             }
-            Ok(Some(other)) => panic!("unhandled control flow {:?}", other),
+            Ok(Some(GameControlFlow::Win)) => (Witness::Win(Win(Private)), Ok(())),
         }
     }
 

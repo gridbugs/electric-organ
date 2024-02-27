@@ -135,13 +135,12 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new<R: Rng>(_config: &Config, victories: Vec<Victory>, base_rng: &mut R) -> Self {
-        let mut rng = Isaac64Rng::seed_from_u64(base_rng.gen());
+    pub fn new<R: Rng>(_config: &Config, _victories: Vec<Victory>, base_rng: &mut R) -> Self {
+        let rng = Isaac64Rng::seed_from_u64(base_rng.gen());
         let Terrain {
             world,
             player_entity,
-            num_dungeons,
-        } = Terrain::generate(world::spawn::make_player(), victories, &mut rng);
+        } = Terrain::generate_text(world::spawn::make_player());
         let mut game = Self {
             rng,
             visibility_grid: VisibilityGrid::new(world.spatial_table.grid_size()),
@@ -226,7 +225,41 @@ impl Game {
     }
 
     fn player_walk(&mut self, direction: CardinalDirection) -> Option<GameControlFlow> {
-        todo!()
+        let player_coord = self.player_coord();
+        let new_player_coord = player_coord + direction.coord();
+        if !new_player_coord.is_valid(self.world.size()) {
+            // player would walk outside bounds of map
+            return None;
+        }
+        if let Some(&Layers {
+            feature: Some(feature_entity),
+            ..
+        }) = self.world.spatial_table.layers_at(new_player_coord)
+        {
+            // If the player bumps into a door, open the door
+            if let Some(DoorState::Closed) = self.world.components.door_state.get(feature_entity) {
+                self.open_door(feature_entity);
+                return None;
+            }
+            // Don't let the player walk through solid entities
+            if self.world.components.solid.contains(feature_entity) {
+                if let Some(open_door_entity) =
+                    self.open_door_entity_adjacent_to_coord(player_coord)
+                {
+                    self.close_door(open_door_entity);
+                }
+                return None;
+            }
+            // Exercise win logic
+            if self.world.components.stairs_down.contains(feature_entity) {
+                return Some(GameControlFlow::Win);
+            }
+        }
+        self.world
+            .spatial_table
+            .update_coord(self.player_entity, new_player_coord)
+            .unwrap();
+        None
     }
 
     fn npc_turn(&mut self) -> Option<GameControlFlow> {

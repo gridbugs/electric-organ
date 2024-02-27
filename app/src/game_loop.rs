@@ -601,7 +601,7 @@ fn game_instance_component(running: witness::Running) -> AppCF<GameLoopState> {
 }
 
 fn win(win_: witness::Win) -> AppCF<()> {
-    todo!()
+    text::win(MAIN_MENU_TEXT_WIDTH)
 }
 
 fn game_over(reason: GameOverReason) -> AppCF<()> {
@@ -641,5 +641,5 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
             MainMenuOutput::Quit => LoopControl::Break(()),
         }),
     })
-    .bound_size(Size::new_u16(80, 60))
+    .bound_size(Size::new_u16(80, 30))
 }

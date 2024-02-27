@@ -16,8 +16,8 @@ fn main() {
         .parse_env_or_exit();
     let context = Context::new(Config {
         font_bytes: FontBytes {
-            normal: include_bytes!("./fonts/PxPlus_IBM_CGAthin-with-quadrant-blocks.ttf").to_vec(),
-            bold: include_bytes!("./fonts/PxPlus_IBM_CGA-with-quadrant-blocks.ttf").to_vec(),
+            normal: include_bytes!("./fonts/PxPlus_IBM_CGAthin-2y.ttf").to_vec(),
+            bold: include_bytes!("./fonts/PxPlus_IBM_CGA-2y.ttf").to_vec(),
         },
         title: NAME.to_string(),
         window_dimensions_px: Dimensions {
@@ -26,12 +26,12 @@ fn main() {
         },
         cell_dimensions_px: Dimensions {
             width: 12.,
-            height: 12.,
+            height: 24.,
         },
-        font_point_size: 12,
+        font_point_size: 24,
         character_cell_offset: Dimensions {
             width: 0.,
-            height: -1.,
+            height: 0.,
         },
         underline_width_cell_ratio: 0.1,
         underline_top_offset_cell_ratio: 0.8,
