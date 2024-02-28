@@ -21,7 +21,7 @@ jobs:
     - run: mkdir x
     - run: mkdir x\$env:OUTPUT_DIR
     - run: copy-item extras\windows\* x\$env:OUTPUT_DIR
-    - run: copy-item target\x86_64-pc-windows-gnu\release\placeholder_wgpu.exe x\$env:OUTPUT_DIR\placeholder.exe
+    - run: copy-item target\x86_64-pc-windows-gnu\release\frontend_wgpu.exe x\$env:OUTPUT_DIR\placeholder.exe
     - run: Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::CreateFromDirectory('x', $env:OUTPUT_DIR + '.zip');
     - uses: ncipollo/release-action@v1
       with:
@@ -64,8 +64,8 @@ jobs:
       run: cargo build --target=aarch64-apple-darwin --manifest-path=ansi-terminal/Cargo.toml --release
     - name: 'Strip binaries'
       run: |
-        strip -v target/aarch64-apple-darwin/release/placeholder_wgpu
-        strip -v target/aarch64-apple-darwin/release/placeholder_ansi_terminal
+        strip -v target/aarch64-apple-darwin/release/frontend_wgpu
+        strip -v target/aarch64-apple-darwin/release/frontend_ansi_terminal
     - name: 'Make archives'
       run: MODE=aarch64-apple-darwin/release ARCHIVE_NAME=placeholder-macos-aarch64-${{ github.ref_name }} scripts/make_archives_unix.sh
     - name: 'Make app and disk image'
@@ -102,8 +102,8 @@ jobs:
       run: cargo build --manifest-path=ansi-terminal/Cargo.toml --release
     - name: 'Strip binaries'
       run: |
-        strip -v target/release/placeholder_wgpu
-        strip -v target/release/placeholder_ansi_terminal
+        strip -v target/release/frontend_wgpu
+        strip -v target/release/frontend_ansi_terminal
     - name: 'Make archives'
       run: MODE=release ARCHIVE_NAME=placeholder-${{ env.SYSTEM_NAME }}-x86_64-${{ github.ref_name }} scripts/make_archives_unix.sh
     - if: matrix.os == 'macOS-latest'
