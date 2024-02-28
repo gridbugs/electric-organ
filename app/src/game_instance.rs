@@ -35,7 +35,7 @@ impl GameInstance {
         }
     }
 
-    fn tile_to_render_cell(tile: Tile, current: bool) -> RenderCell {
+    fn tile_to_render_cell(tile: Tile) -> RenderCell {
         let character = match tile {
             Tile::Player => {
                 return RenderCell {
@@ -95,7 +95,7 @@ impl GameInstance {
                     data.tiles.for_each_enumerate(|tile, layer| {
                         if let Some(&tile) = tile.as_ref() {
                             let depth = Self::layer_to_depth(layer);
-                            let mut render_cell = Self::tile_to_render_cell(tile, false);
+                            let mut render_cell = Self::tile_to_render_cell(tile);
                             render_cell.style.background = Some(background);
                             render_cell.style.foreground = Some(Rgba32::new_grey(63));
                             fb.set_cell_relative_to_ctx(ctx, coord, depth, render_cell);
@@ -106,7 +106,7 @@ impl GameInstance {
                     data.tiles.for_each_enumerate(|tile, layer| {
                         if let Some(&tile) = tile.as_ref() {
                             let depth = Self::layer_to_depth(layer);
-                            let mut render_cell = Self::tile_to_render_cell(tile, true);
+                            let render_cell = Self::tile_to_render_cell(tile);
                             fb.set_cell_relative_to_ctx(ctx, coord, depth, render_cell);
                         }
                     });
@@ -147,7 +147,7 @@ impl GameInstance {
         }
     }
 
-    pub fn render(&self, ctx: Ctx, fb: &mut FrameBuffer, aim_hint: bool) {
+    pub fn render(&self, ctx: Ctx, fb: &mut FrameBuffer) {
         self.render_game(ctx, fb);
         self.render_messages(
             ctx.add_xy(1, ctx.bounding_box.size().height() as i32 - 7)

@@ -7,7 +7,7 @@ use crate::{
 use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
 use game::{
     witness::{self, Witness},
-    Config as GameConfig, GameOverReason, MenuChoice as GameMenuChoice, Victory,
+    Config as GameConfig, GameOverReason, Victory,
 };
 use general_storage_static::{self as storage, format, StaticStorage as Storage};
 use rand::{Rng, SeedableRng};
@@ -331,13 +331,6 @@ impl GameLoopData {
         )
     }
 
-    fn screen_coord_to_game_coord(&self, screen_coord: Coord, screen_size: Size) -> Coord {
-        let instance = self.instance.as_ref().unwrap();
-        let player_coord = instance.game.inner_ref().player_coord();
-        let mid = screen_size.to_coord().unwrap() / 2;
-        (screen_coord - mid) + player_coord
-    }
-
     fn save_instance(&mut self, running: witness::Running) -> witness::Running {
         let instance = self.instance.take().unwrap().into_storable(running);
         self.storage.save_game(&instance);
@@ -363,7 +356,7 @@ impl GameLoopData {
 
     fn render(&self, ctx: Ctx, fb: &mut FrameBuffer) {
         let instance = self.instance.as_ref().unwrap();
-        instance.render(ctx, fb, self.cursor.is_some());
+        instance.render(ctx, fb);
         if let Some(cursor) = self.cursor {
             let cursor_colour = Rgba32::new(255, 255, 255, 127);
             let render_cell = RenderCell::default().with_background(cursor_colour);
@@ -472,8 +465,9 @@ fn main_menu() -> AppCF<MainMenuEntry> {
     };
     add_item(NewGame, "New Game", 'n');
     add_item(Help, "Help", 'h');
-    #[cfg(not(feature = "web"))]
-    add_item(Quit, "Quit", 'q');
+    if !cfg!(feature = "web") {
+        add_item(Quit, "Quit", 'q');
+    }
     builder.build_cf()
 }
 
@@ -532,10 +526,10 @@ fn pause_menu() -> AppCF<PauseMenuEntry> {
         builder.add_item_mut(item(entry, identifier).add_hotkey_char(ch));
     };
     add_item(Resume, "Resume", 'r');
-    #[cfg(not(feature = "web"))]
-    add_item(SaveQuit, "Save and Quit", 'q');
-    #[cfg(not(feature = "web"))]
-    add_item(Save, "Save", 's');
+    if !cfg!(feature = "web") {
+        add_item(SaveQuit, "Save and Quit", 'q');
+        add_item(Save, "Save", 's');
+    }
     add_item(NewGame, "New Game", 'n');
     add_item(Help, "Help", 'h');
     add_item(Clear, "Clear", 'c');
@@ -600,7 +594,7 @@ fn game_instance_component(running: witness::Running) -> AppCF<GameLoopState> {
     cf(GameInstanceComponent::new(running)).some().no_peek()
 }
 
-fn win(win_: witness::Win) -> AppCF<()> {
+fn win() -> AppCF<()> {
     text::win(MAIN_MENU_TEXT_WIDTH)
 }
 
@@ -615,7 +609,62 @@ fn game_over(reason: GameOverReason) -> AppCF<()> {
 }
 
 fn game_menu(menu_witness: witness::Menu) -> AppCF<Witness> {
-    todo!()
+    use chargrid::align::*;
+    use game::MenuChoice;
+    use menu::builder::*;
+    let mut builder = menu_builder();
+    let mut add_item = |entry: MenuChoice, name: String, ch: char| {
+        let identifier = MENU_FADE_SPEC.identifier(move |b| write!(b, "{}. {}", ch, name).unwrap());
+        builder.add_item_mut(item(entry, identifier).add_hotkey_char(ch));
+    };
+    for (i, choice) in menu_witness.menu.choices.iter().enumerate() {
+        let ch = std::char::from_digit(i as u32 + 1, 10).unwrap();
+        match choice {
+            MenuChoice::Dummy => add_item(choice.clone(), "Dummy".to_string(), ch),
+        }
+    }
+    let title = {
+        use chargrid::text::*;
+        Text::new(vec![StyledString {
+            string: menu_witness.menu.text.clone(),
+            style: Style::plain_text(),
+        }])
+        .wrap_word()
+        .cf::<State>()
+        .set_width(36)
+    };
+    let menu_cf = builder
+        .build_cf()
+        .menu_harness()
+        .add_x(2)
+        .with_title_vertical(title, 2)
+        .align(Alignment {
+            x: AlignmentX::Left,
+            y: AlignmentY::Centre,
+        })
+        .add_x(4)
+        .overlay(
+            render_state(move |state: &State, ctx, fb| {
+                state
+                    .images
+                    .image_from_menu_image(menu_witness.menu.image)
+                    .render(ctx, fb)
+            }),
+            1,
+        );
+    menu_cf.and_then_side_effect(|result, state: &mut State| {
+        let witness = match result {
+            Err(Close) => menu_witness.cancel(),
+            Ok(choice) => {
+                if let Some(instance) = state.instance.as_mut() {
+                    menu_witness.commit(&mut instance.game, choice.clone())
+                } else {
+                    menu_witness.cancel()
+                }
+            }
+        };
+        val_once(witness)
+    })
 }
 
 pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
@@ -624,7 +673,7 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
         Playing(witness) => match witness {
             Witness::Running(running) => game_instance_component(running).continue_(),
             Witness::GameOver(reason) => game_over(reason).map_val(|| MainMenu).continue_(),
-            Witness::Win(win_) => win(win_).map_val(|| MainMenu).continue_(),
+            Witness::Win(_) => win().map_val(|| MainMenu).continue_(),
             Witness::Menu(menu_) => game_menu(menu_).map(Playing).continue_(),
         },
         Paused(running) => pause(running).map(|pause_output| match pause_output {

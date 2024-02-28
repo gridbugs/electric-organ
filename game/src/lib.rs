@@ -53,7 +53,9 @@ impl Default for Config {
 pub enum MenuImage {}
 
 #[derive(Debug, Clone, Copy)]
-pub enum MenuChoice {}
+pub enum MenuChoice {
+    Dummy,
+}
 
 #[derive(Debug, Clone)]
 pub struct Menu {
@@ -335,16 +337,7 @@ impl Game {
         Ok(None)
     }
 
-    fn is_coord_visible(&self, coord: Coord) -> bool {
-        match self.cell_visibility_at_coord(coord) {
-            CellVisibility::Current { .. } => true,
-            CellVisibility::Previous(_) => true,
-            _ => false,
-        }
-    }
-
-    pub(crate) fn handle_choice(&mut self, choice: MenuChoice) -> Option<GameControlFlow> {
-        self.update_visibility();
+    pub(crate) fn handle_choice(&mut self, _choice: MenuChoice) -> Option<GameControlFlow> {
         None
     }
 }

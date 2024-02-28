@@ -56,6 +56,9 @@ fn main() {
     if let ColEncodeChoice::TrueColour = col_encode_choice {
         println!("Running in true-colour mode.\nIf colours look wrong, run with `--rgb` or try a different terminal emulator.");
     }
+    // We can't print all RNG seeds as we do with windowed frontends so generate the first seed and
+    // print it here so at least if something goes wrong in the first playthrough there's a
+    // possibility to replay with the same seed.
     let initial_rng_seed = match initial_rng_seed {
         InitialRngSeed::U64(seed) => seed,
         InitialRngSeed::Random => rand::thread_rng().gen(),
