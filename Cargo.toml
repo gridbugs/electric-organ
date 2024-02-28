@@ -8,7 +8,6 @@ members = [
     "native",
     "ansi-terminal",
     "web",
-    "ggez",
     "wgpu",
     "sdl2",
     "util/vector",

@@ -17,13 +17,11 @@ jobs:
         targets: x86_64-pc-windows-gnu
     - uses: actions/checkout@v3
     - run: cargo build --manifest-path=wgpu/Cargo.toml --target=x86_64-pc-windows-gnu --release
-    - run: cargo build --manifest-path=ggez/Cargo.toml --target=x86_64-pc-windows-gnu --release
     - run: echo OUTPUT_DIR=placeholder-windows-x86_64-${{ github.ref_name }} >> $env:GITHUB_ENV
     - run: mkdir x
     - run: mkdir x\$env:OUTPUT_DIR
     - run: copy-item extras\windows\* x\$env:OUTPUT_DIR
     - run: copy-item target\x86_64-pc-windows-gnu\release\placeholder_wgpu.exe x\$env:OUTPUT_DIR\placeholder.exe
-    - run: copy-item target\x86_64-pc-windows-gnu\release\placeholder_ggez.exe x\$env:OUTPUT_DIR\placeholder-compatibility.exe
     - run: Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::CreateFromDirectory('x', $env:OUTPUT_DIR + '.zip');
     - uses: ncipollo/release-action@v1
       with:
@@ -62,14 +60,11 @@ jobs:
     - uses: actions/checkout@v3
     - name: 'Build graphical version'
       run: cargo build --target=aarch64-apple-darwin --manifest-path=wgpu/Cargo.toml --release
-    - name: 'Build graphical version (compatibility)'
-      run: cargo build --target=aarch64-apple-darwin --manifest-path=ggez/Cargo.toml --release
     - name: 'Build ansi-terminal version'
       run: cargo build --target=aarch64-apple-darwin --manifest-path=ansi-terminal/Cargo.toml --release
     - name: 'Strip binaries'
       run: |
         strip -v target/aarch64-apple-darwin/release/placeholder_wgpu
-        strip -v target/aarch64-apple-darwin/release/placeholder_ggez
         strip -v target/aarch64-apple-darwin/release/placeholder_ansi_terminal
     - name: 'Make archives'
       run: MODE=aarch64-apple-darwin/release ARCHIVE_NAME=placeholder-macos-aarch64-${{ github.ref_name }} scripts/make_archives_unix.sh
@@ -103,14 +98,11 @@ jobs:
     - uses: actions/checkout@v3
     - name: 'Build graphical version'
       run: cargo build --manifest-path=wgpu/Cargo.toml --release
-    - name: 'Build graphical version (compatibility)'
-      run: cargo build --manifest-path=ggez/Cargo.toml --release
     - name: 'Build ansi-terminal version'
       run: cargo build --manifest-path=ansi-terminal/Cargo.toml --release
     - name: 'Strip binaries'
       run: |
         strip -v target/release/placeholder_wgpu
-        strip -v target/release/placeholder_ggez
         strip -v target/release/placeholder_ansi_terminal
     - name: 'Make archives'
       run: MODE=release ARCHIVE_NAME=placeholder-${{ env.SYSTEM_NAME }}-x86_64-${{ github.ref_name }} scripts/make_archives_unix.sh
