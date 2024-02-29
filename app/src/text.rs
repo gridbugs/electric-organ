@@ -33,12 +33,20 @@ pub fn help(width: u32) -> AppCF<()> {
     .press_any_key()
 }
 
+pub fn press_any_key_to_begin(width: u32) -> CF<(), State> {
+    let t = |s: &str| StyledString {
+        string: s.to_string(),
+        style: Style::plain_text(),
+    };
+    text_component(width, vec![t("Press any key to begin...")])
+}
+
 pub fn loading(width: u32) -> AppCF<()> {
     let t = |s: &str| StyledString {
         string: s.to_string(),
         style: Style::plain_text(),
     };
-    text_component(width, vec![t("Generating...")]).delay(Duration::from_millis(32))
+    text_component(width, vec![t("Generating...")]).delay(Duration::from_millis(100))
 }
 
 pub fn saving(width: u32) -> AppCF<()> {
@@ -46,7 +54,7 @@ pub fn saving(width: u32) -> AppCF<()> {
         string: s.to_string(),
         style: Style::plain_text(),
     };
-    text_component(width, vec![t("Saving...")]).delay(Duration::from_millis(32))
+    text_component(width, vec![t("Saving...")]).delay(Duration::from_millis(100))
 }
 
 fn game_over_text(width: u32, _reason: GameOverReason) -> CF<(), State> {

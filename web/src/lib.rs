@@ -1,5 +1,5 @@
 use app::{app, AppArgs, AppStorage, InitialRngSeed};
-use chargrid_web::{Context, Size};
+use chargrid_web::{Context, LoopMethod, Size};
 use general_storage_static::StaticStorage;
 use general_storage_web::LocalStorage;
 use wasm_bindgen::prelude::*;
@@ -27,6 +27,6 @@ pub fn run() -> Result<(), JsValue> {
         omniscient: false,
         new_game: false,
     };
-    context.run(app(args));
+    context.run_with_loop_method(app(args), LoopMethod::SetTimeoutMs(1000 / 60));
     Ok(())
 }

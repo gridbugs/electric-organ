@@ -516,9 +516,9 @@ dependencies = [
 
 [[package]]
 name = "chargrid_web"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6408e3dd3d34e6b450c902fc26fc1042cd3e0dd8eeafaf8d9b6f88a289585722"
+checksum = "479c3b8660fc2cdac8654faadf41bc96d5e922307816d0dd643505a28c70cb99"
 dependencies = [
  "chargrid_input",
  "chargrid_runtime",
