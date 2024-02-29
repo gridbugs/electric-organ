@@ -5,6 +5,7 @@ mod controls;
 mod game_instance;
 mod game_loop;
 mod image;
+mod music;
 mod text;
 
 pub use game_loop::{AppStorage, InitialRngSeed};
