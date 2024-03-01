@@ -1,8 +1,8 @@
-# Placeholder
+# Electric Organ
 
 ## Package Contents
 
-- Placeholder.app: Graphical version of the game
+- ElectricOrgan.app: Graphical version of the game
 
 ## Notes
 

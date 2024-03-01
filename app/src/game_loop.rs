@@ -447,7 +447,7 @@ fn title_decorate<T: 'static>(cf: AppCF<T>) -> AppCF<T> {
     let decoration = {
         let style = Style::plain_text();
         chargrid::many![styled_string(
-            "Placeholder".to_string(),
+            "Electric Organ".to_string(),
             style.with_bold(true)
         )]
     };

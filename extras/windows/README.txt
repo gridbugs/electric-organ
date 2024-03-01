@@ -1,5 +1,5 @@
-# Placeholder
+# Electric Organ
 
 ## Package Contents
 
-- placeholder.exe: Graphical version of the game
+- electric-organ.exe: Graphical version of the game

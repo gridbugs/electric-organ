@@ -1,7 +1,7 @@
-# Placeholder
+# Electric Organ
 
-[![dependency status](https://deps.rs/repo/github/gridbugs/7drl-template-2024/status.svg)](https://deps.rs/repo/github/gridbugs/7drl-template-2024)
-[![test status](https://github.com/gridbugs/7drl-template-2024/actions/workflows/test.yml/badge.svg)](https://github.com/gridbugs/7drl-template-2024/actions/workflows/test.yml)
+[![dependency status](https://deps.rs/repo/github/gridbugs/electric-organ/status.svg)](https://deps.rs/repo/github/gridbugs/electric-organ)
+[![test status](https://github.com/gridbugs/electric-organ/actions/workflows/test.yml/badge.svg)](https://github.com/gridbugs/electric-organ/actions/workflows/test.yml)
 
 ## HIDPI
 

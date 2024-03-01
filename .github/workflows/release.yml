@@ -17,11 +17,11 @@ jobs:
         targets: x86_64-pc-windows-gnu
     - uses: actions/checkout@v3
     - run: cargo build --manifest-path=wgpu/Cargo.toml --target=x86_64-pc-windows-gnu --release
-    - run: echo OUTPUT_DIR=placeholder-windows-x86_64-${{ github.ref_name }} >> $env:GITHUB_ENV
+    - run: echo OUTPUT_DIR=electric-organ-windows-x86_64-${{ github.ref_name }} >> $env:GITHUB_ENV
     - run: mkdir x
     - run: mkdir x\$env:OUTPUT_DIR
     - run: copy-item extras\windows\* x\$env:OUTPUT_DIR
-    - run: copy-item target\x86_64-pc-windows-gnu\release\frontend_wgpu.exe x\$env:OUTPUT_DIR\placeholder.exe
+    - run: copy-item target\x86_64-pc-windows-gnu\release\frontend_wgpu.exe x\$env:OUTPUT_DIR\electric-organ.exe
     - run: Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::CreateFromDirectory('x', $env:OUTPUT_DIR + '.zip');
     - uses: ncipollo/release-action@v1
       with:
@@ -40,7 +40,7 @@ jobs:
         pushd web
         npm install
         NODE_OPTIONS=--openssl-legacy-provider npm run build-production
-        ARCHIVE_NAME=placeholder-web-${{ github.ref_name }}
+        ARCHIVE_NAME=electric-organ-web-${{ github.ref_name }}
         mv dist $ARCHIVE_NAME
         zip -r $ARCHIVE_NAME.zip $ARCHIVE_NAME
         popd
@@ -67,9 +67,9 @@ jobs:
         strip -v target/aarch64-apple-darwin/release/frontend_wgpu
         strip -v target/aarch64-apple-darwin/release/frontend_ansi_terminal
     - name: 'Make archives'
-      run: MODE=aarch64-apple-darwin/release ARCHIVE_NAME=placeholder-macos-aarch64-${{ github.ref_name }} scripts/make_archives_unix.sh
+      run: MODE=aarch64-apple-darwin/release ARCHIVE_NAME=electric-organ-macos-aarch64-${{ github.ref_name }} scripts/make_archives_unix.sh
     - name: 'Make app and disk image'
-      run: MODE=aarch64-apple-darwin/release APP_NAME=Placeholder DMG_NAME=Placeholder-macos-aarch64-${{ github.ref_name }}.dmg scripts/make_dmg_macos.sh
+      run: MODE=aarch64-apple-darwin/release APP_NAME=ElectricOrgan DMG_NAME=electric-organ-macos-aarch64-${{ github.ref_name }}.dmg scripts/make_dmg_macos.sh
     - uses: ncipollo/release-action@v1
       with:
         allowUpdates: true
@@ -105,10 +105,10 @@ jobs:
         strip -v target/release/frontend_wgpu
         strip -v target/release/frontend_ansi_terminal
     - name: 'Make archives'
-      run: MODE=release ARCHIVE_NAME=placeholder-${{ env.SYSTEM_NAME }}-x86_64-${{ github.ref_name }} scripts/make_archives_unix.sh
+      run: MODE=release ARCHIVE_NAME=electric-organ-${{ env.SYSTEM_NAME }}-x86_64-${{ github.ref_name }} scripts/make_archives_unix.sh
     - if: matrix.os == 'macOS-latest'
       name: 'Make macos app and disk image'
-      run: MODE=release APP_NAME=Placeholder DMG_NAME=Placeholder-macos-x86_64-${{ github.ref_name }}.dmg scripts/make_dmg_macos.sh
+      run: MODE=release APP_NAME=ElectricOrgan DMG_NAME=electric-organ-macos-x86_64-${{ github.ref_name }}.dmg scripts/make_dmg_macos.sh
     - uses: ncipollo/release-action@v1
       with:
         allowUpdates: true

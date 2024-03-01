@@ -1,4 +1,4 @@
-# Placeholder Web
+# Electric Organ Web
 
 ## Install
 ```

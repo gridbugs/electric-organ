@@ -1,5 +1,5 @@
 {
-  description = "Placeholder";
+  description = "Electric Organ";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
