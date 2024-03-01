@@ -42,7 +42,7 @@ impl Terrain {
                         player_entity =
                             Some(world.insert_entity_data(player_location, player_data.clone()));
                     }
-                    _ => panic!("unexpected char: {}", ch),
+                    _ => log::warn!("unexpected char: {}", ch),
                 }
             }
         }
