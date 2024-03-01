@@ -102,10 +102,14 @@ impl RngSeedSource {
     fn next_seed(&mut self) -> u64 {
         let seed = self.next_seed;
         self.next_seed = self.seed_rng.gen();
-        #[cfg(feature = "print_stdout")]
-        println!("RNG Seed: {}", seed);
-        #[cfg(feature = "print_log")]
-        log::info!("RNG Seed: {}", seed);
+        if !cfg!(target_os = "windows") {
+            // This is the only time that this program prints to stdout in regular operation and
+            // this seems to crash on windows.
+            #[cfg(feature = "print_stdout")]
+            println!("RNG Seed: {}", seed);
+            #[cfg(feature = "print_log")]
+            log::info!("RNG Seed: {}", seed);
+        }
         seed
     }
 }
