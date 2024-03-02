@@ -34,6 +34,18 @@ impl Cartesian {
             length: ((self.x * self.x) + (self.y * self.y)).sqrt(),
         }
     }
+    pub fn add(self, other: Self) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+    pub fn sub(self, other: Self) -> Self {
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
+    }
 }
 
 impl Radial {

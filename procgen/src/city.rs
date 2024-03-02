@@ -1,5 +1,5 @@
 use coord_2d::{Coord, Size};
-use direction::{CardinalDirection, Direction};
+use direction::{CardinalDirection, Direction, OrdinalDirection};
 use grid_2d::Grid;
 use rand::{seq::SliceRandom, Rng};
 use std::collections::{HashSet, VecDeque};
@@ -1072,3 +1072,126 @@ impl Map4 {
         map4
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tile5 {
+    Wall,
+    Street,
+    Alley,
+    Footpath,
+    Floor,
+    Debris,
+    Door,
+    Tentacle,
+}
+
+pub struct Map5 {
+    pub grid: Grid<Tile5>,
+}
+
+pub struct TentacleSpec {
+    pub num_tentacles: usize,
+    pub segment_length: f64,
+    pub spread: f64,
+    pub distance_from_centre: f64,
+}
+
+impl Map5 {
+    fn from_map4(map4: &Map4) -> Self {
+        Self {
+            grid: map4.grid.map_ref(|&tile| match tile {
+                Tile4::Wall => Tile5::Wall,
+                Tile4::Street => Tile5::Street,
+                Tile4::Alley => Tile5::Alley,
+                Tile4::Footpath => Tile5::Footpath,
+                Tile4::Floor => Tile5::Floor,
+                Tile4::Debris => Tile5::Debris,
+                Tile4::Door => Tile5::Door,
+            }),
+        }
+    }
+
+    fn add_tentacles<R: Rng>(&mut self, tentacle_spec: &TentacleSpec, rng: &mut R) {
+        use vector::*;
+        let bottom_right = self.grid.size().to_coord().unwrap();
+        let corner = match rng.gen::<OrdinalDirection>() {
+            OrdinalDirection::NorthEast => bottom_right.set_y(0),
+            OrdinalDirection::SouthEast => bottom_right,
+            OrdinalDirection::SouthWest => bottom_right.set_x(0),
+            OrdinalDirection::NorthWest => Coord::new(0, 0),
+        };
+        let towards_map_centre =
+            Cartesian::from_coord(Coord::new(30, 15)).sub(Cartesian::from_coord(corner));
+        let angle = towards_map_centre.to_radial().angle;
+        let centre = Cartesian { x: 30.0, y: 15.0 }.add(
+            Radial {
+                length: -tentacle_spec.distance_from_centre,
+                angle,
+            }
+            .to_cartesian(),
+        );
+        let delta = Radial {
+            length: tentacle_spec.segment_length,
+            angle,
+        };
+        for t in 0..tentacle_spec.num_tentacles {
+            let mut prev_coord = None;
+            let mut delta = delta;
+            let base_angle_delta = ((t as f64 * tentacle_spec.spread)
+                / tentacle_spec.num_tentacles as f64)
+                - (tentacle_spec.spread / 2.0);
+            let bend = base_angle_delta + (0.2 * rng.gen::<f64>() - 0.1);
+            delta.angle.0 += bend;
+            let mut vector = centre;
+            let num_steps = 15;
+            for i in 0..num_steps {
+                vector = vector.add(delta.to_cartesian());
+                let coord = vector.to_coord_round_nearest();
+                if let Some(prev_coord) = prev_coord {
+                    for coord in line_2d::coords_between(prev_coord, coord) {
+                        let size = (num_steps - i) / 4 + 1;
+                        let rect = Rect {
+                            coord,
+                            size: Size::new(size, size),
+                        };
+                        delta.angle.0 += bend * 0.2 * rng.gen::<f64>();
+                        for coord in rect.coord_iter() {
+                            if let Some(tile) = self.grid.get_mut(coord) {
+                                *tile = Tile5::Tentacle;
+                            }
+                        }
+                    }
+                }
+                prev_coord = Some(coord);
+            }
+        }
+    }
+
+    pub fn print(&self) {
+        for row in self.grid.rows() {
+            for cell in row {
+                match cell {
+                    Tile5::Street => print!("."),
+                    Tile5::Alley => print!(","),
+                    Tile5::Footpath => print!(","),
+                    Tile5::Wall => print!("#"),
+                    Tile5::Floor => print!("."),
+                    Tile5::Debris => print!("%"),
+                    Tile5::Door => print!("+"),
+                    Tile5::Tentacle => print!("~"),
+                }
+            }
+            println!("");
+        }
+    }
+
+    pub fn generate<R: Rng>(tentacle_spec: &TentacleSpec, rng: &mut R) -> Self {
+        let map4 = Map4::generate(rng);
+        let mut map5 = Self::from_map4(&map4);
+        map5.add_tentacles(&tentacle_spec, rng);
+        map5
+    }
+}
+
+pub type Tile = Tile5;
+pub type Map = Map5;

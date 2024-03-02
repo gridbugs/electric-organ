@@ -1999,7 +1999,9 @@ dependencies = [
  "coord_2d",
  "direction",
  "grid_2d",
+ "line_2d",
  "rand",
+ "vector",
 ]
 
 [[package]]

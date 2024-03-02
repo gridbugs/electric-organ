@@ -6,5 +6,7 @@ edition = "2021"
 [dependencies]
 coord_2d = "0.3"
 grid_2d = "0.15"
+line_2d = "0.5"
 direction = { version = "0.18", features = ["rand"] }
 rand = "0.8"
+vector = { path = "../util/vector" }
