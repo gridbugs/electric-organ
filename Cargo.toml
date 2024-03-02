@@ -13,6 +13,7 @@ members = [
     "util/vector",
     "util/rand-range",
     "util/rational",
+    "procgen",
 ]
 
 [profile.release]

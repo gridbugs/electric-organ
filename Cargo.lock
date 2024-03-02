@@ -1992,6 +1992,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "procgen"
+version = "0.1.0"
+dependencies = [
+ "coord_2d",
+ "direction",
+ "grid_2d",
+ "rand",
+]
+
+[[package]]
 name = "profiling"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
