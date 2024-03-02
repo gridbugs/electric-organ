@@ -583,7 +583,6 @@ impl Block {
         }
     }
 }
-
 impl Map3 {
     fn from_map2(map2: &Map2) -> Self {
         let grid = Grid::new_fn(map2.grid.size(), |coord| {
@@ -752,5 +751,324 @@ impl Map3 {
         }
         map3.clean_corridors();
         map3
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Tile4 {
+    Wall,
+    Street,
+    Alley,
+    Footpath,
+    Floor,
+    Debris,
+    Door,
+}
+
+impl Tile4 {
+    fn is_solid(&self) -> bool {
+        match self {
+            Self::Wall | Self::Debris => true,
+            _ => false,
+        }
+    }
+    fn is_open(&self) -> bool {
+        !self.is_solid()
+    }
+    fn is_outside(&self) -> bool {
+        match self {
+            Self::Street | Self::Alley | Self::Footpath => true,
+            _ => false,
+        }
+    }
+}
+
+struct Area {
+    boundary: HashSet<Coord>,
+}
+
+struct Adjacencies {
+    areas: Vec<Area>,
+    shared_boundaries: Grid<HashSet<Coord>>,
+    neighbours: Vec<Vec<usize>>,
+}
+
+impl Adjacencies {
+    fn shared_boundary(
+        shared_boundaries: &Grid<HashSet<Coord>>,
+        a: usize,
+        b: usize,
+    ) -> &HashSet<Coord> {
+        let coord = if a < b {
+            Coord::new(a as i32, b as i32)
+        } else {
+            Coord::new(b as i32, a as i32)
+        };
+        shared_boundaries.get_checked(coord)
+    }
+
+    fn neighbours(&self, i: usize) -> &[usize] {
+        &self.neighbours[i]
+    }
+}
+
+struct DisconnectedRooms {
+    as_coords: HashSet<Coord>,
+}
+
+impl DisconnectedRooms {
+    fn all_disconnected(adjacencies: &Adjacencies) -> Self {
+        Self {
+            as_coords: adjacencies
+                .shared_boundaries
+                .enumerate()
+                .filter_map(|(coord, shared_boundary)| {
+                    if shared_boundary.is_empty() {
+                        None
+                    } else {
+                        Some(coord)
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    fn connect(&mut self, a: usize, b: usize) {
+        let coord = if a < b {
+            Coord::new(a as i32, b as i32)
+        } else {
+            Coord::new(b as i32, a as i32)
+        };
+        self.as_coords.remove(&coord);
+    }
+
+    fn iter<'a>(&'a self) -> impl Iterator<Item = (usize, usize)> + 'a {
+        self.as_coords
+            .iter()
+            .map(|coord| (coord.x as usize, coord.y as usize))
+    }
+}
+
+pub struct Map4 {
+    grid: Grid<Tile4>,
+}
+
+impl Map4 {
+    fn from_map3(map3: &Map3) -> Self {
+        Self {
+            grid: map3.grid.map_ref(|&tile| match tile {
+                Tile3::Wall => Tile4::Wall,
+                Tile3::Street => Tile4::Street,
+                Tile3::Alley => Tile4::Alley,
+                Tile3::Footpath => Tile4::Footpath,
+                Tile3::Floor => Tile4::Floor,
+            }),
+        }
+    }
+
+    fn add_debris<R: Rng>(&mut self, rng: &mut R) {
+        let mut outside_coords = self
+            .grid
+            .enumerate()
+            .filter_map(|(coord, &tile)| {
+                if tile.is_outside()
+                    && coord.x > 10
+                    && coord.x < (self.grid.width() as i32 - 10)
+                    && coord.y > 7
+                    && coord.y < (self.grid.height() as i32 - 7)
+                {
+                    Some(coord)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        outside_coords.shuffle(rng);
+        for _ in 0..4 {
+            if let Some(mut coord) = outside_coords.pop() {
+                for _ in 0..8 {
+                    *self.grid.get_checked_mut(coord) = Tile4::Debris;
+                    let new_coord = coord + rng.gen::<Direction>().coord();
+                    if let Some(tile) = self.grid.get(new_coord) {
+                        if tile.is_outside() {
+                            coord = new_coord;
+                        }
+                    }
+                }
+            }
+        }
+        let mut open_coords = self
+            .grid
+            .enumerate()
+            .filter_map(|(coord, &tile)| {
+                if tile.is_open()
+                    && (!tile.is_outside()
+                        || (coord.x > 10
+                            && coord.x < (self.grid.width() as i32 - 10)
+                            && coord.y > 7
+                            && coord.y < (self.grid.height() as i32 - 7)))
+                {
+                    Some(coord)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        open_coords.shuffle(rng);
+        for _ in 0..20 {
+            if let Some(coord) = open_coords.pop() {
+                *self.grid.get_checked_mut(coord) = Tile4::Debris;
+            }
+        }
+    }
+
+    fn areas(&self) -> Vec<Area> {
+        use CardinalDirection::*;
+        let mut seen = HashSet::new();
+        let mut ret = Vec::new();
+        for (coord, &tile) in self.grid.enumerate() {
+            if !tile.is_solid() && seen.insert(coord) {
+                let mut boundary = HashSet::new();
+                let mut area_coords = HashSet::new();
+                let mut queue = VecDeque::new();
+                area_coords.insert(coord);
+                queue.push_back(coord);
+                while let Some(coord) = queue.pop_front() {
+                    for d in CardinalDirection::all() {
+                        let coord = coord + d.coord();
+                        if let Some(&tile) = self.grid.get(coord) {
+                            if tile.is_solid() {
+                                if tile == Tile4::Wall {
+                                    let valid_h = self.grid.get(coord + East.coord())
+                                        == Some(&Tile4::Wall)
+                                        && self.grid.get(coord + West.coord())
+                                            == Some(&Tile4::Wall);
+                                    let valid_v = self.grid.get(coord + North.coord())
+                                        == Some(&Tile4::Wall)
+                                        && self.grid.get(coord + South.coord())
+                                            == Some(&Tile4::Wall);
+                                    if valid_h || valid_v {
+                                        boundary.insert(coord);
+                                    }
+                                }
+                            } else {
+                                if area_coords.insert(coord) {
+                                    seen.insert(coord);
+                                    queue.push_back(coord);
+                                }
+                            }
+                        }
+                    }
+                }
+                ret.push(Area { boundary });
+            }
+        }
+        ret
+    }
+
+    fn adjacencies(&self) -> Adjacencies {
+        let areas = self.areas();
+        let shared_boundaries =
+            Grid::new_fn(Size::new(areas.len() as u32, areas.len() as u32), |coord| {
+                let a = coord.x as usize;
+                let b = coord.y as usize;
+                if a < b {
+                    let a = &areas[a];
+                    let b = &areas[b];
+                    a.boundary.intersection(&b.boundary).cloned().collect()
+                } else {
+                    HashSet::new()
+                }
+            });
+        let neighbours = (0..areas.len())
+            .map(|i| {
+                (0..areas.len())
+                    .filter_map(|j| {
+                        let shared_boundary =
+                            Adjacencies::shared_boundary(&shared_boundaries, i, j);
+                        if shared_boundary.is_empty() {
+                            None
+                        } else {
+                            Some(j)
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        Adjacencies {
+            areas,
+            shared_boundaries,
+            neighbours,
+        }
+    }
+
+    fn add_doors<R: Rng>(&mut self, rng: &mut R) {
+        let adjacencies = self.adjacencies();
+        let mut disconnected_rooms = DisconnectedRooms::all_disconnected(&adjacencies);
+        let spanning_tree_start_index = rng.gen_range(0..adjacencies.areas.len());
+        let mut to_visit = vec![spanning_tree_start_index];
+        let mut seen = HashSet::new();
+        seen.insert(spanning_tree_start_index);
+        while !to_visit.is_empty() {
+            let index_to_visit = to_visit.swap_remove(rng.gen_range(0..to_visit.len()));
+            for &neighbour_index in adjacencies.neighbours(index_to_visit) {
+                if seen.insert(neighbour_index) {
+                    to_visit.push(neighbour_index);
+                    let shared_boundary = Adjacencies::shared_boundary(
+                        &adjacencies.shared_boundaries,
+                        index_to_visit,
+                        neighbour_index,
+                    )
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>();
+                    let &door_coord = shared_boundary
+                        .choose(rng)
+                        .expect("Shared boundary between rooms should not be empty");
+                    *self.grid.get_checked_mut(door_coord) = Tile4::Door;
+                    disconnected_rooms.connect(index_to_visit, neighbour_index);
+                }
+            }
+        }
+        let mut disconnected_rooms = disconnected_rooms.iter().collect::<Vec<_>>();
+        disconnected_rooms.shuffle(rng);
+        for _ in 0..(2 * disconnected_rooms.len() / 3) {
+            if let Some((a, b)) = disconnected_rooms.pop() {
+                let shared_boundary =
+                    Adjacencies::shared_boundary(&adjacencies.shared_boundaries, a, b)
+                        .iter()
+                        .cloned()
+                        .collect::<Vec<_>>();
+                let &door_coord = shared_boundary
+                    .choose(rng)
+                    .expect("Shared boundary between rooms should not be empty");
+                *self.grid.get_checked_mut(door_coord) = Tile4::Door;
+            }
+        }
+    }
+
+    pub fn print(&self) {
+        for row in self.grid.rows() {
+            for cell in row {
+                match cell {
+                    Tile4::Street => print!("."),
+                    Tile4::Alley => print!(","),
+                    Tile4::Footpath => print!(","),
+                    Tile4::Wall => print!("#"),
+                    Tile4::Floor => print!("."),
+                    Tile4::Debris => print!("%"),
+                    Tile4::Door => print!("+"),
+                }
+            }
+            println!("");
+        }
+    }
+
+    pub fn generate<R: Rng>(rng: &mut R) -> Self {
+        let map3 = Map3::generate(rng);
+        let mut map4 = Self::from_map3(&map3);
+        map4.add_debris(rng);
+        map4.add_doors(rng);
+        map4
     }
 }
