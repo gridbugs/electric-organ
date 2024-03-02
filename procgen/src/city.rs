@@ -1177,7 +1177,12 @@ impl Map5 {
         }
     }
 
-    pub fn add_stairs<R: Rng>(&mut self, corner: OrdinalDirection, tile: Tile5, rng: &mut R) {
+    pub fn add_stairs<R: Rng>(
+        &mut self,
+        corner: OrdinalDirection,
+        tile: Tile5,
+        rng: &mut R,
+    ) -> bool {
         let bottom_right = self.grid.size().to_coord().unwrap();
         let corner_coord = match corner {
             OrdinalDirection::NorthEast => bottom_right.set_y(0),
@@ -1202,8 +1207,12 @@ impl Map5 {
                 None
             })
             .collect::<Vec<_>>();
-        let stairs_coord = *candidate_coords.choose(rng).unwrap();
-        *self.grid.get_checked_mut(stairs_coord) = tile;
+        if let Some(&stairs_coord) = candidate_coords.choose(rng) {
+            *self.grid.get_checked_mut(stairs_coord) = tile;
+            true
+        } else {
+            false
+        }
     }
 
     fn clear_around_tentactle(&mut self) {
@@ -1258,15 +1267,21 @@ impl Map5 {
     }
 
     pub fn generate<R: Rng>(tentacle_spec: &TentacleSpec, rng: &mut R) -> Self {
-        let map4 = Map4::generate(rng);
-        let mut map5 = Self::from_map4(&map4);
-        let mut corners = OrdinalDirection::all().collect::<Vec<_>>();
-        corners.shuffle(rng);
-        map5.add_tentacles(corners.pop().unwrap(), &tentacle_spec, rng);
-        map5.clear_around_tentactle();
-        map5.add_stairs(corners.pop().unwrap(), Tile5::StairsDown, rng);
-        map5.add_stairs(corners.pop().unwrap(), Tile5::StairsUp, rng);
-        map5
+        loop {
+            let map4 = Map4::generate(rng);
+            let mut map5 = Self::from_map4(&map4);
+            let mut corners = OrdinalDirection::all().collect::<Vec<_>>();
+            corners.shuffle(rng);
+            map5.add_tentacles(corners.pop().unwrap(), &tentacle_spec, rng);
+            map5.clear_around_tentactle();
+            if !map5.add_stairs(corners.pop().unwrap(), Tile5::StairsDown, rng) {
+                continue;
+            }
+            if !map5.add_stairs(corners.pop().unwrap(), Tile5::StairsUp, rng) {
+                continue;
+            }
+            break map5;
+        }
     }
 }
 

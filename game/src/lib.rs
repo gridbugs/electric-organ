@@ -15,7 +15,7 @@ pub mod witness;
 mod world;
 
 pub use visible_area_detection::{
-    vision_distance::Circle, CellVisibility, VisibilityGrid, World as VisibleWorld,
+    vision_distance::Circle, CellVisibility, Light, VisibilityGrid, World as VisibleWorld,
 };
 pub use world::data::{Layer, Location, Meter, Tile};
 use world::{
@@ -117,6 +117,14 @@ impl VisibleWorld for World {
             0
         }
     }
+
+    fn for_each_light_by_coord<F: FnMut(Coord, &Light<Self::VisionDistance>)>(&self, mut f: F) {
+        for (entity, light) in self.components.light.iter() {
+            if let Some(coord) = self.spatial_table.coord_of(entity) {
+                f(coord, light);
+            }
+        }
+    }
 }
 
 pub enum ActionError {}
@@ -178,9 +186,9 @@ impl Game {
                 update_fn,
             );
         } else {
-            let distance = Circle::new_squared(300);
+            let distance = Circle::new_squared(500);
             self.visibility_grid.update_custom(
-                Rgb24::new_grey(255),
+                Rgb24::new_grey(0),
                 &self.world,
                 distance,
                 self.player_coord(),

@@ -667,41 +667,47 @@ fn game_menu(menu_witness: witness::Menu) -> AppCF<Witness> {
     })
 }
 
+pub fn pre_game_screen() -> AppCF<()> {
+    if cfg!(feature = "web") {
+        text::press_any_key_to_begin(MAIN_MENU_TEXT_WIDTH).press_any_key()
+    } else {
+        unit().some()
+    }
+}
+
 pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
     use GameLoopState::*;
-    text::press_any_key_to_begin(MAIN_MENU_TEXT_WIDTH)
-        .press_any_key()
-        .then(|| {
-            loop_(initial_state, |state| match state {
-                Playing(witness) => match witness {
-                    Witness::Running(running) => game_instance_component(running).continue_(),
-                    Witness::GameOver(reason) => game_over(reason).map_val(|| MainMenu).continue_(),
-                    Witness::Win(_) => win().map_val(|| MainMenu).continue_(),
-                    Witness::Menu(menu_) => game_menu(menu_).map(Playing).continue_(),
-                },
-                Paused(running) => pause(running).map(|pause_output| match pause_output {
-                    PauseOutput::ContinueGame { running } => {
-                        LoopControl::Continue(Playing(running.into_witness()))
-                    }
-                    PauseOutput::MainMenu => LoopControl::Continue(MainMenu),
-                    PauseOutput::Quit => LoopControl::Break(()),
-                }),
-                MainMenu => main_menu_loop().map(|main_menu_output| match main_menu_output {
-                    MainMenuOutput::NewGame { new_running } => {
-                        LoopControl::Continue(Playing(new_running.into_witness()))
-                    }
-                    MainMenuOutput::Quit => LoopControl::Break(()),
-                }),
-            })
-            .bound_size(Size::new_u16(80, 30))
-            .on_each_tick({
-                use currawong::signal_player::SignalPlayer;
-                let mut signal = crate::music::signal() * 0.0;
-                let mut signal_player = SignalPlayer::new().unwrap();
-                signal_player.set_buffer_padding_sample_rate_ratio(0.25);
-                move || {
-                    signal_player.send_signal(&mut signal);
+    pre_game_screen().then(|| {
+        loop_(initial_state, |state| match state {
+            Playing(witness) => match witness {
+                Witness::Running(running) => game_instance_component(running).continue_(),
+                Witness::GameOver(reason) => game_over(reason).map_val(|| MainMenu).continue_(),
+                Witness::Win(_) => win().map_val(|| MainMenu).continue_(),
+                Witness::Menu(menu_) => game_menu(menu_).map(Playing).continue_(),
+            },
+            Paused(running) => pause(running).map(|pause_output| match pause_output {
+                PauseOutput::ContinueGame { running } => {
+                    LoopControl::Continue(Playing(running.into_witness()))
                 }
-            })
+                PauseOutput::MainMenu => LoopControl::Continue(MainMenu),
+                PauseOutput::Quit => LoopControl::Break(()),
+            }),
+            MainMenu => main_menu_loop().map(|main_menu_output| match main_menu_output {
+                MainMenuOutput::NewGame { new_running } => {
+                    LoopControl::Continue(Playing(new_running.into_witness()))
+                }
+                MainMenuOutput::Quit => LoopControl::Break(()),
+            }),
         })
+        .bound_size(Size::new_u16(80, 30))
+        .on_each_tick({
+            use currawong::signal_player::SignalPlayer;
+            let mut signal = crate::music::signal() * 0.0;
+            let mut signal_player = SignalPlayer::new().unwrap();
+            signal_player.set_buffer_padding_sample_rate_ratio(0.25);
+            move || {
+                signal_player.send_signal(&mut signal);
+            }
+        })
+    })
 }

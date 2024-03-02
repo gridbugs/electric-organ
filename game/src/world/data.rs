@@ -1,6 +1,7 @@
 pub use crate::world::spatial::{Layer, Location};
 use entity_table::declare_entity_module;
 use serde::{Deserialize, Serialize};
+use visible_area_detection::{vision_distance, Light};
 
 declare_entity_module! {
     components {
@@ -9,6 +10,7 @@ declare_entity_module! {
         door_state: DoorState,
         opacity: u8,
         stairs_down: (),
+        light: Light<vision_distance::Circle>,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -26,6 +28,7 @@ pub enum Tile {
     StairsDown,
     StairsUp,
     Debris,
+    DebrisBurning,
     Tentacle,
     TentacleGlow,
 }

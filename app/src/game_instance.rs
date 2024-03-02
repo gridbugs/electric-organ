@@ -5,7 +5,23 @@ use game::{
     CellVisibility, Config, Layer, Tile, Victory,
 };
 use rand::Rng;
+use rgb_int::Rgb24;
 use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy)]
+struct LightBlend {
+    light_colour: Rgb24,
+}
+
+impl Tint for LightBlend {
+    fn tint(&self, rgba32: Rgba32) -> Rgba32 {
+        rgba32
+            .to_rgb24()
+            .normalised_mul(self.light_colour)
+            .saturating_add(self.light_colour.saturating_scalar_mul_div(1, 5))
+            .to_rgba32(255)
+    }
+}
 
 pub struct GameInstance {
     pub game: Game,
@@ -87,7 +103,7 @@ impl GameInstance {
                     character: Some('#'),
                     style: Style::new()
                         .with_bold(false)
-                        .with_foreground(Rgba32::new_grey(255))
+                        .with_foreground(colours::VAPORWAVE_FOREGROUND.to_rgba32(255))
                         .with_background(colours::VAPORWAVE_BACKGROUND.to_rgba32(255)),
                 };
             }
@@ -100,12 +116,23 @@ impl GameInstance {
                         .with_background(colours::DAMAGED_BACKGROUND.to_rgba32(255)),
                 };
             }
+            Tile::DebrisBurning => {
+                return RenderCell {
+                    character: Some('%'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgba32::new_grey(255))
+                        .with_background(colours::FIRE.to_rgba32(255)),
+                };
+            }
+
             Tile::DoorClosed => {
                 return RenderCell {
                     character: Some('+'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255)),
+                        .with_foreground(Rgba32::new_grey(255))
+                        .with_background(colours::STAIRS.to_rgba32(255)),
                 };
             }
             Tile::DoorOpen => {
@@ -113,7 +140,8 @@ impl GameInstance {
                     character: Some('-'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255)),
+                        .with_foreground(Rgba32::new_grey(255))
+                        .with_background(colours::STAIRS.to_rgba32(255)),
                 };
             }
             Tile::StairsDown => {
@@ -172,17 +200,20 @@ impl GameInstance {
                             let depth = Self::layer_to_depth(layer);
                             let mut render_cell = Self::tile_to_render_cell(tile);
                             render_cell.style.background = Some(background);
-                            render_cell.style.foreground = Some(Rgba32::new_grey(63));
+                            render_cell.style.foreground = Some(colours::STAIRS.to_rgba32(127));
                             fb.set_cell_relative_to_ctx(ctx, coord, depth, render_cell);
                         }
                     });
                 }
-                CellVisibility::Current { data, .. } => {
+                CellVisibility::Current { data, light_colour } => {
+                    let light_colour = light_colour.unwrap_or(Rgb24::new_grey(0));
+                    let tint = LightBlend { light_colour };
+                    let blend_ctx = ctx.with_tint(&tint);
                     data.tiles.for_each_enumerate(|tile, layer| {
                         if let Some(&tile) = tile.as_ref() {
                             let depth = Self::layer_to_depth(layer);
                             let render_cell = Self::tile_to_render_cell(tile);
-                            fb.set_cell_relative_to_ctx(ctx, coord, depth, render_cell);
+                            fb.set_cell_relative_to_ctx(blend_ctx, coord, depth, render_cell);
                         }
                     });
                 }

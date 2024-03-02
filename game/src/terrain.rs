@@ -62,6 +62,7 @@ impl Terrain {
         let mut world = World::new(map.grid.size());
         let mut player_spawn = None;
         let mut tentacle_count = 0;
+        let mut debris_count = 0;
         for (coord, &tile) in map.grid.enumerate() {
             match tile {
                 Tile::Street => {
@@ -81,7 +82,12 @@ impl Terrain {
                     world.spawn_floor(coord);
                 }
                 Tile::Debris => {
-                    world.spawn_debris(coord);
+                    if debris_count % 5 == 0 {
+                        world.spawn_debris_burning(coord);
+                    } else {
+                        world.spawn_debris(coord);
+                    }
+                    debris_count += 1;
                 }
                 Tile::Door => {
                     world.spawn_floor(coord);

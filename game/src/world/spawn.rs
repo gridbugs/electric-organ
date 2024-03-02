@@ -7,10 +7,20 @@ use crate::{
 };
 use coord_2d::Coord;
 use entity_table::entity_data;
+use rgb_int::Rgb24;
+use visible_area_detection::{vision_distance, Light, Rational};
 
 pub fn make_player() -> EntityData {
     EntityData {
         tile: Some(Tile::Player),
+        light: Some(Light {
+            colour: Rgb24::new(127, 127, 127),
+            vision_distance: vision_distance::Circle::new_squared(200),
+            diminish: Rational {
+                numerator: 1,
+                denominator: 100,
+            },
+        }),
         ..Default::default()
     }
 }
@@ -54,6 +64,24 @@ impl World {
         )
     }
 
+    pub fn spawn_debris_burning(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Feature),
+            entity_data! {
+                tile: Tile::DebrisBurning,
+                solid: (),
+                light: Light {
+                    colour: Rgb24::new(255, 127, 0),
+                    vision_distance: vision_distance::Circle::new_squared(200),
+                    diminish: Rational {
+                        numerator: 1,
+                        denominator: 40,
+                    },
+                },
+            },
+        )
+    }
+
     pub fn spawn_tentacle(&mut self, coord: Coord) -> Entity {
         self.spawn_entity(
             (coord, Layer::Feature),
@@ -70,6 +98,14 @@ impl World {
             entity_data! {
                 tile: Tile::TentacleGlow,
                 solid: (),
+                light: Light {
+                    colour: Rgb24::new(127, 255, 0),
+                    vision_distance: vision_distance::Circle::new_squared(200),
+                    diminish: Rational {
+                        numerator: 1,
+                        denominator: 40,
+                    },
+                },
             },
         )
     }
@@ -128,6 +164,14 @@ impl World {
             entity_data! {
                 tile: Tile::StairsDown,
                 stairs_down: (),
+                light: Light {
+                    colour: Rgb24::new(0, 255, 255),
+                    vision_distance: vision_distance::Circle::new_squared(200),
+                    diminish: Rational {
+                        numerator: 1,
+                        denominator: 40,
+                    },
+                },
             },
         )
     }
@@ -137,6 +181,15 @@ impl World {
             (coord, Layer::Feature),
             entity_data! {
                 tile: Tile::StairsUp,
+                light: Light {
+                    colour: Rgb24::new(0, 255, 255),
+                    vision_distance: vision_distance::Circle::new_squared(200),
+                    diminish: Rational {
+                        numerator: 1,
+                        denominator: 40,
+                    },
+
+                },
             },
         )
     }

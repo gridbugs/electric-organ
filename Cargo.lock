@@ -2652,9 +2652,9 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "visible_area_detection"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42e8264bb79c53d0b79f0ec65973e929d2927ce7bdc80738e30784fbf488c255"
+checksum = "24d0175757176c56223c2b80242ff2a5e35c0e42aaff710d4c388c5f5ff9ab24"
 dependencies = [
  "direction",
  "grid_2d",
