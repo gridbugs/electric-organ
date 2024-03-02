@@ -1,3 +1,4 @@
+use crate::colours;
 use chargrid::{prelude::*, text};
 use game::{
     witness::{self, Game, RunningGame},
@@ -36,7 +37,7 @@ impl GameInstance {
     }
 
     fn tile_to_render_cell(tile: Tile) -> RenderCell {
-        let character = match tile {
+        match tile {
             Tile::Player => {
                 return RenderCell {
                     character: Some('@'),
@@ -45,37 +46,111 @@ impl GameInstance {
                         .with_foreground(Rgba32::new_grey(255)),
                 };
             }
+            Tile::Street => {
+                return RenderCell {
+                    character: Some('.'),
+                    style: Style::new()
+                        .with_bold(false)
+                        .with_foreground(Rgba32::new_grey(127))
+                        .with_background(colours::STREET_BACKGROUND.to_rgba32(255)),
+                };
+            }
+            Tile::Alley => {
+                return RenderCell {
+                    character: Some('.'),
+                    style: Style::new()
+                        .with_bold(false)
+                        .with_foreground(Rgba32::new_grey(127))
+                        .with_background(colours::STREET_BACKGROUND.to_rgba32(255)),
+                };
+            }
+            Tile::Footpath => {
+                return RenderCell {
+                    character: Some('.'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgba32::new_grey(255))
+                        .with_background(colours::VAPORWAVE_BACKGROUND.to_rgba32(255)),
+                };
+            }
             Tile::Floor => {
                 return RenderCell {
                     character: Some('.'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(127)),
+                        .with_foreground(Rgba32::new_grey(255))
+                        .with_background(colours::VAPORWAVE_BACKGROUND.to_rgba32(255)),
                 };
             }
-            Tile::Wall => '#',
-            Tile::DoorClosed => '+',
-            Tile::DoorOpen => '-',
-            Tile::StairsDown => {
+            Tile::Wall => {
                 return RenderCell {
-                    character: Some('>'),
+                    character: Some('#'),
+                    style: Style::new()
+                        .with_bold(false)
+                        .with_foreground(Rgba32::new_grey(255))
+                        .with_background(colours::VAPORWAVE_BACKGROUND.to_rgba32(255)),
+                };
+            }
+            Tile::Debris => {
+                return RenderCell {
+                    character: Some('%'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgba32::new_grey(255))
+                        .with_background(colours::DAMAGED_BACKGROUND.to_rgba32(255)),
+                };
+            }
+            Tile::DoorClosed => {
+                return RenderCell {
+                    character: Some('+'),
                     style: Style::new()
                         .with_bold(true)
                         .with_foreground(Rgba32::new_grey(255)),
                 };
             }
+            Tile::DoorOpen => {
+                return RenderCell {
+                    character: Some('-'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgba32::new_grey(255)),
+                };
+            }
+            Tile::StairsDown => {
+                return RenderCell {
+                    character: Some('>'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgba32::new_grey(255))
+                        .with_background(colours::STAIRS.to_rgba32(255)),
+                };
+            }
+            Tile::StairsUp => {
+                return RenderCell {
+                    character: Some('<'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgba32::new_grey(255))
+                        .with_background(colours::STAIRS.to_rgba32(255)),
+                };
+            }
+            Tile::Tentacle => {
+                return RenderCell {
+                    character: Some('█'),
+                    style: Style::new().with_foreground(colours::BIO.to_rgba32(255)),
+                };
+            }
+            Tile::TentacleGlow => {
+                return RenderCell {
+                    character: Some('▒'),
+                    style: Style::new().with_foreground(colours::BIO.to_rgba32(255)),
+                };
+            }
         };
-        RenderCell {
-            character: Some(character),
-            style: Style::new()
-                .with_bold(false)
-                .with_foreground(Rgba32::new_grey(187)),
-        }
     }
 
     pub fn render_game(&self, ctx: Ctx, fb: &mut FrameBuffer) {
-        let centre_coord_delta =
-            self.game.inner_ref().player_coord() - (ctx.bounding_box.size() / 2);
+        let centre_coord_delta = Coord::new(0, 0);
         for coord in ctx.bounding_box.size().coord_iter_row_major() {
             let cell = self
                 .game

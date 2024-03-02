@@ -134,15 +134,22 @@ pub struct Game {
     visibility_grid: VisibilityGrid<VisibleCellData>,
     messages: Vec<String>,
     ai_ctx: AiCtx,
+    omniscient: bool,
 }
 
 impl Game {
-    pub fn new<R: Rng>(_config: &Config, _victories: Vec<Victory>, base_rng: &mut R) -> Self {
-        let rng = Isaac64Rng::seed_from_u64(base_rng.gen());
+    pub fn new<R: Rng>(config: &Config, _victories: Vec<Victory>, base_rng: &mut R) -> Self {
+        let mut rng = Isaac64Rng::seed_from_u64(base_rng.gen());
         let Terrain {
-            world,
-            player_entity,
-        } = Terrain::generate_text(world::spawn::make_player());
+            mut world,
+            player_spawn,
+        } = Terrain::generate(&mut rng);
+        let player_data = world::spawn::make_player();
+        let player_location = Location {
+            coord: player_spawn,
+            layer: Some(Layer::Character),
+        };
+        let player_entity = world.insert_entity_data(player_location, player_data);
         let mut game = Self {
             rng,
             visibility_grid: VisibilityGrid::new(world.spatial_table.grid_size()),
@@ -150,6 +157,7 @@ impl Game {
             player_entity,
             messages: Vec::new(),
             ai_ctx: Default::default(),
+            omniscient: config.omniscient.is_some(),
         };
         game.update_visibility();
         game
@@ -163,14 +171,22 @@ impl Game {
         let update_fn = |data: &mut VisibleCellData, coord| {
             data.update(&self.world, coord);
         };
-        let distance = Circle::new_squared(150);
-        self.visibility_grid.update_custom(
-            Rgb24::new_grey(255),
-            &self.world,
-            distance,
-            self.player_coord(),
-            update_fn,
-        );
+        if self.omniscient {
+            self.visibility_grid.update_omniscient_custom(
+                Rgb24::new_grey(255),
+                &self.world,
+                update_fn,
+            );
+        } else {
+            let distance = Circle::new_squared(300);
+            self.visibility_grid.update_custom(
+                Rgb24::new_grey(255),
+                &self.world,
+                distance,
+                self.player_coord(),
+                update_fn,
+            );
+        }
     }
 
     pub fn cell_visibility_at_coord(&self, coord: Coord) -> CellVisibility<&VisibleCellData> {

@@ -1,6 +1,7 @@
 use chargrid::{control_flow::*, core::*};
 use game::Config;
 
+mod colours;
 mod controls;
 mod game_instance;
 mod game_loop;

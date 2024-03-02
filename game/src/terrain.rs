@@ -7,21 +7,21 @@ use crate::{
     Entity,
 };
 use coord_2d::{Coord, Size};
-use procgen::city::{Map, TentacleSpec};
+use procgen::city::{Map, TentacleSpec, Tile};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 pub struct Terrain {
     pub world: World,
-    pub player_entity: Entity,
+    pub player_spawn: Coord,
 }
 
 impl Terrain {
     #[allow(unused)]
-    pub fn generate_text(player_data: EntityData) -> Self {
-        let mut player_entity: Option<Entity> = None;
+    pub fn generate_text() -> Self {
         let txt = include_str!("terrain.txt");
         let rows = txt.split('\n').collect::<Vec<_>>();
         let mut world = World::new(Size::new(rows[0].len() as u32, rows.len() as u32));
+        let mut player_spawn = None;
         for (y, row) in rows.into_iter().enumerate() {
             for (x, ch) in row.chars().enumerate() {
                 let coord = Coord::new(x as i32, y as i32);
@@ -38,25 +38,20 @@ impl Terrain {
                         world.spawn_stairs_down(coord);
                     }
                     '@' => {
-                        let player_location = Location {
-                            layer: Some(Layer::Character),
-                            coord,
-                        };
-                        player_entity =
-                            Some(world.insert_entity_data(player_location, player_data.clone()));
+                        player_spawn = Some(coord);
                     }
                     _ => log::warn!("unexpected char: {}", ch),
                 }
             }
         }
-        let player_entity = player_entity.expect("no player in terrain file");
+        let player_spawn = player_spawn.expect("no player in terrain file");
         Self {
             world,
-            player_entity,
+            player_spawn,
         }
     }
 
-    pub fn generate<R: Rng>(player_data: EntityData, rng: &mut R) -> Self {
+    pub fn generate<R: Rng>(rng: &mut R) -> Self {
         let tentacle_spec = TentacleSpec {
             num_tentacles: 3,
             segment_length: 1.5,
@@ -64,6 +59,55 @@ impl Terrain {
             spread: 0.3,
         };
         let map = Map::generate(&tentacle_spec, rng);
-        todo!()
+        let mut world = World::new(map.grid.size());
+        let mut player_spawn = None;
+        let mut tentacle_count = 0;
+        for (coord, &tile) in map.grid.enumerate() {
+            match tile {
+                Tile::Street => {
+                    world.spawn_street(coord);
+                }
+                Tile::Alley => {
+                    world.spawn_alley(coord);
+                }
+                Tile::Footpath => {
+                    world.spawn_footpath(coord);
+                }
+                Tile::Wall => {
+                    world.spawn_floor(coord);
+                    world.spawn_wall(coord);
+                }
+                Tile::Floor => {
+                    world.spawn_floor(coord);
+                }
+                Tile::Debris => {
+                    world.spawn_debris(coord);
+                }
+                Tile::Door => {
+                    world.spawn_floor(coord);
+                    world.spawn_door(coord);
+                }
+                Tile::Tentacle => {
+                    if tentacle_count % 10 == 0 {
+                        world.spawn_tentacle_glow(coord);
+                    } else {
+                        world.spawn_tentacle(coord);
+                    }
+                    tentacle_count += 1;
+                }
+                Tile::StairsDown => {
+                    world.spawn_stairs_down(coord);
+                }
+                Tile::StairsUp => {
+                    world.spawn_stairs_up(coord);
+                    player_spawn = Some(coord);
+                }
+            }
+        }
+        let player_spawn = player_spawn.expect("no player spawn in generated level");
+        Self {
+            world,
+            player_spawn,
+        }
     }
 }

@@ -18,9 +18,16 @@ pub enum Tile {
     Player,
     Floor,
     Wall,
+    Street,
+    Alley,
+    Footpath,
     DoorClosed,
     DoorOpen,
     StairsDown,
+    StairsUp,
+    Debris,
+    Tentacle,
+    TentacleGlow,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

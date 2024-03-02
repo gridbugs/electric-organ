@@ -44,11 +44,68 @@ impl World {
         )
     }
 
+    pub fn spawn_debris(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Feature),
+            entity_data! {
+                tile: Tile::Debris,
+                solid: (),
+            },
+        )
+    }
+
+    pub fn spawn_tentacle(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Feature),
+            entity_data! {
+                tile: Tile::Tentacle,
+                solid: (),
+            },
+        )
+    }
+
+    pub fn spawn_tentacle_glow(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Feature),
+            entity_data! {
+                tile: Tile::TentacleGlow,
+                solid: (),
+            },
+        )
+    }
+
     pub fn spawn_floor(&mut self, coord: Coord) -> Entity {
         self.spawn_entity(
             (coord, Layer::Floor),
             entity_data! {
                 tile: Tile::Floor,
+            },
+        )
+    }
+
+    pub fn spawn_street(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Floor),
+            entity_data! {
+                tile: Tile::Street,
+            },
+        )
+    }
+
+    pub fn spawn_alley(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Floor),
+            entity_data! {
+                tile: Tile::Alley,
+            },
+        )
+    }
+
+    pub fn spawn_footpath(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Floor),
+            entity_data! {
+                tile: Tile::Footpath,
             },
         )
     }
@@ -71,6 +128,15 @@ impl World {
             entity_data! {
                 tile: Tile::StairsDown,
                 stairs_down: (),
+            },
+        )
+    }
+
+    pub fn spawn_stairs_up(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Feature),
+            entity_data! {
+                tile: Tile::StairsUp,
             },
         )
     }

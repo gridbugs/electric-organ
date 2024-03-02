@@ -7,5 +7,5 @@ edition = "2021"
 [dependencies]
 chargrid_sdl2 = "0.4"
 env_logger = "0.11"
-app = { path = "../app" }
+app = { path = "../app", features = ["print_stdout"] }
 native = { path = "../native" }
