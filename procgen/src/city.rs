@@ -1083,10 +1083,13 @@ pub enum Tile5 {
     Debris,
     Door,
     Tentacle,
+    StairsDown,
+    StairsUp,
 }
 
 pub struct Map5 {
     pub grid: Grid<Tile5>,
+    tentacle_coords: Vec<Coord>,
 }
 
 pub struct TentacleSpec {
@@ -1108,13 +1111,19 @@ impl Map5 {
                 Tile4::Debris => Tile5::Debris,
                 Tile4::Door => Tile5::Door,
             }),
+            tentacle_coords: Vec::new(),
         }
     }
 
-    fn add_tentacles<R: Rng>(&mut self, tentacle_spec: &TentacleSpec, rng: &mut R) {
+    fn add_tentacles<R: Rng>(
+        &mut self,
+        corner: OrdinalDirection,
+        tentacle_spec: &TentacleSpec,
+        rng: &mut R,
+    ) {
         use vector::*;
         let bottom_right = self.grid.size().to_coord().unwrap();
-        let corner = match rng.gen::<OrdinalDirection>() {
+        let corner = match corner {
             OrdinalDirection::NorthEast => bottom_right.set_y(0),
             OrdinalDirection::SouthEast => bottom_right,
             OrdinalDirection::SouthWest => bottom_right.set_x(0),
@@ -1158,11 +1167,72 @@ impl Map5 {
                         for coord in rect.coord_iter() {
                             if let Some(tile) = self.grid.get_mut(coord) {
                                 *tile = Tile5::Tentacle;
+                                self.tentacle_coords.push(coord);
                             }
                         }
                     }
                 }
                 prev_coord = Some(coord);
+            }
+        }
+    }
+
+    pub fn add_stairs<R: Rng>(&mut self, corner: OrdinalDirection, tile: Tile5, rng: &mut R) {
+        let bottom_right = self.grid.size().to_coord().unwrap();
+        let corner_coord = match corner {
+            OrdinalDirection::NorthEast => bottom_right.set_y(0),
+            OrdinalDirection::SouthEast => bottom_right,
+            OrdinalDirection::SouthWest => bottom_right.set_x(0),
+            OrdinalDirection::NorthWest => Coord::new(0, 0),
+        };
+        let candidate_coords = self
+            .grid
+            .enumerate()
+            .filter_map(|(coord, &tile)| {
+                if tile == Tile5::Floor {
+                    if coord.manhattan_distance(corner_coord) < 10 {
+                        for d in Direction::all() {
+                            if self.grid.get(coord + d.coord()) == Some(&Tile5::Wall) {
+                                return None;
+                            }
+                        }
+                        return Some(coord);
+                    }
+                }
+                None
+            })
+            .collect::<Vec<_>>();
+        let stairs_coord = *candidate_coords.choose(rng).unwrap();
+        *self.grid.get_checked_mut(stairs_coord) = tile;
+    }
+
+    fn clear_around_tentactle(&mut self) {
+        let mut border = Vec::new();
+        for &coord in &self.tentacle_coords {
+            for d in Direction::all() {
+                let coord = coord + d.coord();
+                if let Some(&tile) = self.grid.get(coord) {
+                    match tile {
+                        Tile5::Wall | Tile5::Door | Tile5::Debris => {
+                            *self.grid.get_checked_mut(coord) = Tile5::Floor;
+                            border.push(coord);
+                        }
+                        _ => (),
+                    }
+                }
+            }
+        }
+        for coord in border {
+            for d in Direction::all() {
+                let coord = coord + d.coord();
+                if let Some(&tile) = self.grid.get(coord) {
+                    match tile {
+                        Tile5::Wall | Tile5::Door | Tile5::Debris => {
+                            *self.grid.get_checked_mut(coord) = Tile5::Floor;
+                        }
+                        _ => (),
+                    }
+                }
             }
         }
     }
@@ -1179,6 +1249,8 @@ impl Map5 {
                     Tile5::Debris => print!("%"),
                     Tile5::Door => print!("+"),
                     Tile5::Tentacle => print!("~"),
+                    Tile5::StairsDown => print!(">"),
+                    Tile5::StairsUp => print!("<"),
                 }
             }
             println!("");
@@ -1188,7 +1260,12 @@ impl Map5 {
     pub fn generate<R: Rng>(tentacle_spec: &TentacleSpec, rng: &mut R) -> Self {
         let map4 = Map4::generate(rng);
         let mut map5 = Self::from_map4(&map4);
-        map5.add_tentacles(&tentacle_spec, rng);
+        let mut corners = OrdinalDirection::all().collect::<Vec<_>>();
+        corners.shuffle(rng);
+        map5.add_tentacles(corners.pop().unwrap(), &tentacle_spec, rng);
+        map5.clear_around_tentactle();
+        map5.add_stairs(corners.pop().unwrap(), Tile5::StairsDown, rng);
+        map5.add_stairs(corners.pop().unwrap(), Tile5::StairsUp, rng);
         map5
     }
 }

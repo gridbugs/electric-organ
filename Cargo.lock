@@ -1003,6 +1003,7 @@ dependencies = [
  "grid_search_cardinal_distance_map",
  "line_2d",
  "log",
+ "procgen",
  "rand",
  "rand_isaac",
  "rand_range",

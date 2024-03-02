@@ -22,3 +22,4 @@ rand_isaac = { version = "0.3", features = ["serde1"] }
 vector = { path = "../util/vector" }
 rational = { path = "../util/rational" }
 rand_range = { path = "../util/rand-range" }
+procgen = { path = "../procgen" }

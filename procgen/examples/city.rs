@@ -9,8 +9,8 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(rng_seed);
     let tentacle_spec = TentacleSpec {
         num_tentacles: 3,
-        segment_length: 1.5,
-        distance_from_centre: 35.0,
+        segment_length: 2.0,
+        distance_from_centre: 40.0,
         spread: 0.3,
     };
     let map = Map::generate(&tentacle_spec, &mut rng);
