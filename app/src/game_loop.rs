@@ -702,7 +702,7 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
         .bound_size(Size::new_u16(80, 30))
         .on_each_tick({
             use currawong::signal_player::SignalPlayer;
-            let mut signal = crate::music::signal() * 0.0;
+            let mut signal = crate::music::menu::signal();
             let mut signal_player = SignalPlayer::new().unwrap();
             signal_player.set_buffer_padding_sample_rate_ratio(0.25);
             move || {
