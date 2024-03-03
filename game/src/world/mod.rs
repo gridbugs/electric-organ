@@ -1,6 +1,6 @@
 use crate::realtime::RealtimeComponents;
 use coord_2d::Size;
-use entity_table::EntityAllocator;
+use entity_table::{Entity, EntityAllocator};
 use grid_search_cardinal_distance_map::DistanceMap;
 use serde::{Deserialize, Serialize};
 
@@ -8,11 +8,12 @@ pub mod spatial;
 use spatial::SpatialTable;
 
 pub mod data;
-use data::Components;
+use data::{Components, EntityData};
 
 pub mod spawn;
 
 mod action;
+mod query;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct World {
@@ -36,5 +37,12 @@ impl World {
             spatial_table,
             distance_map: DistanceMap::new(size),
         }
+    }
+
+    pub fn remove_entity(&mut self, entity: Entity) -> EntityData {
+        self.entity_allocator.free(entity);
+        self.realtime_components.remove_entity(entity);
+        self.spatial_table.remove(entity);
+        self.components.remove_entity_data(entity)
     }
 }

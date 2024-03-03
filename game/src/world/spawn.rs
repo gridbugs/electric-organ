@@ -17,7 +17,7 @@ pub fn make_player() -> EntityData {
         character: Some(()),
         tile: Some(Tile::Player),
         light: Some(Light {
-            colour: Rgb24::new(127, 127, 127),
+            colour: Rgb24::new(150, 150, 150),
             vision_distance: vision_distance::Circle::new_squared(200),
             diminish: Rational {
                 numerator: 1,
@@ -76,7 +76,7 @@ impl World {
                 tile: Tile::DebrisBurning,
                 solid: (),
                 light: Light {
-                    colour: Rgb24::new(255, 127, 0),
+                    colour: Rgb24::new(255, 87, 0),
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
@@ -238,8 +238,28 @@ impl World {
             (coord, Layer::Feature),
             entity_data! {
                 tile: Tile::StairsUp,
+                stairs_up: (),
                 light: Light {
                     colour: Rgb24::new(0, 255, 255),
+                    vision_distance: vision_distance::Circle::new_squared(200),
+                    diminish: Rational {
+                        numerator: 1,
+                        denominator: 40,
+                    },
+
+                },
+            },
+        )
+    }
+
+    pub fn spawn_exit(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Feature),
+            entity_data! {
+                tile: Tile::Exit,
+                exit: (),
+                light: Light {
+                    colour: Rgb24::new(0, 0, 255),
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,

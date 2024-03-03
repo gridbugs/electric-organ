@@ -67,8 +67,7 @@ impl GameInstance {
                     character: Some('.'),
                     style: Style::new()
                         .with_bold(false)
-                        .with_foreground(Rgba32::new_grey(127))
-                        .with_background(colours::STREET_BACKGROUND.to_rgba32(255)),
+                        .with_foreground(Rgba32::new_grey(127)),
                 };
             }
             Tile::Alley => {
@@ -76,8 +75,7 @@ impl GameInstance {
                     character: Some('.'),
                     style: Style::new()
                         .with_bold(false)
-                        .with_foreground(Rgba32::new_grey(127))
-                        .with_background(colours::STREET_BACKGROUND.to_rgba32(255)),
+                        .with_foreground(Rgba32::new_grey(127)),
                 };
             }
             Tile::Footpath => {
@@ -85,8 +83,7 @@ impl GameInstance {
                     character: Some('.'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255))
-                        .with_background(colours::VAPORWAVE_BACKGROUND.to_rgba32(255)),
+                        .with_foreground(colours::FLOOR.to_rgba32(255)),
                 };
             }
             Tile::Floor => {
@@ -94,8 +91,7 @@ impl GameInstance {
                     character: Some('.'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255))
-                        .with_background(colours::VAPORWAVE_BACKGROUND.to_rgba32(255)),
+                        .with_foreground(colours::FLOOR.to_rgba32(255)),
                 };
             }
             Tile::Wall => {
@@ -103,8 +99,7 @@ impl GameInstance {
                     character: Some('#'),
                     style: Style::new()
                         .with_bold(false)
-                        .with_foreground(colours::VAPORWAVE_FOREGROUND.to_rgba32(255))
-                        .with_background(colours::VAPORWAVE_BACKGROUND.to_rgba32(255)),
+                        .with_foreground(colours::VAPORWAVE_FOREGROUND.to_rgba32(255)),
                 };
             }
             Tile::Debris => {
@@ -112,8 +107,7 @@ impl GameInstance {
                     character: Some('%'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255))
-                        .with_background(colours::DAMAGED_BACKGROUND.to_rgba32(255)),
+                        .with_foreground(Rgba32::new_grey(255)),
                 };
             }
             Tile::DebrisBurning => {
@@ -121,8 +115,7 @@ impl GameInstance {
                     character: Some('%'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255))
-                        .with_background(colours::FIRE.to_rgba32(255)),
+                        .with_foreground(Rgba32::new_grey(255)),
                 };
             }
 
@@ -131,8 +124,7 @@ impl GameInstance {
                     character: Some('+'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255))
-                        .with_background(colours::STAIRS.to_rgba32(255)),
+                        .with_foreground(Rgba32::new_grey(255)),
                 };
             }
             Tile::DoorOpen => {
@@ -140,8 +132,7 @@ impl GameInstance {
                     character: Some('-'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255))
-                        .with_background(colours::STAIRS.to_rgba32(255)),
+                        .with_foreground(Rgba32::new_grey(255)),
                 };
             }
             Tile::StairsDown => {
@@ -149,8 +140,7 @@ impl GameInstance {
                     character: Some('>'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255))
-                        .with_background(colours::STAIRS.to_rgba32(255)),
+                        .with_foreground(Rgba32::new_grey(255)),
                 };
             }
             Tile::StairsUp => {
@@ -158,8 +148,7 @@ impl GameInstance {
                     character: Some('<'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgba32::new_grey(255))
-                        .with_background(colours::STAIRS.to_rgba32(255)),
+                        .with_foreground(Rgba32::new_grey(255)),
                 };
             }
             Tile::Tentacle => {
@@ -172,6 +161,12 @@ impl GameInstance {
                 return RenderCell {
                     character: Some('▒'),
                     style: Style::new().with_foreground(colours::BIO.to_rgba32(255)),
+                };
+            }
+            Tile::Exit => {
+                return RenderCell {
+                    character: Some('Ω'),
+                    style: Style::new().with_foreground(Rgb24::new(255, 0, 0).to_rgba32(255)),
                 };
             }
         };

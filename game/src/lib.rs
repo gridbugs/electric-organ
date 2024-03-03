@@ -173,12 +173,20 @@ struct AiCtx {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Game {
+struct Level {
     world: World,
+    visibility_grid: VisibilityGrid<VisibleCellData>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Game {
+    current_level_index: usize,
+    other_levels: Vec<Option<Level>>,
+    world: World,
+    visibility_grid: VisibilityGrid<VisibleCellData>,
     rng: Isaac64Rng,
     animation_rng: Isaac64Rng,
     player_entity: Entity,
-    visibility_grid: VisibilityGrid<VisibleCellData>,
     message_log: Vec<Message>,
     ai_ctx: AiCtx,
     animation_context: AnimationContext,
@@ -186,14 +194,28 @@ pub struct Game {
     external_events: Vec<ExternalEvent>,
 }
 
+pub const NUM_LEVELS: usize = 6;
+
 impl Game {
     pub fn new<R: Rng>(config: &Config, _victories: Vec<Victory>, base_rng: &mut R) -> Self {
         let mut rng = Isaac64Rng::seed_from_u64(base_rng.gen());
         let animation_rng = Isaac64Rng::seed_from_u64(base_rng.gen());
-        let Terrain {
+        let mut other_levels = (0..NUM_LEVELS)
+            .map(|i| {
+                let Terrain { world } = Terrain::generate(i, &mut rng);
+                let visibility_grid = VisibilityGrid::new(world.spatial_table.grid_size());
+                Some(Level {
+                    world,
+                    visibility_grid,
+                })
+            })
+            .collect::<Vec<_>>();
+        let current_level_index = 0;
+        let Level {
             mut world,
-            player_spawn,
-        } = Terrain::generate(&mut rng);
+            visibility_grid,
+        } = other_levels[current_level_index].take().unwrap();
+        let player_spawn = world.stairs_up_or_exit_coord().unwrap();
         let player_data = world::spawn::make_player();
         let player_location = Location {
             coord: player_spawn,
@@ -201,10 +223,12 @@ impl Game {
         };
         let player_entity = world.insert_entity_data(player_location, player_data);
         let mut game = Self {
+            current_level_index,
+            other_levels,
+            world,
+            visibility_grid,
             rng,
             animation_rng,
-            visibility_grid: VisibilityGrid::new(world.spatial_table.grid_size()),
-            world,
             player_entity,
             message_log: Vec::new(),
             ai_ctx: Default::default(),
@@ -214,6 +238,34 @@ impl Game {
         };
         game.update_visibility();
         game
+    }
+
+    pub fn enter_level(&mut self, level_index: usize) {
+        use std::mem;
+        assert!(
+            level_index == self.current_level_index + 1
+                || level_index == self.current_level_index - 1
+        );
+        let down = level_index == self.current_level_index + 1;
+        let player_data = self.world.remove_entity(self.player_entity);
+        let mut level = self.other_levels[level_index].take().unwrap();
+        mem::swap(&mut self.world, &mut level.world);
+        mem::swap(&mut self.visibility_grid, &mut level.visibility_grid);
+        self.other_levels[self.current_level_index] = Some(level);
+        self.current_level_index = level_index;
+        let player_coord = if down {
+            self.world.stairs_up_or_exit_coord().unwrap()
+        } else {
+            self.world.stairs_down_coord().unwrap()
+        };
+        self.player_entity = self.world.insert_entity_data(
+            Location {
+                layer: Some(Layer::Character),
+                coord: player_coord,
+            },
+            player_data,
+        );
+        self.update_visibility();
     }
 
     pub fn message_log(&self) -> &[Message] {
@@ -231,7 +283,7 @@ impl Game {
                 update_fn,
             );
         } else {
-            let distance = Circle::new_squared(500);
+            let distance = Circle::new_squared(200);
             self.visibility_grid.update_custom(
                 Rgb24::new_grey(0),
                 &self.world,
@@ -267,17 +319,25 @@ impl Game {
         );
     }
 
-    fn open_door_entity_adjacent_to_coord(&self, coord: Coord) -> Option<Entity> {
+    fn open_door_entity_adjacent_to_coord(
+        &self,
+        coord: Coord,
+        dest_coord: Coord,
+    ) -> Option<Entity> {
         for direction in Direction::all() {
             let potential_door_coord = coord + direction.coord();
-            if let Some(&Layers {
-                feature: Some(feature_entity),
-                ..
-            }) = self.world.spatial_table.layers_at(potential_door_coord)
-            {
-                if let Some(DoorState::Open) = self.world.components.door_state.get(feature_entity)
+            let delta = dest_coord - potential_door_coord;
+            if delta.x.abs() <= 1 && delta.y.abs() <= 1 {
+                if let Some(&Layers {
+                    feature: Some(feature_entity),
+                    ..
+                }) = self.world.spatial_table.layers_at(potential_door_coord)
                 {
-                    return Some(feature_entity);
+                    if let Some(DoorState::Open) =
+                        self.world.components.door_state.get(feature_entity)
+                    {
+                        return Some(feature_entity);
+                    }
                 }
             }
         }
@@ -317,22 +377,35 @@ impl Game {
             // Don't let the player walk through solid entities
             if self.world.components.solid.contains(feature_entity) {
                 if let Some(open_door_entity) =
-                    self.open_door_entity_adjacent_to_coord(player_coord)
+                    self.open_door_entity_adjacent_to_coord(player_coord, new_player_coord)
                 {
                     self.close_door(open_door_entity);
                 }
                 return None;
-            }
-            // Exercise win logic
-            if self.world.components.stairs_down.contains(feature_entity) {
-                return Some(GameControlFlow::Win);
             }
         }
         self.world
             .spatial_table
             .update_coord(self.player_entity, new_player_coord)
             .unwrap();
+        self.change_level_if_player_is_on_stairs();
         None
+    }
+
+    fn change_level_if_player_is_on_stairs(&mut self) {
+        let player_coord = self.player_coord();
+        if let Some(feature_entity) = self
+            .world
+            .spatial_table
+            .layers_at_checked(player_coord)
+            .feature
+        {
+            if self.world.components.stairs_down.contains(feature_entity) {
+                self.enter_level(self.current_level_index + 1);
+            } else if self.world.components.stairs_up.contains(feature_entity) {
+                self.enter_level(self.current_level_index - 1);
+            }
+        }
     }
 
     fn npc_turn(&mut self) -> Option<GameControlFlow> {

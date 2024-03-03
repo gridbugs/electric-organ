@@ -346,6 +346,16 @@ impl GameLoopData {
         )
     }
 
+    // XXX the witness system is overly restrictive
+    fn try_save_instance_cheat(&mut self) {
+        if let Some(instance) = self.instance.take() {
+            let instance = instance.into_storable(witness::Running::cheat());
+            self.storage.save_game(&instance);
+            let (instance, _running) = instance.into_game_instance();
+            self.instance = Some(instance);
+        }
+    }
+
     fn save_instance(&mut self, running: witness::Running) -> witness::Running {
         let instance = self.instance.take().unwrap().into_storable(running);
         self.storage.save_game(&instance);
@@ -718,5 +728,6 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
         })
         .bound_size(Size::new_u16(80, 30))
         .on_each_tick_with_state(|state| state.music_state.tick())
+        .on_exit_with_state(|state| state.try_save_instance_cheat())
     })
 }

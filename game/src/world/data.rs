@@ -16,6 +16,8 @@ declare_entity_module! {
         door_state: DoorState,
         opacity: u8,
         stairs_down: (),
+        stairs_up: (),
+        exit: (),
         colour_hint: Rgba32,
         light: Light<vision_distance::Circle>,
         collides_with: CollidesWith,
@@ -41,6 +43,7 @@ pub enum Tile {
     DebrisBurning,
     Tentacle,
     TentacleGlow,
+    Exit,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
