@@ -287,6 +287,7 @@ impl GameLoopData {
         mut storage: AppStorage,
         initial_rng_seed: InitialRngSeed,
         force_new_game: bool,
+        mute: bool,
     ) -> (Self, GameLoopState) {
         let mut rng_seed_source = RngSeedSource::new(initial_rng_seed);
         let config = storage.load_config().unwrap_or_default();
@@ -319,7 +320,11 @@ impl GameLoopData {
             controls
         };
         let music_state = MusicState::new();
-        music_state.set_volume(0.5);
+        if mute {
+            music_state.set_volume(0.0);
+        } else {
+            music_state.set_volume(0.5);
+        }
         if instance.is_some() {
             music_state.set_track(Some(Track::Level));
         } else {

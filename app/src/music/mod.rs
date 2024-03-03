@@ -27,7 +27,15 @@ impl Control {
 pub struct MusicState {
     control: Rc<RefCell<Control>>,
     signal: Sf64,
-    signal_player: SignalPlayer,
+    // This starts as `None` becuse when running in a browser, an audio context can only be created
+    // in response to IO.
+    signal_player: Option<SignalPlayer>,
+}
+
+fn make_signal_player() -> SignalPlayer {
+    let mut signal_player = SignalPlayer::new().unwrap();
+    signal_player.set_buffer_padding_sample_rate_ratio(0.25);
+    signal_player
 }
 
 impl MusicState {
@@ -41,12 +49,10 @@ impl MusicState {
                 sample * control.volume
             }
         });
-        let mut signal_player = SignalPlayer::new().unwrap();
-        signal_player.set_buffer_padding_sample_rate_ratio(0.25);
         Self {
             control,
             signal,
-            signal_player,
+            signal_player: None,
         }
     }
 
@@ -56,7 +62,7 @@ impl MusicState {
             None => const_(0.0),
             Some(Track::Level) => level::signal(),
             Some(Track::Menu) => menu::signal(),
-        } * 0.0
+        }
     }
 
     pub fn set_volume(&self, volume: f64) {
@@ -64,6 +70,12 @@ impl MusicState {
     }
 
     pub fn tick(&mut self) {
-        self.signal_player.send_signal(&mut self.signal);
+        if self.signal_player.is_none() {
+            self.signal_player = Some(make_signal_player());
+        }
+        self.signal_player
+            .as_mut()
+            .unwrap()
+            .send_signal(&mut self.signal);
     }
 }

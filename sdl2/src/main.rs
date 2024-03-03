@@ -11,6 +11,7 @@ fn main() {
         initial_rng_seed,
         omniscient,
         new_game,
+        mute,
     } = NativeCommon::parser()
         .with_help_default()
         .parse_env_or_exit();
@@ -42,5 +43,6 @@ fn main() {
         initial_rng_seed,
         omniscient,
         new_game,
+        mute,
     }));
 }

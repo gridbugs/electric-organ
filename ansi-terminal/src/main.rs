@@ -50,6 +50,7 @@ fn main() {
                 initial_rng_seed,
                 omniscient,
                 new_game,
+                mute,
             },
         col_encode_choice,
     } = Args::parser().with_help_default().parse_env_or_exit();
@@ -70,6 +71,7 @@ fn main() {
         initial_rng_seed: InitialRngSeed::U64(initial_rng_seed),
         omniscient,
         new_game,
+        mute,
     });
     use ColEncodeChoice as C;
     match col_encode_choice {
