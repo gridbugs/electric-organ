@@ -28,51 +28,6 @@ fn drum_loop(trigger: Trigger, pattern: Vec<u8>) -> Sf64 {
     )
 }
 
-fn voice2(
-    VoiceDesc {
-        note,
-        key_down,
-        key_press,
-        ..
-    }: VoiceDesc,
-    effect_x: Sf64,
-    effect_y: Sf64,
-) -> Sf64 {
-    let oscillator = oscillator_hz(Waveform::Saw, note.freq_hz()).build();
-    let env = adsr_linear_01(&key_down)
-        .key_press(key_press)
-        .attack_s(0.0)
-        .decay_s(0.1)
-        .sustain_01(0.1)
-        .release_s(0.0)
-        .build()
-        .exp_01(1.0);
-    oscillator.filter(
-        low_pass_moog_ladder(env * (30 * note.freq_hz() * effect_x))
-            .resonance(4.0 * effect_y)
-            .build(),
-    )
-}
-
-fn voice3(
-    VoiceDesc {
-        note,
-        key_down,
-        key_press,
-        ..
-    }: VoiceDesc,
-) -> Sf64 {
-    let freq = note.freq_hz() / 2;
-    let osc = pulse_pwm_hz(&freq / 2).build();
-    let env = adsr_linear_01(&key_down)
-        .key_press(key_press)
-        .attack_s(0.0)
-        .release_s(0.1)
-        .build()
-        .exp_01(1.0);
-    osc * env
-}
-
 fn voice4(
     VoiceDesc {
         note,
@@ -116,42 +71,6 @@ fn bass_voice(
         .build()
         .exp_01(1.0);
     osc.filter(low_pass_moog_ladder(5000.0).build()) * env
-}
-
-fn arp_shape(trigger: Trigger) -> Signal<ArpeggiatorShape> {
-    use rand::{rngs::StdRng, Rng, SeedableRng};
-    use std::{cell::RefCell, rc::Rc};
-    struct State {
-        rng: StdRng,
-        indices: Vec<Option<usize>>,
-    }
-    let state = Rc::new(RefCell::new(State {
-        rng: StdRng::from_entropy(),
-        indices: vec![Some(0); 8],
-    }));
-    const MAX_INDEX: usize = 6;
-    trigger
-        .divide(16)
-        .on_unit({
-            let state = Rc::clone(&state);
-            move || {
-                let mut state = state.borrow_mut();
-                let index_to_change = state.rng.gen::<usize>() % state.indices.len();
-                let value = if state.indices.len() <= 1 || state.rng.gen::<f64>() < 0.9 {
-                    Some(state.rng.gen::<usize>() % MAX_INDEX)
-                } else {
-                    None
-                };
-                state.indices[index_to_change] = value;
-            }
-        })
-        .map({
-            let state = Rc::clone(&state);
-            move |()| {
-                let state = state.borrow();
-                ArpeggiatorShape::Indices(state.indices.clone())
-            }
-        })
 }
 
 fn virtual_key_events_bass(trigger: Trigger) -> Signal<Vec<KeyEvent>> {
@@ -205,10 +124,6 @@ fn virtual_key_events(trigger: Trigger) -> Signal<Vec<KeyEvent>> {
         .divide(32)
         .on({
             let state = Rc::clone(&state);
-            let inversion = Inversion::WithRootOctave {
-                root_octave: Octave::OCTAVE_3,
-                lowest_position: ChordPosition::Root,
-            };
             let inversion = Inversion::InOctave {
                 octave_base: note::A2,
             };
