@@ -10,8 +10,8 @@ impl Effects {
     fn new() -> Self {
         Self {
             tempo: const_(0.3),
-            drum_volume: const_(0.5),
-            drum_low_pass_filter: const_(0.5),
+            drum_volume: const_(0.4),
+            drum_low_pass_filter: const_(0.3),
         }
     }
 }
@@ -195,7 +195,7 @@ pub fn signal() -> Sf64 {
     let snare = 1 << 1;
     let kick = 1 << 2;
     let trigger = periodic_trigger_hz(effects.tempo * 8).build();
-    let drums = drum_loop(trigger.clone(), vec![kick, snare]);
+    let drums = drum_loop(trigger.divide(2), vec![kick, snare]);
     let arp_config = ArpeggiatorConfig::default()
         .shape(arp_shape(trigger.clone()))
         .extend_octaves_high(1);
@@ -227,6 +227,6 @@ pub fn signal() -> Sf64 {
     let bass = voice1_bass(bass_desc);
     (drums.filter(low_pass_moog_ladder(effects.drum_low_pass_filter * 20000).build())
         * effects.drum_volume)
-        + keys
-        + bass
+        + keys * 0.2
+        + bass * 0.2
 }

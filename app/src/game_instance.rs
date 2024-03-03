@@ -208,7 +208,6 @@ impl GameInstance {
                 CellVisibility::Current { data, light_colour } => {
                     let light_colour = light_colour.unwrap_or(Rgb24::new_grey(0));
                     let tint = LightBlend { light_colour };
-                    let blend_ctx = ctx.with_tint(&tint);
                     data.tiles.for_each_enumerate(|visible_entity, layer| {
                         if let Some(tile) = visible_entity.tile {
                             let depth = Self::layer_to_depth(layer);
@@ -216,7 +215,12 @@ impl GameInstance {
                             if let Some(colour_hint) = visible_entity.colour_hint {
                                 render_cell = render_cell.with_foreground(colour_hint);
                             }
-                            fb.set_cell_relative_to_ctx(blend_ctx, coord, depth, render_cell);
+                            fb.set_cell_relative_to_ctx(
+                                ctx_tint!(ctx, tint),
+                                coord,
+                                depth,
+                                render_cell,
+                            );
                         }
                     });
                 }

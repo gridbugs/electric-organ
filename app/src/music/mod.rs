@@ -56,7 +56,7 @@ impl MusicState {
             None => const_(0.0),
             Some(Track::Level) => level::signal(),
             Some(Track::Menu) => menu::signal(),
-        }
+        } * 0.0
     }
 
     pub fn set_volume(&self, volume: f64) {
