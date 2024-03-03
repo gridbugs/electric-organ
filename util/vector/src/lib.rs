@@ -79,6 +79,9 @@ impl Radians {
     pub fn random<R: Rng>(rng: &mut R) -> Self {
         Self(rng.gen_range(-::std::f64::consts::PI..::std::f64::consts::PI))
     }
+    pub fn from_degrees(degrees: f64) -> Self {
+        Self((degrees * std::f64::consts::PI * 2.0) / 360.0)
+    }
 }
 
 pub struct UniformRadians {

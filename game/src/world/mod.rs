@@ -12,6 +12,8 @@ use data::Components;
 
 pub mod spawn;
 
+mod action;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct World {
     pub entity_allocator: EntityAllocator,

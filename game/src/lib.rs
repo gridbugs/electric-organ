@@ -5,7 +5,7 @@ pub use grid_search_cardinal_distance_map as distance_map;
 pub use line_2d::{self, coords_between, coords_between_cardinal};
 use rand::{Rng, SeedableRng};
 use rand_isaac::Isaac64Rng;
-pub use rgb_int::Rgb24;
+pub use rgb_int::{Rgb24, Rgba32};
 use serde::{Deserialize, Serialize};
 pub use shadowcast::Context as ShadowcastContext;
 pub use spatial_table::UpdateError;
@@ -51,6 +51,16 @@ impl Default for Config {
     }
 }
 
+/// Events which the game can report back to the io layer so it can
+/// respond with a sound/visual effect.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+pub enum ExternalEvent {}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum Message {
+    Dummy,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum MenuImage {}
 
@@ -86,14 +96,40 @@ pub enum Input {
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
+pub struct VisibleEntity {
+    pub tile: Option<Tile>,
+    pub colour_hint: Option<Rgba32>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct VisibleCellData {
-    pub tiles: LayerTable<Option<Tile>>,
+    pub tiles: LayerTable<VisibleEntity>,
+}
+impl Default for VisibleCellData {
+    fn default() -> Self {
+        Self {
+            tiles: LayerTable {
+                floor: Default::default(),
+                feature: Default::default(),
+                character: Default::default(),
+                item: Default::default(),
+            },
+        }
+    }
 }
 
 impl VisibleCellData {
     fn update(&mut self, world: &World, coord: Coord) {
         let layers = world.spatial_table.layers_at_checked(coord);
-        self.tiles = layers.option_and_then(|&entity| world.components.tile.get(entity).cloned());
+        self.tiles = layers.map(|&entity| {
+            entity
+                .map(|entity| {
+                    let tile = world.components.tile.get(entity).cloned();
+                    let colour_hint = world.components.colour_hint.get(entity).cloned();
+                    VisibleEntity { tile, colour_hint }
+                })
+                .unwrap_or_default()
+        });
     }
 }
 
@@ -140,17 +176,20 @@ struct AiCtx {
 pub struct Game {
     world: World,
     rng: Isaac64Rng,
+    animation_rng: Isaac64Rng,
     player_entity: Entity,
     visibility_grid: VisibilityGrid<VisibleCellData>,
-    messages: Vec<String>,
+    message_log: Vec<Message>,
     ai_ctx: AiCtx,
     animation_context: AnimationContext,
     omniscient: bool,
+    external_events: Vec<ExternalEvent>,
 }
 
 impl Game {
     pub fn new<R: Rng>(config: &Config, _victories: Vec<Victory>, base_rng: &mut R) -> Self {
         let mut rng = Isaac64Rng::seed_from_u64(base_rng.gen());
+        let animation_rng = Isaac64Rng::seed_from_u64(base_rng.gen());
         let Terrain {
             mut world,
             player_spawn,
@@ -163,20 +202,22 @@ impl Game {
         let player_entity = world.insert_entity_data(player_location, player_data);
         let mut game = Self {
             rng,
+            animation_rng,
             visibility_grid: VisibilityGrid::new(world.spatial_table.grid_size()),
             world,
             player_entity,
-            messages: Vec::new(),
+            message_log: Vec::new(),
             ai_ctx: Default::default(),
             animation_context: Default::default(),
             omniscient: config.omniscient.is_some(),
+            external_events: Default::default(),
         };
         game.update_visibility();
         game
     }
 
-    pub fn messages(&self) -> &[String] {
-        &self.messages
+    pub fn message_log(&self) -> &[Message] {
+        &self.message_log
     }
 
     pub fn update_visibility(&mut self) {
@@ -220,6 +261,7 @@ impl Game {
                 door_state: Some(DoorState::Open),
                 tile: Some(Tile::DoorOpen),
                 solid: None,
+                solid_for_particles: None,
                 opacity: None,
             },
         );
@@ -249,6 +291,7 @@ impl Game {
                 door_state: DoorState::Closed,
                 tile: Tile::DoorClosed,
                 solid: (),
+                solid_for_particles: (),
                 opacity: 255,
             },
         );
@@ -336,7 +379,12 @@ impl Game {
         _since_last_tick: Duration,
         _config: &Config,
     ) -> Option<GameControlFlow> {
-        self.animation_context.tick(&mut self.world);
+        self.animation_context.tick(
+            &mut self.world,
+            &mut self.external_events,
+            &mut self.message_log,
+            &mut self.animation_rng,
+        );
         self.update_visibility();
         None
     }
@@ -369,5 +417,24 @@ impl Game {
 
     pub(crate) fn handle_choice(&mut self, _choice: MenuChoice) -> Option<GameControlFlow> {
         None
+    }
+
+    pub fn for_each_visible_particle<F: FnMut(Coord, VisibleEntity, Option<Rgb24>)>(
+        &self,
+        mut f: F,
+    ) {
+        for entity in self.world.components.particle.entities() {
+            if let Some(coord) = self.world.spatial_table.coord_of(entity) {
+                if let CellVisibility::Current { light_colour, .. } =
+                    self.cell_visibility_at_coord(coord)
+                {
+                    let visible_entity = VisibleEntity {
+                        tile: self.world.components.tile.get(entity).cloned(),
+                        colour_hint: self.world.components.colour_hint.get(entity).cloned(),
+                    };
+                    f(coord, visible_entity, light_colour);
+                }
+            }
+        }
     }
 }

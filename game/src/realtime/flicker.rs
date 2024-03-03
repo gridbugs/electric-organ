@@ -2,20 +2,20 @@ use crate::{realtime::Context, Tile};
 use entity_table_realtime::{Entity, RealtimeComponent, RealtimeComponentApplyEvent};
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_isaac::Isaac64Rng;
-use rgb_int::Rgb24;
+use rgb_int::{Rgb24, Rgba32};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 pub mod spec {
     pub use crate::Tile;
     pub use rand_range::UniformInclusiveRange;
-    pub use rgb_int::Rgb24;
+    pub use rgb_int::{Rgb24, Rgba32};
     use serde::{Deserialize, Serialize};
     pub use std::time::Duration;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Flicker {
-        pub colour_hint: Option<UniformInclusiveRange<Rgb24>>,
+        pub colour_hint: Option<UniformInclusiveRange<Rgba32>>,
         pub light_colour: Option<UniformInclusiveRange<Rgb24>>,
         pub tile: Option<Vec<Tile>>,
         pub until_next_event: UniformInclusiveRange<Duration>,
@@ -38,7 +38,7 @@ pub struct FlickerState {
 }
 
 pub struct FlickerEvent {
-    colour_hint: Option<Rgb24>,
+    colour_hint: Option<Rgba32>,
     light_colour: Option<Rgb24>,
     tile: Option<Tile>,
 }

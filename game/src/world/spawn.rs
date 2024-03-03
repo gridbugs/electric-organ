@@ -1,5 +1,5 @@
 use crate::{
-    realtime::flicker,
+    realtime::{flicker, particle},
     world::{
         data::{DoorState, EntityData, Layer, Location, Tile},
         World,
@@ -14,6 +14,7 @@ use visible_area_detection::{vision_distance, Light, Rational};
 
 pub fn make_player() -> EntityData {
     EntityData {
+        character: Some(()),
         tile: Some(Tile::Player),
         light: Some(Light {
             colour: Rgb24::new(127, 127, 127),
@@ -51,6 +52,7 @@ impl World {
             entity_data! {
                 tile: Tile::Wall,
                 solid: (),
+                solid_for_particles: (),
                 opacity: 255,
             },
         )
@@ -86,16 +88,49 @@ impl World {
         self.realtime_components.flicker.insert(entity, {
             use flicker::spec::*;
             let colour_range = UniformInclusiveRange {
-                low: Rgb24::new(127, 127, 0),
-                high: Rgb24::new(255, 255, 0),
+                low: Rgb24::new(187, 127, 0).to_rgba32(255),
+                high: Rgb24::new(255, 187, 0).to_rgba32(255),
+            };
+            let light_colour_range = UniformInclusiveRange {
+                low: Rgb24::new(187, 127, 0),
+                high: Rgb24::new(255, 187, 0),
             };
             Flicker {
                 colour_hint: Some(colour_range),
-                light_colour: Some(colour_range),
+                light_colour: Some(light_colour_range),
                 tile: None,
                 until_next_event: UniformInclusiveRange {
                     low: Duration::from_millis(50),
                     high: Duration::from_millis(200),
+                },
+            }
+            .build(rng)
+        });
+        self.realtime_components.particle_emitter.insert(entity, {
+            use particle::spec::*;
+            let colour_range = UniformInclusiveRange {
+                low: Rgb24::new(0, 0, 0).to_rgba32(31),
+                high: Rgb24::new(255, 255, 255).to_rgba32(31),
+            };
+            ParticleEmitter {
+                emit_particle_every_period: Duration::from_millis(16),
+                fade_out_duration: None,
+                particle: Particle {
+                    colour_hint: Some(colour_range),
+                    movement: Some(Movement {
+                        angle_range: Radians::uniform_range_all(),
+                        /*
+                        angle_range: UniformLeftInclusiveRange {
+                            low: Radians::from_degrees(-135.0),
+                            high: Radians::from_degrees(-45.0),
+                        }, */
+                        cardinal_period_range: UniformInclusiveRange {
+                            low: Duration::from_millis(500),
+                            high: Duration::from_millis(1000),
+                        },
+                    }),
+                    fade_duration: Some(Duration::from_millis(5000)),
+                    ..Default::default()
                 },
             }
             .build(rng)
@@ -173,6 +208,7 @@ impl World {
             entity_data! {
                 tile: Tile::DoorClosed,
                 solid: (),
+                solid_for_particles: (),
                 door_state: DoorState::Closed,
                 opacity: 255,
             },

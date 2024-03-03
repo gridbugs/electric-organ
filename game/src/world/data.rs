@@ -1,19 +1,26 @@
 pub use crate::world::spatial::{Layer, Location};
 use entity_table::declare_entity_module;
-use rgb_int::Rgb24;
+use rgb_int::Rgba32;
 use serde::{Deserialize, Serialize};
 use visible_area_detection::{vision_distance, Light};
 
 declare_entity_module! {
     components {
         realtime: (),
+        blocks_gameplay: (),
         tile: Tile,
         solid: (),
+        solid_for_particles: (),
+        character: (),
+        particle: (),
         door_state: DoorState,
         opacity: u8,
         stairs_down: (),
-        colour_hint: Rgb24,
+        colour_hint: Rgba32,
         light: Light<vision_distance::Circle>,
+        collides_with: CollidesWith,
+        projectile_damage: ProjectileDamage,
+        on_collision: OnCollision,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -83,4 +90,21 @@ impl Meter {
     pub fn fill(&mut self) {
         self.current = self.max;
     }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct CollidesWith {
+    pub solid: bool,
+    pub character: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct ProjectileDamage {
+    pub hit_points: u32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum OnCollision {
+    Remove,
+    RemoveRealtime,
 }

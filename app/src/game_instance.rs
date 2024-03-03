@@ -2,7 +2,7 @@ use crate::colours;
 use chargrid::{prelude::*, text};
 use game::{
     witness::{self, Game, RunningGame},
-    CellVisibility, Config, Layer, Tile, Victory,
+    CellVisibility, Config, Layer, Message, Tile, Victory,
 };
 use rand::Rng;
 use rgb_int::Rgb24;
@@ -195,8 +195,8 @@ impl GameInstance {
                 }
                 CellVisibility::Previous(data) => {
                     let background = Rgba32::new(0, 0, 0, 255);
-                    data.tiles.for_each_enumerate(|tile, layer| {
-                        if let Some(&tile) = tile.as_ref() {
+                    data.tiles.for_each_enumerate(|visible_entity, layer| {
+                        if let Some(&tile) = visible_entity.tile.as_ref() {
                             let depth = Self::layer_to_depth(layer);
                             let mut render_cell = Self::tile_to_render_cell(tile);
                             render_cell.style.background = Some(background);
@@ -209,23 +209,34 @@ impl GameInstance {
                     let light_colour = light_colour.unwrap_or(Rgb24::new_grey(0));
                     let tint = LightBlend { light_colour };
                     let blend_ctx = ctx.with_tint(&tint);
-                    data.tiles.for_each_enumerate(|tile, layer| {
-                        if let Some(&tile) = tile.as_ref() {
+                    data.tiles.for_each_enumerate(|visible_entity, layer| {
+                        if let Some(tile) = visible_entity.tile {
                             let depth = Self::layer_to_depth(layer);
-                            let render_cell = Self::tile_to_render_cell(tile);
+                            let mut render_cell = Self::tile_to_render_cell(tile);
+                            if let Some(colour_hint) = visible_entity.colour_hint {
+                                render_cell = render_cell.with_foreground(colour_hint);
+                            }
                             fb.set_cell_relative_to_ctx(blend_ctx, coord, depth, render_cell);
                         }
                     });
                 }
             }
         }
+        self.game
+            .inner_ref()
+            .for_each_visible_particle(|coord, visible_entity, _light_colour| {
+                if let Some(colour_hint) = visible_entity.colour_hint {
+                    let render_cell = RenderCell::default().with_background(colour_hint);
+                    fb.set_cell_relative_to_ctx(ctx, coord, 10, render_cell);
+                }
+            });
     }
 
     fn render_messages(&self, ctx: Ctx, fb: &mut FrameBuffer) {
         use text::*;
         let max = 4;
-        let mut messages: Vec<(usize, String)> = Vec::new();
-        for m in self.game.inner_ref().messages().iter().rev() {
+        let mut messages: Vec<(usize, Message)> = Vec::new();
+        for m in self.game.inner_ref().message_log().iter().rev() {
             if messages.len() >= max {
                 break;
             }
@@ -238,6 +249,8 @@ impl GameInstance {
             messages.push((1, m.clone()));
         }
         for (i, (count, m)) in messages.into_iter().enumerate() {
+            let _ = m;
+            let m = "todo".to_string();
             let string = if count == 1 {
                 m
             } else {
