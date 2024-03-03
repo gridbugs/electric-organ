@@ -1,15 +1,18 @@
 pub use crate::world::spatial::{Layer, Location};
 use entity_table::declare_entity_module;
+use rgb_int::Rgb24;
 use serde::{Deserialize, Serialize};
 use visible_area_detection::{vision_distance, Light};
 
 declare_entity_module! {
     components {
+        realtime: (),
         tile: Tile,
         solid: (),
         door_state: DoorState,
         opacity: u8,
         stairs_down: (),
+        colour_hint: Rgb24,
         light: Light<vision_distance::Circle>,
     }
 }

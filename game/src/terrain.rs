@@ -1,14 +1,7 @@
-use crate::{
-    world::{
-        data::EntityData,
-        spatial::{Layer, Location},
-        World,
-    },
-    Entity,
-};
+use crate::world::World;
 use coord_2d::{Coord, Size};
 use procgen::city::{Map, TentacleSpec, Tile};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::Rng;
 
 pub struct Terrain {
     pub world: World,
@@ -83,7 +76,7 @@ impl Terrain {
                 }
                 Tile::Debris => {
                     if debris_count % 5 == 0 {
-                        world.spawn_debris_burning(coord);
+                        world.spawn_debris_burning(coord, rng);
                     } else {
                         world.spawn_debris(coord);
                     }

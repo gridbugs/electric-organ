@@ -1,4 +1,5 @@
 use crate::{
+    realtime::flicker,
     world::{
         data::{DoorState, EntityData, Layer, Location, Tile},
         World,
@@ -7,6 +8,7 @@ use crate::{
 };
 use coord_2d::Coord;
 use entity_table::entity_data;
+use rand::Rng;
 use rgb_int::Rgb24;
 use visible_area_detection::{vision_distance, Light, Rational};
 
@@ -64,10 +66,11 @@ impl World {
         )
     }
 
-    pub fn spawn_debris_burning(&mut self, coord: Coord) -> Entity {
-        self.spawn_entity(
+    pub fn spawn_debris_burning<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        let entity = self.spawn_entity(
             (coord, Layer::Feature),
             entity_data! {
+                realtime: (),
                 tile: Tile::DebrisBurning,
                 solid: (),
                 light: Light {
@@ -79,7 +82,25 @@ impl World {
                     },
                 },
             },
-        )
+        );
+        self.realtime_components.flicker.insert(entity, {
+            use flicker::spec::*;
+            let colour_range = UniformInclusiveRange {
+                low: Rgb24::new(127, 127, 0),
+                high: Rgb24::new(255, 255, 0),
+            };
+            Flicker {
+                colour_hint: Some(colour_range),
+                light_colour: Some(colour_range),
+                tile: None,
+                until_next_event: UniformInclusiveRange {
+                    low: Duration::from_millis(50),
+                    high: Duration::from_millis(200),
+                },
+            }
+            .build(rng)
+        });
+        entity
     }
 
     pub fn spawn_tentacle(&mut self, coord: Coord) -> Entity {
@@ -99,7 +120,7 @@ impl World {
                 tile: Tile::TentacleGlow,
                 solid: (),
                 light: Light {
-                    colour: Rgb24::new(127, 255, 0),
+                    colour: Rgb24::new(0, 255, 0),
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,

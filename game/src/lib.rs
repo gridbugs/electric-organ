@@ -11,21 +11,23 @@ pub use shadowcast::Context as ShadowcastContext;
 pub use spatial_table::UpdateError;
 use std::time::Duration;
 
-pub mod witness;
-mod world;
-
 pub use visible_area_detection::{
     vision_distance::Circle, CellVisibility, Light, VisibilityGrid, World as VisibleWorld,
 };
+
+mod terrain;
+mod world;
+use terrain::Terrain;
+mod realtime;
+pub mod witness;
+
+use realtime::AnimationContext;
 pub use world::data::{Layer, Location, Meter, Tile};
 use world::{
     data::{Components, DoorState, EntityData, EntityUpdate},
     spatial::{LayerTable, Layers, SpatialTable},
     World,
 };
-
-mod terrain;
-use terrain::Terrain;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Omniscient;
@@ -142,6 +144,7 @@ pub struct Game {
     visibility_grid: VisibilityGrid<VisibleCellData>,
     messages: Vec<String>,
     ai_ctx: AiCtx,
+    animation_context: AnimationContext,
     omniscient: bool,
 }
 
@@ -165,6 +168,7 @@ impl Game {
             player_entity,
             messages: Vec::new(),
             ai_ctx: Default::default(),
+            animation_context: Default::default(),
             omniscient: config.omniscient.is_some(),
         };
         game.update_visibility();
@@ -332,6 +336,8 @@ impl Game {
         _since_last_tick: Duration,
         _config: &Config,
     ) -> Option<GameControlFlow> {
+        self.animation_context.tick(&mut self.world);
+        self.update_visibility();
         None
     }
 
