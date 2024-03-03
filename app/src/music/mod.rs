@@ -1,8 +1,8 @@
 use currawong::{prelude::*, signal_player::SignalPlayer};
 use std::{cell::RefCell, rc::Rc};
 
-pub mod level;
-pub mod menu;
+mod level;
+mod menu;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Track {
@@ -11,14 +11,14 @@ pub enum Track {
 }
 
 struct Control {
-    pub track: Option<Track>,
-    pub volume: f64,
+    volume: f64,
+    signal: Sf64,
 }
 
 impl Control {
     fn new() -> Self {
         Self {
-            track: None,
+            signal: const_(0.0),
             volume: 1.0,
         }
     }
@@ -34,16 +34,10 @@ impl MusicState {
     pub fn new() -> Self {
         let control = Rc::new(RefCell::new(Control::new()));
         let signal = Signal::from_fn({
-            let menu = menu::signal();
-            let level = level::signal();
             let control = Rc::clone(&control);
             move |ctx| {
                 let control = control.borrow();
-                let sample = match control.track {
-                    Some(Track::Level) => level.sample(ctx),
-                    Some(Track::Menu) => menu.sample(ctx),
-                    None => 0.0,
-                };
+                let sample = control.signal.sample(ctx);
                 sample * control.volume
             }
         });
@@ -57,7 +51,12 @@ impl MusicState {
     }
 
     pub fn set_track(&self, track: Option<Track>) {
-        self.control.borrow_mut().track = track;
+        let mut control = self.control.borrow_mut();
+        control.signal = match track {
+            None => const_(0.0),
+            Some(Track::Level) => level::signal(),
+            Some(Track::Menu) => menu::signal(),
+        }
     }
 
     pub fn set_volume(&self, volume: f64) {
