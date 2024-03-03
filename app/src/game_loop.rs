@@ -2,6 +2,7 @@ use crate::{
     controls::{AppInput, Controls},
     game_instance::{GameInstance, GameInstanceStorable},
     image::Images,
+    music::{MusicState, Track},
     text,
 };
 use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
@@ -277,6 +278,7 @@ pub struct GameLoopData {
     config: Config,
     images: Images,
     cursor: Option<Coord>,
+    music_state: MusicState,
 }
 
 impl GameLoopData {
@@ -316,6 +318,13 @@ impl GameLoopData {
             storage.save_controls(&controls);
             controls
         };
+        let music_state = MusicState::new();
+        music_state.set_volume(0.5);
+        if instance.is_some() {
+            music_state.set_track(Some(Track::Level));
+        } else {
+            music_state.set_track(Some(Track::Menu));
+        };
         (
             Self {
                 instance,
@@ -326,6 +335,7 @@ impl GameLoopData {
                 config,
                 images: Images::new(),
                 cursor: None,
+                music_state,
             },
             state,
         )
@@ -340,6 +350,7 @@ impl GameLoopData {
     }
 
     fn clear_saved_game(&mut self) {
+        self.music_state.set_track(Some(Track::Menu));
         self.storage.clear_game();
     }
 
@@ -347,6 +358,7 @@ impl GameLoopData {
         let victories = self.config.victories.clone();
         let (instance, running) = new_game(&mut self.rng_seed_source, &self.game_config, victories);
         self.instance = Some(instance);
+        self.music_state.set_track(Some(Track::Level));
         running
     }
 
@@ -700,14 +712,6 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
             }),
         })
         .bound_size(Size::new_u16(80, 30))
-        .on_each_tick({
-            use currawong::signal_player::SignalPlayer;
-            let mut signal = crate::music::menu::signal();
-            let mut signal_player = SignalPlayer::new().unwrap();
-            signal_player.set_buffer_padding_sample_rate_ratio(0.25);
-            move || {
-                signal_player.send_signal(&mut signal);
-            }
-        })
+        .on_each_tick_with_state(|state| state.music_state.tick())
     })
 }

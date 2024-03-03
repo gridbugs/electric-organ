@@ -465,9 +465,9 @@ dependencies = [
 
 [[package]]
 name = "chargrid_common"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d2233ce2f5a2aff510256d391dac9ff8d896cd279ca93b793f082aac96d7054"
+checksum = "660d290f0fb177edcc53d557aa7ef36c2ab13f081c9b746b39114ea661a6ed0e"
 dependencies = [
  "chargrid_core",
 ]
