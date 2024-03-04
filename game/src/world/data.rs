@@ -11,6 +11,7 @@ declare_entity_module! {
         tile: Tile,
         solid: (),
         solid_for_particles: (),
+        difficult: (),
         character: (),
         particle: (),
         door_state: DoorState,
@@ -46,6 +47,8 @@ pub enum Tile {
     TentacleGlow,
     Exit,
     Zombie,
+    Climber,
+    Trespasser,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,7 +123,35 @@ pub enum Disposition {
     Afraid,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct NpcMovement {
+    pub can_traverse_difficult: bool,
+    pub can_open_doors: bool,
+}
+
+impl NpcMovement {
+    pub const ALL: &'static [Self] = &[
+        NpcMovement {
+            can_traverse_difficult: false,
+            can_open_doors: false,
+        },
+        NpcMovement {
+            can_traverse_difficult: false,
+            can_open_doors: true,
+        },
+        NpcMovement {
+            can_traverse_difficult: true,
+            can_open_doors: false,
+        },
+        NpcMovement {
+            can_traverse_difficult: true,
+            can_open_doors: true,
+        },
+    ];
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Npc {
     pub disposition: Disposition,
+    pub movement: NpcMovement,
 }

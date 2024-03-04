@@ -25,8 +25,8 @@ use ai::{Agent, AiContext};
 use realtime::AnimationContext;
 pub use world::data::{Layer, Location, Meter, Tile};
 use world::{
-    data::{Components, DoorState, EntityData, EntityUpdate},
-    spatial::{LayerTable, Layers, SpatialTable},
+    data::{DoorState, EntityData, EntityUpdate},
+    spatial::{LayerTable, Layers},
     World,
 };
 
@@ -417,8 +417,11 @@ impl Game {
         }) = self.world.spatial_table.layers_at(new_coord)
         {
             if let Some(feature_entity) = feature {
-                // Don't let them walk through solid entities
-                if self.world.components.solid.contains(feature_entity) {
+                // If the npc bumps into a door, open the door
+                if let Some(DoorState::Closed) =
+                    self.world.components.door_state.get(feature_entity)
+                {
+                    self.open_door(feature_entity);
                     return None;
                 }
             }
@@ -427,6 +430,13 @@ impl Game {
                 return None;
             }
         }
+        if !self
+            .world
+            .can_npc_traverse_feature_at_coord_with_entity(new_coord, entity)
+        {
+            return None;
+        }
+
         self.world
             .spatial_table
             .update_coord(entity, new_coord)

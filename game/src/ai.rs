@@ -1,5 +1,5 @@
 use crate::{
-    world::{data::Disposition, spatial::Layers},
+    world::data::{Disposition, Npc, NpcMovement},
     Input, World,
 };
 use coord_2d::{Coord, Size};
@@ -19,6 +19,7 @@ use line_2d::LineSegment;
 use rand::{seq::SliceRandom, Rng};
 use serde::{Deserialize, Serialize};
 use shadowcast::{vision_distance, Context as ShadowcastContext, InputGrid, VisionDistance};
+use std::collections::HashMap;
 
 const FLEE_DISTANCE: u32 = 10;
 
@@ -37,21 +38,27 @@ impl InputGrid for Visibility {
 
 struct WorldCanEnterIgnoreCharacters<'a> {
     world: &'a World,
+    npc_movement: NpcMovement,
 }
 
 impl<'a> CanEnter for WorldCanEnterIgnoreCharacters<'a> {
     fn can_enter(&self, coord: Coord) -> bool {
-        self.world.can_npc_traverse_feature_at_coord(coord)
+        self.world
+            .can_npc_traverse_feature_at_coord_with_movement(coord, self.npc_movement)
     }
 }
 
 struct WorldCanEnterAvoidNpcs<'a> {
     world: &'a World,
+    npc_movement: NpcMovement,
 }
 
 impl<'a> CanEnter for WorldCanEnterAvoidNpcs<'a> {
     fn can_enter(&self, coord: Coord) -> bool {
-        self.world.can_npc_traverse_feature_at_coord(coord) && !self.world.is_npc_at_coord(coord)
+        let can_traverse = self
+            .world
+            .can_npc_traverse_feature_at_coord_with_movement(coord, self.npc_movement);
+        can_traverse && !self.world.is_npc_at_coord(coord)
     }
 }
 
@@ -81,8 +88,8 @@ pub struct AiContext {
     point_to_point_search_context: PointToPointSearchContext,
     distance_map_populate_context: DistanceMapPopulateContext,
     distance_map_search_context: DistanceMapSearchContext,
-    player_approach: DistanceMap,
-    player_flee: DistanceMap,
+    player_approach: HashMap<NpcMovement, DistanceMap>,
+    player_flee: HashMap<NpcMovement, DistanceMap>,
     wander_path: Path,
     shadowcast: ShadowcastContext<u8>,
 }
@@ -94,24 +101,42 @@ impl AiContext {
             point_to_point_search_context: PointToPointSearchContext::new(size),
             distance_map_populate_context: DistanceMapPopulateContext::default(),
             distance_map_search_context: DistanceMapSearchContext::new(size),
-            player_approach: DistanceMap::new(size),
-            player_flee: DistanceMap::new(size),
+            player_approach: NpcMovement::ALL
+                .iter()
+                .map(|&npc_movement| (npc_movement, DistanceMap::new(size)))
+                .collect(),
+            player_flee: NpcMovement::ALL
+                .iter()
+                .map(|&npc_movement| (npc_movement, DistanceMap::new(size)))
+                .collect(),
             wander_path: Path::default(),
             shadowcast: ShadowcastContext::default(),
         }
     }
     pub fn update(&mut self, player: Entity, world: &World) {
         if let Some(player_coord) = world.entity_coord(player) {
-            let can_enter = WorldCanEnterIgnoreCharacters { world };
-            self.distance_map_populate_context.add(player_coord);
-            self.distance_map_populate_context.populate_approach(
-                &can_enter,
-                20,
-                &mut self.player_approach,
-            );
-            self.distance_map_populate_context.add(player_coord);
-            self.distance_map_populate_context
-                .populate_flee(&can_enter, 20, &mut self.player_flee);
+            for (&npc_movement, player_approach) in self.player_approach.iter_mut() {
+                self.distance_map_populate_context.add(player_coord);
+                self.distance_map_populate_context.populate_approach(
+                    &WorldCanEnterIgnoreCharacters {
+                        world,
+                        npc_movement,
+                    },
+                    20,
+                    player_approach,
+                );
+            }
+            for (&npc_movement, player_flee) in self.player_flee.iter_mut() {
+                self.distance_map_populate_context.add(player_coord);
+                self.distance_map_populate_context.populate_flee(
+                    &WorldCanEnterIgnoreCharacters {
+                        world,
+                        npc_movement,
+                    },
+                    20,
+                    player_flee,
+                );
+            }
         } else {
             self.player_approach.clear();
             self.player_flee.clear();
@@ -147,6 +172,7 @@ impl LastSeenGrid {
 
     fn update(
         &mut self,
+        npc: &Npc,
         eye: Coord,
         vision_distance: vision_distance::Circle,
         world: &World,
@@ -154,7 +180,7 @@ impl LastSeenGrid {
         ai_context: &mut AiContext,
     ) {
         self.count += 1;
-        let distance_map_to_player = &ai_context.player_approach;
+        let distance_map_to_player = ai_context.player_approach.get(&npc.movement).unwrap();
         ai_context.shadowcast.for_each_visible(
             eye,
             &Visibility,
@@ -194,7 +220,10 @@ impl<'a, R: Rng> BestSearch for Wander<'a, R> {
         false
     }
     fn can_enter_initial_updating_best(&mut self, coord: Coord) -> bool {
-        if self.world.can_npc_traverse_feature_at_coord(coord) {
+        if self
+            .world
+            .can_npc_traverse_feature_at_coord_with_entity(coord, self.entity)
+        {
             if let Some(entity) = self.world.character_at_coord(coord) {
                 if entity != self.entity {
                     let my_coord = self.world.entity_coord(self.entity).unwrap();
@@ -278,6 +307,7 @@ impl Agent {
                     None
                 };
             self.last_seen_grid.update(
+                npc,
                 coord,
                 self.vision_distance,
                 world,
@@ -291,7 +321,9 @@ impl Agent {
                         accurate: true,
                     },
                     Disposition::Afraid => {
-                        if let Some(distance) = ai_context.player_approach.distance(coord) {
+                        let player_approach =
+                            ai_context.player_approach.get(&npc.movement).unwrap();
+                        if let Some(distance) = player_approach.distance(coord) {
                             if distance < FLEE_DISTANCE {
                                 Behaviour::Flee
                             } else {
@@ -327,7 +359,7 @@ impl Agent {
             }
         } else {
             self.last_seen_grid
-                .update(coord, self.vision_distance, world, None, ai_context);
+                .update(npc, coord, self.vision_distance, world, None, ai_context);
             Behaviour::Wander { avoid: false }
         };
         match self.behaviour {
@@ -366,11 +398,15 @@ impl Agent {
                 }
             }
             Behaviour::Flee => {
+                let player_flee = ai_context.player_flee.get(&npc.movement).unwrap();
                 let maybe_cardinal_direction = ai_context.distance_map_search_context.search_first(
-                    &WorldCanEnterAvoidNpcs { world },
+                    &WorldCanEnterAvoidNpcs {
+                        world,
+                        npc_movement: npc.movement,
+                    },
                     coord,
                     5,
-                    &ai_context.player_flee,
+                    player_flee,
                 );
                 match maybe_cardinal_direction {
                     None => {
@@ -385,12 +421,16 @@ impl Agent {
                 accurate,
             } => {
                 if accurate {
+                    let player_approach = ai_context.player_approach.get(&npc.movement).unwrap();
                     let maybe_cardinal_direction =
                         ai_context.distance_map_search_context.search_first(
-                            &WorldCanEnterAvoidNpcs { world },
+                            &WorldCanEnterAvoidNpcs {
+                                world,
+                                npc_movement: npc.movement,
+                            },
                             coord,
                             5,
-                            &ai_context.player_approach,
+                            player_approach,
                         );
                     match maybe_cardinal_direction {
                         None => {
@@ -399,25 +439,24 @@ impl Agent {
                         }
                         Some(cardinal_direction) => {
                             let dest = coord + cardinal_direction.coord();
-                            let cardinal_direction =
-                                if ai_context.player_approach.distance(dest) == Some(1) {
-                                    // The agent is about to be 1 space away from the player. This can
-                                    // cause a problem where the agent consistently moves to block the
-                                    // player's movement which is annoying. The consistency comes from
-                                    // the fact that the distance map search favours certain directions
-                                    // over others. Break this monotony by randomly choosing between
-                                    // equally good positions.
-                                    let mut options = Vec::new();
-                                    for direction in CardinalDirection::all() {
-                                        let dest = coord + direction.coord();
-                                        if ai_context.player_approach.distance(dest) == Some(1) {
-                                            options.push(direction);
-                                        }
+                            let cardinal_direction = if player_approach.distance(dest) == Some(1) {
+                                // The agent is about to be 1 space away from the player. This can
+                                // cause a problem where the agent consistently moves to block the
+                                // player's movement which is annoying. The consistency comes from
+                                // the fact that the distance map search favours certain directions
+                                // over others. Break this monotony by randomly choosing between
+                                // equally good positions.
+                                let mut options = Vec::new();
+                                for direction in CardinalDirection::all() {
+                                    let dest = coord + direction.coord();
+                                    if player_approach.distance(dest) == Some(1) {
+                                        options.push(direction);
                                     }
-                                    *options.choose(rng).unwrap()
-                                } else {
-                                    cardinal_direction
-                                };
+                                }
+                                *options.choose(rng).unwrap()
+                            } else {
+                                cardinal_direction
+                            };
                             Some(Input::Walk(cardinal_direction))
                         }
                     }
@@ -426,7 +465,10 @@ impl Agent {
                         .point_to_point_search_context
                         .point_to_point_search_first(
                             expand::JumpPoint,
-                            &WorldCanEnterAvoidNpcs { world },
+                            &WorldCanEnterAvoidNpcs {
+                                world,
+                                npc_movement: npc.movement,
+                            },
                             coord,
                             last_seen_player_coord,
                         );

@@ -112,9 +112,19 @@ impl Terrain {
             .filter(|coord| coord.manhattan_distance(player_spawn) > 8)
             .collect::<Vec<_>>();
         npc_spawn_candidates.shuffle(rng);
-        for _ in 0..1 {
+        for _ in 0..5 {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_zombie(coord);
+            }
+        }
+        for _ in 0..5 {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_climber(coord);
+            }
+        }
+        for _ in 0..5 {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_trespasser(coord);
             }
         }
         Self { world }

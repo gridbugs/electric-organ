@@ -176,7 +176,23 @@ impl GameInstance {
                     character: Some('z'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::BIO.to_rgba32(255)),
+                        .with_foreground(colours::ZOMBIE.to_rgba32(255)),
+                };
+            }
+            Tile::Climber => {
+                return RenderCell {
+                    character: Some('c'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::CLIMBER.to_rgba32(255)),
+                };
+            }
+            Tile::Trespasser => {
+                return RenderCell {
+                    character: Some('t'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::TRESPASSER.to_rgba32(255)),
                 };
             }
         };

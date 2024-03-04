@@ -1,5 +1,8 @@
 use crate::{
-    world::{data::Npc, spatial::Layers},
+    world::{
+        data::{Npc, NpcMovement},
+        spatial::Layers,
+    },
     World,
 };
 use coord_2d::Coord;
@@ -30,10 +33,18 @@ impl World {
     pub fn entity_coord(&self, entity: Entity) -> Option<Coord> {
         self.spatial_table.coord_of(entity)
     }
-    pub fn can_npc_traverse_feature_at_coord(&self, coord: Coord) -> bool {
+
+    pub fn can_npc_traverse_feature_at_coord_with_movement(
+        &self,
+        coord: Coord,
+        movement: NpcMovement,
+    ) -> bool {
         if let Some(layers) = self.spatial_table.layers_at(coord) {
             if let Some(feature) = layers.feature {
                 !self.components.solid.contains(feature)
+                    || movement.can_open_doors && self.components.door_state.contains(feature)
+                    || movement.can_traverse_difficult
+                        && self.components.difficult.contains(feature)
             } else {
                 true
             }
@@ -41,6 +52,16 @@ impl World {
             false
         }
     }
+
+    pub fn can_npc_traverse_feature_at_coord_with_entity(
+        &self,
+        coord: Coord,
+        npc_entity: Entity,
+    ) -> bool {
+        let npc = self.components.npc.get(npc_entity).expect("not an npc");
+        self.can_npc_traverse_feature_at_coord_with_movement(coord, npc.movement)
+    }
+
     pub fn is_npc_at_coord(&self, coord: Coord) -> bool {
         if let Some(layers) = self.spatial_table.layers_at(coord) {
             if let Some(character) = layers.character {

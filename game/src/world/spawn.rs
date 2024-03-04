@@ -1,7 +1,7 @@
 use crate::{
     realtime::{flicker, particle},
     world::{
-        data::{Disposition, DoorState, EntityData, Layer, Location, Npc, Tile},
+        data::{Disposition, DoorState, EntityData, Layer, Location, Npc, NpcMovement, Tile},
         World,
     },
     Entity,
@@ -64,6 +64,7 @@ impl World {
             entity_data! {
                 tile: Tile::Debris,
                 solid: (),
+                difficult: (),
             },
         )
     }
@@ -75,6 +76,7 @@ impl World {
                 realtime: (),
                 tile: Tile::DebrisBurning,
                 solid: (),
+                difficult: (),
                 light: Light {
                     colour: Rgb24::new(255, 87, 0),
                     vision_distance: vision_distance::Circle::new_squared(200),
@@ -276,7 +278,46 @@ impl World {
             (coord, Layer::Character),
             entity_data! {
                 tile: Tile::Zombie,
-                npc: Npc { disposition: Disposition::Hostile },
+                npc: Npc {
+                    disposition: Disposition::Hostile,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+            },
+        )
+    }
+
+    pub fn spawn_climber(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Climber,
+                npc: Npc {
+                    disposition: Disposition::Hostile,
+                    movement: NpcMovement {
+                        can_traverse_difficult: true,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+            },
+        )
+    }
+
+    pub fn spawn_trespasser(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Trespasser,
+                npc: Npc { disposition: Disposition::Hostile,
+                    movement: NpcMovement {
+                        can_traverse_difficult: true,
+                        can_open_doors: true,
+                    },
+                },
                 character: (),
             },
         )
