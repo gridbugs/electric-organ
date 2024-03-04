@@ -1,7 +1,7 @@
 use crate::{
     realtime::{flicker, particle},
     world::{
-        data::{DoorState, EntityData, Layer, Location, Tile},
+        data::{Disposition, DoorState, EntityData, Layer, Location, Npc, Tile},
         World,
     },
     Entity,
@@ -276,7 +276,7 @@ impl World {
             (coord, Layer::Character),
             entity_data! {
                 tile: Tile::Zombie,
-                npc: (),
+                npc: Npc { disposition: Disposition::Hostile },
                 character: (),
             },
         )

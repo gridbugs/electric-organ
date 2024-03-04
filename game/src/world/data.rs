@@ -23,7 +23,7 @@ declare_entity_module! {
         collides_with: CollidesWith,
         projectile_damage: ProjectileDamage,
         on_collision: OnCollision,
-        npc: (),
+        npc: Npc,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -112,4 +112,15 @@ pub struct ProjectileDamage {
 pub enum OnCollision {
     Remove,
     RemoveRealtime,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Disposition {
+    Hostile,
+    Afraid,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Npc {
+    pub disposition: Disposition,
 }

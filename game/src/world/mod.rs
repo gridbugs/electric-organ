@@ -45,4 +45,8 @@ impl World {
         self.spatial_table.remove(entity);
         self.components.remove_entity_data(entity)
     }
+
+    pub fn size(&self) -> Size {
+        self.spatial_table.grid_size()
+    }
 }

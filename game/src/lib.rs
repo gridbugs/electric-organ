@@ -7,7 +7,6 @@ use rand::{Rng, SeedableRng};
 use rand_isaac::Isaac64Rng;
 pub use rgb_int::{Rgb24, Rgba32};
 use serde::{Deserialize, Serialize};
-pub use shadowcast::Context as ShadowcastContext;
 pub use spatial_table::UpdateError;
 use std::time::Duration;
 
@@ -22,6 +21,7 @@ mod ai;
 mod realtime;
 pub mod witness;
 
+use ai::{Agent, AiContext};
 use realtime::AnimationContext;
 pub use world::data::{Layer, Location, Meter, Tile};
 use world::{
@@ -142,19 +142,7 @@ impl VisibleWorld for World {
     }
 
     fn get_opacity(&self, coord: Coord) -> u8 {
-        if let Some(&Layers {
-            feature: Some(feature_entity),
-            ..
-        }) = self.spatial_table.layers_at(coord)
-        {
-            self.components
-                .opacity
-                .get(feature_entity)
-                .cloned()
-                .unwrap_or(0)
-        } else {
-            0
-        }
+        Self::get_opacity(self, coord)
     }
 
     fn for_each_light_by_coord<F: FnMut(Coord, &Light<Self::VisionDistance>)>(&self, mut f: F) {
@@ -168,15 +156,11 @@ impl VisibleWorld for World {
 
 pub enum ActionError {}
 
-#[derive(Serialize, Deserialize, Default)]
-struct AiCtx {
-    distance_map: distance_map::PopulateContext,
-}
-
 #[derive(Serialize, Deserialize)]
 struct Level {
     world: World,
     visibility_grid: VisibilityGrid<VisibleCellData>,
+    agents: ComponentTable<Agent>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -185,11 +169,12 @@ pub struct Game {
     other_levels: Vec<Option<Level>>,
     world: World,
     visibility_grid: VisibilityGrid<VisibleCellData>,
+    agents: ComponentTable<Agent>,
     rng: Isaac64Rng,
     animation_rng: Isaac64Rng,
     player_entity: Entity,
     message_log: Vec<Message>,
-    ai_ctx: AiCtx,
+    ai_context: AiContext,
     animation_context: AnimationContext,
     omniscient: bool,
     external_events: Vec<ExternalEvent>,
@@ -208,6 +193,7 @@ impl Game {
                 Some(Level {
                     world,
                     visibility_grid,
+                    agents: Default::default(),
                 })
             })
             .collect::<Vec<_>>();
@@ -215,6 +201,7 @@ impl Game {
         let Level {
             mut world,
             visibility_grid,
+            agents,
         } = other_levels[current_level_index].take().unwrap();
         let player_spawn = world.stairs_up_or_exit_coord().unwrap();
         let player_data = world::spawn::make_player();
@@ -224,15 +211,16 @@ impl Game {
         };
         let player_entity = world.insert_entity_data(player_location, player_data);
         let mut game = Self {
+            ai_context: AiContext::new(world.size()),
             current_level_index,
             other_levels,
             world,
             visibility_grid,
+            agents,
             rng,
             animation_rng,
             player_entity,
             message_log: Vec::new(),
-            ai_ctx: Default::default(),
             animation_context: Default::default(),
             omniscient: config.omniscient.is_some(),
             external_events: Default::default(),
@@ -252,6 +240,7 @@ impl Game {
         let mut level = self.other_levels[level_index].take().unwrap();
         mem::swap(&mut self.world, &mut level.world);
         mem::swap(&mut self.visibility_grid, &mut level.visibility_grid);
+        mem::swap(&mut self.agents, &mut level.agents);
         self.other_levels[self.current_level_index] = Some(level);
         self.current_level_index = level_index;
         let player_coord = if down {
@@ -409,40 +398,83 @@ impl Game {
         }
     }
 
-    fn npc_turn(&mut self) -> Option<GameControlFlow> {
+    fn npc_walk(
+        &mut self,
+        entity: Entity,
+        direction: CardinalDirection,
+    ) -> Option<GameControlFlow> {
+        let current_coord = self
+            .world
+            .entity_coord(entity)
+            .expect("Entity tried to walk but it doesn't have a coord");
+        let new_coord = current_coord + direction.coord();
+        if !new_coord.is_valid(self.world.size()) {
+            // would walk outside bounds of map
+            return None;
+        }
+        if let Some(&Layers {
+            feature, character, ..
+        }) = self.world.spatial_table.layers_at(new_coord)
         {
-            struct C<'a> {
-                components: &'a Components,
-                spatial_table: &'a SpatialTable,
-            }
-            impl<'a> distance_map::CanEnter for C<'a> {
-                fn can_enter(&self, coord: Coord) -> bool {
-                    if let Some(&layers) = self.spatial_table.layers_at(coord) {
-                        if let Layers {
-                            feature: Some(feature),
-                            ..
-                        } = layers
-                        {
-                            if self.components.solid.contains(feature) {
-                                return false;
-                            }
-                        }
-                        if let Layers { floor: None, .. } = layers {
-                            return false;
-                        }
-                    }
-                    true
+            if let Some(feature_entity) = feature {
+                // Don't let them walk through solid entities
+                if self.world.components.solid.contains(feature_entity) {
+                    return None;
                 }
             }
-            self.ai_ctx.distance_map.clear();
-            self.ai_ctx.distance_map.add(self.player_coord());
-            let c = C {
-                components: &self.world.components,
-                spatial_table: &self.world.spatial_table,
-            };
-            self.ai_ctx
-                .distance_map
-                .populate_approach(&c, 12, &mut self.world.distance_map);
+            // Don't let them walk into other characters
+            if let Some(_character_entity) = character {
+                return None;
+            }
+        }
+        self.world
+            .spatial_table
+            .update_coord(entity, new_coord)
+            .unwrap();
+        None
+    }
+
+    // Create agents for npcs that lack agents and remove agents for agents whose npcs have been
+    // removed.
+    fn npc_setup_agents(&mut self) {
+        for entity in self.world.components.npc.entities() {
+            if !self.agents.contains(entity) {
+                self.agents.insert(entity, Agent::new(self.world.size()));
+            }
+        }
+        let mut agents_to_remove = Vec::new();
+        for entity in self.agents.entities() {
+            if !self.world.components.npc.contains(entity) {
+                agents_to_remove.push(entity);
+            }
+        }
+        for entity in agents_to_remove {
+            self.agents.remove(entity);
+        }
+    }
+
+    fn npc_turn(&mut self) -> Option<GameControlFlow> {
+        self.npc_setup_agents();
+        self.ai_context.update(self.player_entity, &self.world);
+        let agent_entities = self.agents.entities().collect::<Vec<_>>();
+        for agent_entity in agent_entities {
+            let ai_input = self.agents.get_mut(agent_entity).unwrap().act(
+                agent_entity,
+                &self.world,
+                self.player_entity,
+                &mut self.ai_context,
+                &mut self.rng,
+            );
+            if let Some(input) = ai_input {
+                match input {
+                    Input::Wait => (),
+                    Input::Walk(direction) => {
+                        if let Some(control_flow) = self.npc_walk(agent_entity, direction) {
+                            return Some(control_flow);
+                        }
+                    }
+                }
+            }
         }
         None
     }
