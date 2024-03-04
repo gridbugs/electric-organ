@@ -378,7 +378,10 @@ impl GameInstance {
         );
         let border_style = Style::new()
             .with_bold(true)
-            .with_foreground(Rgb24::new_grey(255).to_rgba32(187));
+            .with_foreground(colours::VAPORWAVE_BACKGROUND.to_rgba32(255));
+        let border_text_style = Style::new()
+            .with_bold(true)
+            .with_foreground(colours::VAPORWAVE_FOREGROUND.to_rgba32(255));
         let game_size = self.game.inner_ref().world_size();
         let box_render_cell = RenderCell::default().with_style(border_style);
         // line to the right of game
@@ -396,10 +399,20 @@ impl GameInstance {
                 let coord = Coord::new(i as i32, game_size.height() as i32);
                 fb.set_cell_relative_to_ctx(ctx, coord, 0, render_cell);
             }
-            StyledString {
-                string: "╡Message Log╞".to_string(),
-                style: border_style,
-            }
+            Text::new(vec![
+                StyledString {
+                    string: "╡".to_string(),
+                    style: border_style,
+                },
+                StyledString {
+                    string: "Message Log".to_string(),
+                    style: border_text_style,
+                },
+                StyledString {
+                    string: "╞".to_string(),
+                    style: border_style,
+                },
+            ])
             .render(&(), ctx.add_xy(2, game_size.height() as i32), fb);
         }
         fb.set_cell_relative_to_ctx(
@@ -416,10 +429,20 @@ impl GameInstance {
                 let coord = Coord::new(i as i32, offset_y);
                 fb.set_cell_relative_to_ctx(ctx, coord, 0, render_cell);
             }
-            StyledString {
-                string: "╡Description╞".to_string(),
-                style: border_style,
-            }
+            Text::new(vec![
+                StyledString {
+                    string: "╡".to_string(),
+                    style: border_style,
+                },
+                StyledString {
+                    string: "Description".to_string(),
+                    style: border_text_style,
+                },
+                StyledString {
+                    string: "╞".to_string(),
+                    style: border_style,
+                },
+            ])
             .render(&(), ctx.add_xy(game_size.width() as i32 + 1, offset_y), fb);
             fb.set_cell_relative_to_ctx(
                 ctx,
@@ -525,17 +548,43 @@ fn describe_tile(tile: Tile) -> Description {
             )])),
         },
         Tile::Zombie => Description {
-            name: Text::new(vec![StyledString::plain_text("a zombie".to_string())]),
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "zombie".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ZOMBIE.to_rgba32(255)),
+                },
+            ]),
             description: Some(Text::new(vec![StyledString::plain_text(
-                "A basic former human. Not particularly strong but there are a lot of them. Some of their organs may still be in tact.".to_string(),
+                "A basic former human. Not particularly strong but there are a lot of them. \
+                        Some of their organs may still be intact."
+                    .to_string(),
             )])),
         },
         Tile::Climber => Description {
-            name: Text::new(vec![StyledString::plain_text("a climber".to_string())]),
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "climber".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::CLIMBER.to_rgba32(255)),
+                },
+            ]),
             description: None,
         },
         Tile::Trespasser => Description {
-            name: Text::new(vec![StyledString::plain_text("a tresspasser".to_string())]),
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "trespasser".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::TRESPASSER.to_rgba32(255)),
+                },
+            ]),
             description: None,
         },
     }
