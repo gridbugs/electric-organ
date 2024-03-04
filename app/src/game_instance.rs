@@ -293,20 +293,26 @@ impl GameInstance {
             messages.push((1, m.clone()));
         }
         for (i, (count, m)) in messages.into_iter().enumerate() {
-            let _ = m;
-            let m = "todo".to_string();
-            let string = if count == 1 {
-                m
+            let text = message_to_text(m);
+            let mut text = if count == 1 {
+                text
             } else {
-                format!("{} (x{})", m, count)
+                let mut text = text;
+                text.parts
+                    .push(StyledString::plain_text(format!(" (x{})", count)));
+                text
             };
             let alpha = 255 - (i as u8 * 50);
-            let styled_string = StyledString {
-                string,
-                style: Style::plain_text().with_foreground(Rgba32::new_grey(255).with_a(alpha)),
-            };
             let offset = max as i32 - i as i32 - 1;
-            styled_string.render(&(), ctx.add_y(offset), fb);
+            for part in &mut text.parts {
+                part.style = part.style.with_foreground(
+                    part.style
+                        .foreground
+                        .unwrap_or_else(|| Rgba32::new(255, 255, 255, 255))
+                        .with_a(alpha),
+                );
+            }
+            text.render(&(), ctx.add_y(offset), fb);
         }
     }
 
@@ -366,7 +372,7 @@ impl GameInstance {
         use text::*;
         self.render_game(ctx, fb);
         self.render_messages(
-            ctx.add_xy(1, ctx.bounding_box.size().height() as i32 - 7)
+            ctx.add_xy(1, ctx.bounding_box.size().height() as i32 - 4)
                 .add_depth(20),
             fb,
         );
@@ -532,5 +538,17 @@ fn describe_tile(tile: Tile) -> Description {
             name: Text::new(vec![StyledString::plain_text("a tresspasser".to_string())]),
             description: None,
         },
+    }
+}
+
+fn message_to_text(message: Message) -> Text {
+    use text::*;
+    match message {
+        Message::OpenDoor => Text::new(vec![StyledString::plain_text(
+            "You open the door.".to_string(),
+        )]),
+        Message::CloseDoor => Text::new(vec![StyledString::plain_text(
+            "You close the door.".to_string(),
+        )]),
     }
 }

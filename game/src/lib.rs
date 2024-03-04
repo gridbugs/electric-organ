@@ -62,7 +62,8 @@ pub enum ExternalEvent {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Message {
-    Dummy,
+    OpenDoor,
+    CloseDoor,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -365,6 +366,7 @@ impl Game {
             // If the player bumps into a door, open the door
             if let Some(DoorState::Closed) = self.world.components.door_state.get(feature_entity) {
                 self.open_door(feature_entity);
+                self.message_log.push(Message::OpenDoor);
                 return None;
             }
             // Don't let the player walk through solid entities
@@ -373,6 +375,7 @@ impl Game {
                     self.open_door_entity_adjacent_to_coord(player_coord, new_player_coord)
                 {
                     self.close_door(open_door_entity);
+                    self.message_log.push(Message::CloseDoor);
                 }
                 return None;
             }
