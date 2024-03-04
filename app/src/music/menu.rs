@@ -1,7 +1,6 @@
 use currawong::prelude::*;
 
 struct Effects {
-    tempo: Sf64,
     drum_volume: Sf64,
     drum_low_pass_filter: Sf64,
 }
@@ -9,7 +8,6 @@ struct Effects {
 impl Effects {
     fn new() -> Self {
         Self {
-            tempo: const_(0.3),
             drum_volume: const_(0.4),
             drum_low_pass_filter: const_(0.3),
         }
@@ -194,7 +192,7 @@ pub fn signal() -> Sf64 {
     let _hat_closed = 1 << 0;
     let snare = 1 << 1;
     let kick = 1 << 2;
-    let trigger = periodic_trigger_hz(effects.tempo * 8).build();
+    let trigger = periodic_trigger_hz(3.0).build();
     let drums = drum_loop(trigger.divide(2), vec![kick, snare]);
     let arp_config = ArpeggiatorConfig::default()
         .shape(arp_shape(trigger.clone()))

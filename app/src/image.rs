@@ -21,32 +21,36 @@ impl Image {
 }
 
 #[derive(Clone, Copy)]
-enum ImageName {
-    Placeholder,
+pub enum ImageName {
+    Heart,
+    HeartBeat,
 }
 
 impl ImageName {
     const fn data(self) -> &'static [u8] {
         use ImageName::*;
         match self {
-            Placeholder => include_bytes!("images/placeholder.bin"),
+            Heart => include_bytes!("images/heart.bin"),
+            HeartBeat => include_bytes!("images/heart-beat.bin"),
         }
     }
 
-    fn load(self) -> Image {
+    pub fn load(self) -> Image {
         Image::load(self.data())
     }
 }
 
 pub struct Images {
-    pub placeholder: Image,
+    pub heart: Image,
+    pub heart_beat: Image,
 }
 
 impl Images {
     pub fn new() -> Self {
         use ImageName::*;
         Self {
-            placeholder: Placeholder.load(),
+            heart: Heart.load(),
+            heart_beat: HeartBeat.load(),
         }
     }
 

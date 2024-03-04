@@ -45,7 +45,7 @@ impl Rect {
 
 impl Map1 {
     fn new() -> Self {
-        let grid = Grid::new_clone(Size::new(60, 30), Tile1::Wall);
+        let grid = Grid::new_clone(Size::new(50, 25), Tile1::Wall);
         Self {
             grid,
             street_builders: Vec::new(),
@@ -164,20 +164,19 @@ impl Map1 {
                 for coord in rect.coord_iter() {
                     *seen.get_checked_mut(coord) = true;
                 }
-                if width > 30 {
+                if width > self.grid.width() / 2 {
                     let split_x = width / 2; //rng.gen_range(width / 3..(2 * width) / 3);
                     let tile = if rng.gen::<f64>() < 0.5 {
                         Ground1::Alley
                     } else {
                         Ground1::Street
                     };
-
                     for i in 0..height {
                         let coord = coord + Coord::new(split_x as i32, i as i32);
                         *self.grid.get_checked_mut(coord) = Tile1::Ground(tile);
                     }
                 }
-                if height > 15 {
+                if height > self.grid.height() / 2 {
                     let split_y = height / 2; // rng.gen_range(height / 3..(2 * height) / 3);
                     let tile = if rng.gen::<f64>() < 0.5 {
                         Ground1::Alley
@@ -1087,6 +1086,18 @@ pub enum Tile5 {
     StairsUp,
 }
 
+impl Tile5 {
+    fn is_solid(&self) -> bool {
+        match self {
+            Self::Wall | Self::Debris | Self::Tentacle => true,
+            _ => false,
+        }
+    }
+    fn is_open(&self) -> bool {
+        !self.is_solid()
+    }
+}
+
 pub struct Map5 {
     pub grid: Grid<Tile5>,
     tentacle_coords: Vec<Coord>,
@@ -1129,10 +1140,17 @@ impl Map5 {
             OrdinalDirection::SouthWest => bottom_right.set_x(0),
             OrdinalDirection::NorthWest => Coord::new(0, 0),
         };
-        let towards_map_centre =
-            Cartesian::from_coord(Coord::new(30, 15)).sub(Cartesian::from_coord(corner));
+        let towards_map_centre = Cartesian::from_coord(Coord::new(
+            self.grid.width() as i32 / 2,
+            self.grid.height() as i32 / 2,
+        ))
+        .sub(Cartesian::from_coord(corner));
         let angle = towards_map_centre.to_radial().angle;
-        let centre = Cartesian { x: 30.0, y: 15.0 }.add(
+        let centre = Cartesian {
+            x: self.grid.width() as f64 / 2.0,
+            y: self.grid.height() as f64 / 2.0,
+        }
+        .add(
             Radial {
                 length: -tentacle_spec.distance_from_centre,
                 angle,
@@ -1246,6 +1264,14 @@ impl Map5 {
         }
     }
 
+    fn add_debris_around_edge(&mut self) {
+        for (_coord, tile) in self.grid.edge_enumerate_mut() {
+            if tile.is_open() {
+                *tile = Tile::Debris;
+            }
+        }
+    }
+
     pub fn print(&self) {
         for row in self.grid.rows() {
             for cell in row {
@@ -1280,6 +1306,7 @@ impl Map5 {
             if !map5.add_stairs(corners.pop().unwrap(), Tile5::StairsUp, rng) {
                 continue;
             }
+            map5.add_debris_around_edge();
             break map5;
         }
     }

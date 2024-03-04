@@ -270,4 +270,15 @@ impl World {
             },
         )
     }
+
+    pub fn spawn_zombie(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Zombie,
+                npc: (),
+                character: (),
+            },
+        )
+    }
 }

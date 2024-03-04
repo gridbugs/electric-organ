@@ -166,7 +166,17 @@ impl GameInstance {
             Tile::Exit => {
                 return RenderCell {
                     character: Some('Ω'),
-                    style: Style::new().with_foreground(Rgb24::new(255, 0, 0).to_rgba32(255)),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgb24::new(255, 0, 0).to_rgba32(255)),
+                };
+            }
+            Tile::Zombie => {
+                return RenderCell {
+                    character: Some('z'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::BIO.to_rgba32(255)),
                 };
             }
         };

@@ -1,7 +1,7 @@
 use crate::world::World;
 use coord_2d::{Coord, Size};
 use procgen::city::{Map, TentacleSpec, Tile};
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 
 pub struct Terrain {
     pub world: World,
@@ -46,15 +46,20 @@ impl Terrain {
         let mut world = World::new(map.grid.size());
         let mut tentacle_count = 0;
         let mut debris_count = 0;
+        let mut empty_space = Vec::new();
+        let mut player_spawn = None;
         for (coord, &tile) in map.grid.enumerate() {
             match tile {
                 Tile::Street => {
+                    empty_space.push(coord);
                     world.spawn_street(coord);
                 }
                 Tile::Alley => {
+                    empty_space.push(coord);
                     world.spawn_alley(coord);
                 }
                 Tile::Footpath => {
+                    empty_space.push(coord);
                     world.spawn_footpath(coord);
                 }
                 Tile::Wall => {
@@ -62,6 +67,7 @@ impl Terrain {
                     world.spawn_wall(coord);
                 }
                 Tile::Floor => {
+                    empty_space.push(coord);
                     world.spawn_floor(coord);
                 }
                 Tile::Debris => {
@@ -90,12 +96,25 @@ impl Terrain {
                     }
                 }
                 Tile::StairsUp => {
+                    player_spawn = Some(coord);
                     if level_index > 0 {
                         world.spawn_stairs_up(coord);
                     } else {
                         world.spawn_exit(coord);
                     }
                 }
+            }
+        }
+        let player_spawn = player_spawn.expect("no player spawn");
+        let mut npc_spawn_candidates = empty_space
+            .iter()
+            .cloned()
+            .filter(|coord| coord.manhattan_distance(player_spawn) > 8)
+            .collect::<Vec<_>>();
+        npc_spawn_candidates.shuffle(rng);
+        for _ in 0..20 {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                //world.spawn_zombie(coord);
             }
         }
         Self { world }

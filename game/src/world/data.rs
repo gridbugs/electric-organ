@@ -23,6 +23,7 @@ declare_entity_module! {
         collides_with: CollidesWith,
         projectile_damage: ProjectileDamage,
         on_collision: OnCollision,
+        npc: (),
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -44,6 +45,7 @@ pub enum Tile {
     Tentacle,
     TentacleGlow,
     Exit,
+    Zombie,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

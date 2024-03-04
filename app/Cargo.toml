@@ -16,6 +16,7 @@ direction = "0.18"
 chargrid = { version = "0.12", features = ["serialize"] }
 rgb_int = "0.1"
 perlin2 = { version = "0.1", features = ["serialize"] }
+line_2d = "0.5"
 coord_2d = "0.3"
 grid_2d = "0.15"
 game = { path = "../game" }
