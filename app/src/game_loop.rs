@@ -387,9 +387,9 @@ impl GameLoopData {
 
     fn render(&self, ctx: Ctx, fb: &mut FrameBuffer) {
         let instance = self.instance.as_ref().unwrap();
-        instance.render(ctx, fb);
+        instance.render(ctx, fb, self.cursor);
         if let Some(cursor) = self.cursor {
-            let cursor_colour = Rgba32::new(255, 255, 255, 127);
+            let cursor_colour = Rgba32::new(0, 255, 255, 127);
             let render_cell = RenderCell::default().with_background(cursor_colour);
             fb.set_cell_relative_to_ctx(ctx, cursor, 50, render_cell);
         }
@@ -399,6 +399,7 @@ impl GameLoopData {
         let instance = self.instance.as_mut().unwrap();
         let witness = match event {
             Event::Input(input) => {
+                self.cursor = None;
                 if let Some(app_input) = self.controls.get(input) {
                     let (witness, _action_result) = match app_input {
                         AppInput::Direction(direction) => {
@@ -408,6 +409,9 @@ impl GameLoopData {
                     };
                     witness
                 } else {
+                    if let Input::Mouse(MouseInput::MouseMove { coord, .. }) = input {
+                        self.cursor = Some(coord);
+                    }
                     running.into_witness()
                 }
             }

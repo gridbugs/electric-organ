@@ -23,11 +23,14 @@ pub mod witness;
 
 use ai::{Agent, AiContext};
 use realtime::AnimationContext;
-pub use world::data::{Layer, Location, Meter, Tile};
 use world::{
     data::{DoorState, EntityData, EntityUpdate},
-    spatial::{LayerTable, Layers},
+    spatial::Layers,
     World,
+};
+pub use world::{
+    data::{Layer, Location, Meter, Tile},
+    spatial::LayerTable,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -552,5 +555,9 @@ impl Game {
                 }
             }
         }
+    }
+
+    pub fn world_size(&self) -> Size {
+        self.world.spatial_table.grid_size()
     }
 }
