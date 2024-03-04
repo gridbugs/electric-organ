@@ -3,6 +3,7 @@ use crate::{
     Input, World,
 };
 use coord_2d::{Coord, Size};
+use direction::CardinalDirection;
 use entity_table::Entity;
 use grid_2d::Grid;
 use grid_search_cardinal::{
@@ -15,7 +16,7 @@ use grid_search_cardinal::{
     CanEnter, Path,
 };
 use line_2d::LineSegment;
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 use serde::{Deserialize, Serialize};
 use shadowcast::{vision_distance, Context as ShadowcastContext, InputGrid, VisionDistance};
 
@@ -54,10 +55,20 @@ impl<'a> CanEnter for WorldCanEnterAvoidNpcs<'a> {
     }
 }
 
-fn has_line_of_sight(eye: Coord, dest: Coord, vision_distance: vision_distance::Circle) -> bool {
+fn has_line_of_sight(
+    eye: Coord,
+    dest: Coord,
+    vision_distance: vision_distance::Circle,
+    world: &World,
+) -> bool {
+    let mut opacity_sum = 0;
     for coord in LineSegment::new(eye, dest).iter() {
         let eye_to_coord = coord - eye;
         if !vision_distance.in_range(eye_to_coord) {
+            return false;
+        }
+        opacity_sum += world.get_opacity(coord) as u32;
+        if opacity_sum >= 255 {
             return false;
         }
     }
@@ -192,6 +203,7 @@ impl<'a, R: Rng> BestSearch for Wander<'a, R> {
                             my_coord,
                             coord,
                             vision_distance::Circle::new_squared(40),
+                            &self.world,
                         );
                         if can_see_character && self.rng.gen_range(0u8..4) > 0 {
                             return false;
@@ -259,11 +271,12 @@ impl Agent {
         let coord = world.entity_coord(entity)?;
         let npc = world.entity_npc(entity).expect("not an npc");
         self.behaviour = if let Some(player_coord) = world.entity_coord(player) {
-            let can_see_player = if has_line_of_sight(coord, player_coord, self.vision_distance) {
-                Some(CanSeePlayer)
-            } else {
-                None
-            };
+            let can_see_player =
+                if has_line_of_sight(coord, player_coord, self.vision_distance, world) {
+                    Some(CanSeePlayer)
+                } else {
+                    None
+                };
             self.last_seen_grid.update(
                 coord,
                 self.vision_distance,
@@ -384,7 +397,29 @@ impl Agent {
                             self.behaviour = Behaviour::Wander { avoid: true };
                             None
                         }
-                        Some(cardinal_direction) => Some(Input::Walk(cardinal_direction)),
+                        Some(cardinal_direction) => {
+                            let dest = coord + cardinal_direction.coord();
+                            let cardinal_direction =
+                                if ai_context.player_approach.distance(dest) == Some(1) {
+                                    // The agent is about to be 1 space away from the player. This can
+                                    // cause a problem where the agent consistently moves to block the
+                                    // player's movement which is annoying. The consistency comes from
+                                    // the fact that the distance map search favours certain directions
+                                    // over others. Break this monotony by randomly choosing between
+                                    // equally good positions.
+                                    let mut options = Vec::new();
+                                    for direction in CardinalDirection::all() {
+                                        let dest = coord + direction.coord();
+                                        if ai_context.player_approach.distance(dest) == Some(1) {
+                                            options.push(direction);
+                                        }
+                                    }
+                                    *options.choose(rng).unwrap()
+                                } else {
+                                    cardinal_direction
+                                };
+                            Some(Input::Walk(cardinal_direction))
+                        }
                     }
                 } else {
                     let result = ai_context
