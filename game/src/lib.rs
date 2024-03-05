@@ -70,8 +70,15 @@ pub enum Message {
     OpenDoor,
     CloseDoor,
     ActionError(ActionError),
-    NpcHit { npc_type: NpcType, damage: u32 },
+    NpcHit {
+        npc_type: NpcType,
+        damage: u32,
+    },
     NpcDies(NpcType),
+    PlayerHit {
+        attacker_npc_type: NpcType,
+        damage: u32,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -100,6 +107,14 @@ pub enum GameControlFlow {
     GameOver(GameOverReason),
     Win,
     Menu(Menu),
+}
+
+pub struct PlayerStats {
+    pub health: Meter,
+    pub oxygen: Meter,
+    pub food: Meter,
+    pub poison: Meter,
+    pub radiation: Meter,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -454,7 +469,16 @@ impl Game {
                 }
             }
             // Don't let them walk into other characters
-            if let Some(_character_entity) = character {
+            if let Some(character_entity) = character {
+                if self.world.components.player.contains(character_entity) {
+                    self.world.damage_player(
+                        entity,
+                        1,
+                        &mut self.rng,
+                        &mut self.external_events,
+                        &mut self.message_log,
+                    );
+                }
                 return None;
             }
         }
@@ -464,7 +488,6 @@ impl Game {
         {
             return None;
         }
-
         self.world
             .spatial_table
             .update_coord(entity, new_coord)
@@ -632,5 +655,20 @@ impl Game {
     pub fn take_external_events(&mut self) -> Vec<ExternalEvent> {
         use std::mem;
         mem::replace(&mut self.external_events, Vec::new())
+    }
+
+    pub fn player_stats(&self) -> PlayerStats {
+        PlayerStats {
+            health: *self
+                .world
+                .components
+                .health
+                .get(self.player_entity)
+                .unwrap(),
+            oxygen: Meter::new(4, 10),
+            food: Meter::new(8, 10),
+            poison: Meter::new(3, 10),
+            radiation: Meter::new(4, 10),
+        }
     }
 }

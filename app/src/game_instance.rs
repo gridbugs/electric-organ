@@ -55,10 +55,20 @@ fn visible_entity_on_top(layers: &LayerTable<VisibleEntity>) -> Option<&VisibleE
 
 fn render_meter(meter: Meter, colour: Rgb24, ctx: Ctx, fb: &mut FrameBuffer) {
     use text::*;
-    let width = 10;
-    let text = format!("{}/{}", meter.current(), meter.max());
-    let centre_offset = (width / 2) - (text.len() / 2);
-    StyledString::plain_text(text).render(&(), ctx.add_y(centre_offset as i32), fb);
+    let width = 15;
+    let string = format!("{}/{}", meter.current(), meter.max());
+    let style = Style::plain_text()
+        .with_bold(true)
+        .with_foreground(Rgb24::new_grey(255).to_rgba32(187));
+    let centre_offset = (width / 2) - ((string.len() + 1) / 2);
+    let filled_width = (meter.current() * width as u32) / meter.max();
+    for i in 0..width {
+        let coord = Coord::new(i as i32, 0);
+        let alpha = if i < filled_width as usize { 255 } else { 63 };
+        let rc = RenderCell::default().with_background(colour.to_rgba32(alpha));
+        fb.set_cell_relative_to_ctx(ctx, coord, 0, rc);
+    }
+    StyledString { string, style }.render(&(), ctx.add_x(centre_offset as i32), fb);
 }
 
 impl GameInstance {
@@ -430,6 +440,46 @@ impl GameInstance {
         text.wrap_word().render(&(), ctx, fb);
     }
 
+    fn render_stats(&self, ctx: Ctx, fb: &mut FrameBuffer) {
+        use text::*;
+        let stats = self.game.inner_ref().player_stats();
+        let x_offset = 11;
+        StyledString {
+            string: "Health:".to_string(),
+            style: Style::plain_text(),
+        }
+        .render(&(), ctx, fb);
+        render_meter(stats.health, colours::HEALTH, ctx.add_x(x_offset), fb);
+        let ctx = ctx.add_y(1);
+        StyledString {
+            string: "Oxygen:".to_string(),
+            style: Style::plain_text(),
+        }
+        .render(&(), ctx, fb);
+        render_meter(stats.oxygen, colours::OXYGEN, ctx.add_x(x_offset), fb);
+        let ctx = ctx.add_y(1);
+        StyledString {
+            string: "Food:".to_string(),
+            style: Style::plain_text(),
+        }
+        .render(&(), ctx, fb);
+        render_meter(stats.food, colours::FOOD, ctx.add_x(x_offset), fb);
+        let ctx = ctx.add_y(1);
+        StyledString {
+            string: "Poison:".to_string(),
+            style: Style::plain_text(),
+        }
+        .render(&(), ctx, fb);
+        render_meter(stats.poison, colours::POISON, ctx.add_x(x_offset), fb);
+        let ctx = ctx.add_y(1);
+        StyledString {
+            string: "Radiation:".to_string(),
+            style: Style::plain_text(),
+        }
+        .render(&(), ctx, fb);
+        render_meter(stats.radiation, colours::RADIATION, ctx.add_x(x_offset), fb);
+    }
+
     pub fn render(
         &self,
         ctx: Ctx,
@@ -572,6 +622,71 @@ impl GameInstance {
                     .add_xy(2, 1),
                 fb,
                 mode,
+            );
+        }
+        // stats
+        {
+            let offset_y = 0;
+            let render_cell = box_render_cell.with_character('═');
+            for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
+                let coord = Coord::new(i as i32, offset_y);
+                fb.set_cell_relative_to_ctx(ctx, coord, 0, render_cell);
+            }
+            Text::new(vec![
+                StyledString {
+                    string: "╡".to_string(),
+                    style: border_style,
+                },
+                StyledString {
+                    string: "Stats".to_string(),
+                    style: border_text_style,
+                },
+                StyledString {
+                    string: "╞".to_string(),
+                    style: border_style,
+                },
+            ])
+            .render(&(), ctx.add_xy(game_size.width() as i32 + 1, offset_y), fb);
+            fb.set_cell_relative_to_ctx(
+                ctx,
+                game_size.to_coord().unwrap().set_y(offset_y),
+                0,
+                box_render_cell.with_character('╠'),
+            );
+            self.render_stats(
+                ctx.add_offset(game_size.to_coord().unwrap().set_y(offset_y + 1))
+                    .add_xy(2, 1),
+                fb,
+            );
+        }
+        // equipment
+        {
+            let offset_y = 10;
+            let render_cell = box_render_cell.with_character('═');
+            for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
+                let coord = Coord::new(i as i32, offset_y);
+                fb.set_cell_relative_to_ctx(ctx, coord, 0, render_cell);
+            }
+            Text::new(vec![
+                StyledString {
+                    string: "╡".to_string(),
+                    style: border_style,
+                },
+                StyledString {
+                    string: "Equipment".to_string(),
+                    style: border_text_style,
+                },
+                StyledString {
+                    string: "╞".to_string(),
+                    style: border_style,
+                },
+            ])
+            .render(&(), ctx.add_xy(game_size.width() as i32 + 1, offset_y), fb);
+            fb.set_cell_relative_to_ctx(
+                ctx,
+                game_size.to_coord().unwrap().set_y(offset_y),
+                0,
+                box_render_cell.with_character('╠'),
             );
         }
     }
@@ -760,11 +875,23 @@ fn message_to_text(message: Message) -> Text {
             },
             StyledString::plain_text(" damage.".to_string()),
         ]),
-
         Message::NpcDies(npc_type) => Text::new(vec![
             StyledString::plain_text("The ".to_string()),
             npc_type_to_styled_string(npc_type),
             StyledString::plain_text(" dies.".to_string()),
+        ]),
+        Message::PlayerHit {
+            attacker_npc_type,
+            damage,
+        } => Text::new(vec![
+            StyledString::plain_text("The ".to_string()),
+            npc_type_to_styled_string(attacker_npc_type),
+            StyledString::plain_text(" hits you for ".to_string()),
+            StyledString {
+                string: format!("{damage}"),
+                style: Style::plain_text().with_bold(true),
+            },
+            StyledString::plain_text(" damage.".to_string()),
         ]),
     }
 }

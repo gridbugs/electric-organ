@@ -28,7 +28,7 @@ pub fn make_player() -> EntityData {
                 denominator: 100,
             },
         }),
-        health: Some(Meter::new_full(1000)),
+        health: Some(Meter::new_full(10)),
         ..Default::default()
     }
 }

@@ -170,6 +170,38 @@ impl World {
         }
     }
 
+    pub fn damage_player<R: Rng>(
+        &mut self,
+        character: Entity,
+        hit_points_to_lose: u32,
+        rng: &mut R,
+        external_events: &mut Vec<ExternalEvent>,
+        message_log: &mut Vec<Message>,
+    ) {
+        let player_entity = self.components.player.entities().next().unwrap();
+        if self.components.to_remove.contains(player_entity) {
+            // prevent cascading damage on explosions
+            return;
+        }
+        if let Some(&npc_type) = self.components.npc_type.get(character) {
+            message_log.push(Message::PlayerHit {
+                attacker_npc_type: npc_type,
+                damage: hit_points_to_lose,
+            });
+        }
+        let hit_points = self
+            .components
+            .health
+            .get_mut(player_entity)
+            .expect("character lacks hit_points");
+        if hit_points_to_lose >= hit_points.current() {
+            hit_points.set_current(0);
+            self.character_die(character, rng, external_events, message_log);
+        } else {
+            hit_points.decrease(hit_points_to_lose);
+        }
+    }
+
     fn character_die<R: Rng>(
         &mut self,
         character: Entity,
