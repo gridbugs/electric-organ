@@ -8,6 +8,7 @@ pub const STAIRS: Rgb24 = Rgb24::new(0, 153, 230);
 pub const ZOMBIE: Rgb24 = Rgb24::new(255, 51, 0);
 pub const CLIMBER: Rgb24 = Rgb24::new(153, 255, 51);
 pub const TRESPASSER: Rgb24 = Rgb24::new(0, 153, 255);
+pub const BOOMER: Rgb24 = Rgb24::hex(0xcc7a00);
 pub const NORMAL_MODE: Rgb24 = Rgb24::new(0, 255, 255);
 pub const AIMING_MODE: Rgb24 = Rgb24::new(255, 0, 0);
 pub const HEALTH: Rgb24 = Rgb24::hex(0x800000);

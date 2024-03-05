@@ -54,10 +54,11 @@ pub enum Tile {
     Tentacle,
     TentacleGlow,
     Exit,
+    Bullet,
     Zombie,
     Climber,
     Trespasser,
-    Bullet,
+    Boomer,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -174,4 +175,5 @@ pub enum NpcType {
     Zombie,
     Climber,
     Trespasser,
+    Boomer,
 }

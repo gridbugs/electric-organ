@@ -581,13 +581,32 @@ impl World {
                 tile: Tile::Trespasser,
                 npc: Npc { disposition: Disposition::Hostile,
                     movement: NpcMovement {
-                        can_traverse_difficult: true,
+                        can_traverse_difficult: false,
                         can_open_doors: true,
                     },
                 },
                 character: (),
                 npc_type: NpcType::Trespasser,
                 health: Meter::new_full(3),
+            },
+        )
+    }
+
+    pub fn spawn_boomer(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Boomer,
+                npc: Npc { disposition: Disposition::Hostile,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::Boomer,
+                health: Meter::new_full(2),
+                explodes_on_death: (),
             },
         )
     }

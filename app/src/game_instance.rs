@@ -215,6 +215,14 @@ impl GameInstance {
                         .with_foreground(Rgb24::new(255, 0, 0).to_rgba32(255)),
                 };
             }
+            Tile::Bullet => {
+                return RenderCell {
+                    character: Some('●'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgb24::new(187, 187, 187).to_rgba32(255)),
+                };
+            }
             Tile::Zombie => {
                 return RenderCell {
                     character: Some('z'),
@@ -239,12 +247,12 @@ impl GameInstance {
                         .with_foreground(colours::TRESPASSER.to_rgba32(255)),
                 };
             }
-            Tile::Bullet => {
+            Tile::Boomer => {
                 return RenderCell {
-                    character: Some('●'),
+                    character: Some('b'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(Rgb24::new(187, 187, 187).to_rgba32(255)),
+                        .with_foreground(colours::BOOMER.to_rgba32(255)),
                 };
             }
         };
@@ -402,9 +410,11 @@ impl GameInstance {
                                     .push(StyledString::plain_text(format!("Its health is ")));
                                 text.parts.push(StyledString {
                                     string: format!("{}/{}", health.current(), health.max()),
-                                    style: Style::default()
-                                        .with_bold(true)
-                                        .with_foreground(colours::HEALTH.to_rgba32(255)),
+                                    style: Style::default().with_bold(true).with_foreground(
+                                        colours::HEALTH
+                                            .to_rgba32(255)
+                                            .saturating_scalar_mul_div(3, 2),
+                                    ),
                                 });
                             }
                         }
@@ -823,6 +833,20 @@ fn describe_tile(tile: Tile) -> Description {
                 "It knows how to open doors.".to_string(),
             )])),
         },
+        Tile::Boomer => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "boomer".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::BOOMER.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Explodes on when it dies.".to_string(),
+            )])),
+        },
     }
 }
 
@@ -841,12 +865,17 @@ fn npc_type_to_styled_string(npc_type: NpcType) -> text::StyledString {
                 .with_bold(true)
                 .with_foreground(colours::CLIMBER.to_rgba32(255)),
         },
-
         NpcType::Trespasser => StyledString {
             string: "trespasser".to_string(),
             style: Style::new()
                 .with_bold(true)
                 .with_foreground(colours::TRESPASSER.to_rgba32(255)),
+        },
+        NpcType::Boomer => StyledString {
+            string: "boomer".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::BOOMER.to_rgba32(255)),
         },
     }
 }

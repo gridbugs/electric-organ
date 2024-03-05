@@ -128,6 +128,11 @@ impl Terrain {
                 world.spawn_trespasser(coord);
             }
         }
+        for _ in 0..5 {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_boomer(coord);
+            }
+        }
         Self { world }
     }
 }
