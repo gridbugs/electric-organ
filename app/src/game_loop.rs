@@ -1,17 +1,18 @@
 use crate::{
     colours,
     controls::{AppInput, Controls},
-    game_instance::{GameInstance, GameInstanceStorable},
+    game_instance::{GameInstance, GameInstanceStorable, Mode},
     image::Images,
     music::{MusicState, Track},
     text,
 };
 use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
 use game::{
-    witness::{self, Witness},
+    witness::{self, FireEquipped, Running, Witness},
     Config as GameConfig, GameOverReason, Victory,
 };
 use general_storage_static::{self as storage, format, StaticStorage as Storage};
+use line_2d;
 use rand::{Rng, SeedableRng};
 use rand_isaac::Isaac64Rng;
 use rgb_int::Rgb24;
@@ -385,13 +386,29 @@ impl GameLoopData {
         self.storage.save_config(&self.config);
     }
 
-    fn render(&self, ctx: Ctx, fb: &mut FrameBuffer) {
+    fn render(&self, ctx: Ctx, fb: &mut FrameBuffer, mode: Mode) {
         let instance = self.instance.as_ref().unwrap();
-        instance.render(ctx, fb, self.cursor);
-        if let Some(cursor) = self.cursor {
-            let cursor_colour = Rgba32::new(0, 255, 255, 127);
-            let render_cell = RenderCell::default().with_background(cursor_colour);
-            fb.set_cell_relative_to_ctx(ctx, cursor, 50, render_cell);
+        instance.render(ctx, fb, self.cursor, mode);
+        match mode {
+            Mode::Normal => {
+                let colour = colours::NORMAL_MODE.to_rgba32(127);
+                if let Some(cursor) = self.cursor {
+                    let render_cell = RenderCell::default().with_background(colour);
+                    fb.set_cell_relative_to_ctx(ctx, cursor, 50, render_cell);
+                }
+            }
+            Mode::Aiming => {
+                if let Some(cursor) = self.cursor {
+                    let colour = colours::AIMING_MODE.to_rgba32(127);
+                    let render_cell = RenderCell::default().with_background(colour);
+                    let instance = self.instance.as_ref().unwrap();
+                    for coord in
+                        line_2d::coords_between(instance.game.inner_ref().player_coord(), cursor)
+                    {
+                        fb.set_cell_relative_to_ctx(ctx, coord, 50, render_cell);
+                    }
+                }
+            }
         }
     }
 
@@ -403,14 +420,27 @@ impl GameLoopData {
                 if let Some(app_input) = self.controls.get(input) {
                     let (witness, _action_result) = match app_input {
                         AppInput::Direction(direction) => {
-                            running.walk(&mut instance.game, direction, &self.game_config)
+                            running.walk(&mut instance.game, direction)
                         }
-                        AppInput::Wait => running.wait(&mut instance.game, &self.game_config),
+                        AppInput::Wait => running.wait(&mut instance.game),
+                        AppInput::FireEquipped => {
+                            self.cursor = Some(instance.game.inner_ref().player_coord());
+                            (running.fire_equipped(), Ok(()))
+                        }
                     };
                     witness
                 } else {
                     if let Input::Mouse(MouseInput::MouseMove { coord, .. }) = input {
                         self.cursor = Some(coord);
+                    }
+                    if let Input::Mouse(MouseInput::MousePress { coord, .. }) = input {
+                        self.cursor = Some(coord);
+                    }
+                    if let Input::Mouse(MouseInput::MouseRelease { coord, .. }) = input {
+                        self.cursor = Some(coord);
+                    }
+                    if let Input::Keyboard(KeyboardInput::Char('?')) = input {
+                        return GameLoopState::Help(running);
                     }
                     running.into_witness()
                 }
@@ -436,6 +466,7 @@ pub enum GameLoopState {
     Paused(witness::Running),
     Playing(Witness),
     MainMenu,
+    Help(witness::Running),
 }
 
 impl Component for GameInstanceComponent {
@@ -443,7 +474,7 @@ impl Component for GameInstanceComponent {
     type State = GameLoopData;
 
     fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
-        state.render(ctx, fb);
+        state.render(ctx, fb, Mode::Normal);
     }
 
     fn update(&mut self, state: &mut Self::State, _ctx: Ctx, event: Event) -> Self::Output {
@@ -460,12 +491,68 @@ impl Component for GameInstanceComponent {
     }
 }
 
+struct GameInstanceFireEquippedComponent(Option<FireEquipped>);
+
+struct Cancel;
+
+impl Component for GameInstanceFireEquippedComponent {
+    type Output = Option<(Result<Coord, Cancel>, FireEquipped)>;
+    type State = GameLoopData;
+
+    fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
+        state.render(ctx, fb, Mode::Aiming);
+    }
+
+    fn update(&mut self, state: &mut Self::State, _ctx: Ctx, event: Event) -> Self::Output {
+        let instance = state.instance.as_mut().unwrap();
+        if event.is_escape() {
+            return Some((Err(Cancel), self.0.take().unwrap()));
+        }
+        match event {
+            Event::Input(input) => {
+                if let Input::Mouse(MouseInput::MouseMove { coord, .. }) = input {
+                    if coord.is_valid(instance.game.inner_ref().world_size()) {
+                        state.cursor = Some(coord);
+                    }
+                }
+                if let Input::Mouse(MouseInput::MousePress { coord, .. }) = input {
+                    return Some((Ok(coord), self.0.take().unwrap()));
+                }
+                if let Input::Keyboard(key) = input {
+                    let delta = match key {
+                        KeyboardInput::Left => Coord::new(-1, 0),
+                        KeyboardInput::Right => Coord::new(1, 0),
+                        KeyboardInput::Up => Coord::new(0, -1),
+                        KeyboardInput::Down => Coord::new(0, 1),
+                        _ => Coord::new(0, 0),
+                    };
+                    if let Some(cursor) = state.cursor {
+                        let new_cursor = cursor + delta;
+                        if new_cursor.is_valid(instance.game.inner_ref().world_size()) {
+                            state.cursor = Some(new_cursor);
+                        }
+                    }
+                }
+            }
+            Event::Tick(since_previous) => {
+                Running::cheat().tick(&mut instance.game, since_previous, &state.game_config);
+            }
+            _ => (),
+        }
+        None
+    }
+
+    fn size(&self, _state: &Self::State, ctx: Ctx) -> Size {
+        ctx.bounding_box.size()
+    }
+}
+
 fn menu_style<T: 'static>(menu: AppCF<T>) -> AppCF<T> {
     menu.border(BorderStyle::default())
         .fill(MENU_BACKGROUND)
         .centre()
         .overlay_tint(
-            render_state(|state: &State, ctx, fb| state.render(ctx, fb)),
+            render_state(|state: &State, ctx, fb| state.render(ctx, fb, Mode::Normal)),
             chargrid::core::TintDim(63),
             60,
         )
@@ -679,6 +766,12 @@ impl Component for MainMenuBackground {
     }
 }
 
+fn help() -> AppCF<()> {
+    text::help(MAIN_MENU_TEXT_WIDTH)
+        .centre()
+        .overlay(background(), 1)
+}
+
 fn main_menu_loop() -> AppCF<MainMenuOutput> {
     use MainMenuEntry::*;
     title_decorate(
@@ -696,10 +789,7 @@ fn main_menu_loop() -> AppCF<MainMenuOutput> {
                 })
             })
             .break_(),
-        Help => text::help(MAIN_MENU_TEXT_WIDTH)
-            .centre()
-            .overlay(background(), 1)
-            .continue_(),
+        Help => help().continue_(),
         Quit => val_once(MainMenuOutput::Quit).break_(),
     })
 }
@@ -792,6 +882,19 @@ fn game_instance_component(running: witness::Running) -> AppCF<GameLoopState> {
     cf(GameInstanceComponent::new(running)).some().no_peek()
 }
 
+fn fire_equipped(fire_equipped: FireEquipped) -> AppCF<Witness> {
+    cf(GameInstanceFireEquippedComponent(Some(fire_equipped)))
+        .no_peek()
+        .map_side_effect(|(result, fire_equipped), state: &mut State| match result {
+            Ok(coord) => {
+                let (witness, _) =
+                    fire_equipped.commit(&mut state.instance.as_mut().unwrap().game, coord);
+                witness
+            }
+            Err(Cancel) => fire_equipped.cancel(),
+        })
+}
+
 fn win() -> AppCF<()> {
     text::win(MAIN_MENU_TEXT_WIDTH)
 }
@@ -882,6 +985,9 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
                 Witness::GameOver(reason) => game_over(reason).map_val(|| MainMenu).continue_(),
                 Witness::Win(_) => win().map_val(|| MainMenu).continue_(),
                 Witness::Menu(menu_) => game_menu(menu_).map(Playing).continue_(),
+                Witness::FireEquipped(fire_equipped_) => {
+                    fire_equipped(fire_equipped_).map(Playing).continue_()
+                }
             },
             Paused(running) => pause(running).map(|pause_output| match pause_output {
                 PauseOutput::ContinueGame { running } => {
@@ -896,6 +1002,9 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
                 }
                 MainMenuOutput::Quit => LoopControl::Break(()),
             }),
+            Help(running) => help()
+                .map(|()| GameLoopState::Playing(running.into_witness()))
+                .continue_(),
         })
         .bound_size(Size::new_u16(80, 30))
         .on_each_tick_with_state(|state| state.music_state.tick())

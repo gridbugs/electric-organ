@@ -1,4 +1,5 @@
 use crate::{ActionError, Config, GameControlFlow, GameOverReason, Input, Menu as GameMenu};
+use coord_2d::Coord;
 use direction::CardinalDirection;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -47,11 +48,15 @@ pub struct Menu {
 }
 
 #[derive(Debug)]
+pub struct FireEquipped(Private);
+
+#[derive(Debug)]
 pub enum Witness {
     Running(Running),
     GameOver(GameOverReason),
     Win(Win),
     Menu(Menu),
+    FireEquipped(FireEquipped),
 }
 
 impl Witness {
@@ -116,15 +121,18 @@ impl Running {
         self,
         game: &mut Game,
         direction: CardinalDirection,
-        config: &Config,
     ) -> (Witness, Result<(), ActionError>) {
         let Self(private) = self;
-        game.witness_handle_input(Input::Walk(direction), config, private)
+        game.witness_handle_input(Input::Walk(direction), private)
     }
 
-    pub fn wait(self, game: &mut Game, config: &Config) -> (Witness, Result<(), ActionError>) {
+    pub fn wait(self, game: &mut Game) -> (Witness, Result<(), ActionError>) {
         let Self(private) = self;
-        game.witness_handle_input(Input::Wait, config, private)
+        game.witness_handle_input(Input::Wait, private)
+    }
+
+    pub fn fire_equipped(self) -> Witness {
+        Witness::FireEquipped(FireEquipped(self.0))
     }
 }
 
@@ -132,10 +140,9 @@ impl Game {
     fn witness_handle_input(
         &mut self,
         input: Input,
-        config: &Config,
         private: Private,
     ) -> (Witness, Result<(), ActionError>) {
-        match self.inner_game.handle_input(input, config) {
+        match self.inner_game.handle_input(input) {
             Err(e) => (Witness::running(private), Err(e)),
             Ok(None) => (Witness::running(private), Ok(())),
             Ok(Some(GameControlFlow::GameOver(reason))) => (Witness::GameOver(reason), Ok(())),
@@ -180,5 +187,15 @@ impl Game {
 
     pub fn into_running_game(self, running: Running) -> RunningGame {
         RunningGame::new(self, running)
+    }
+}
+
+impl FireEquipped {
+    pub fn cancel(self) -> Witness {
+        Witness::Running(Running(self.0))
+    }
+
+    pub fn commit(self, game: &mut Game, coord: Coord) -> (Witness, Result<(), ActionError>) {
+        game.witness_handle_input(Input::FireEquipped(coord), self.0)
     }
 }

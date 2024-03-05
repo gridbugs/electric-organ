@@ -5,11 +5,17 @@ use chargrid::{
 };
 use game::{
     witness::{self, Game, RunningGame},
-    CellVisibility, Config, Layer, LayerTable, Message, Tile, Victory, VisibleEntity,
+    ActionError, CellVisibility, Config, Layer, LayerTable, Message, Tile, Victory, VisibleEntity,
 };
 use rand::Rng;
 use rgb_int::Rgb24;
 use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug)]
+pub enum Mode {
+    Normal,
+    Aiming,
+}
 
 #[derive(Clone, Copy)]
 struct LightBlend {
@@ -320,10 +326,11 @@ impl GameInstance {
         use text::*;
         if let Some(cursor) = cursor {
             if self.game.inner_ref().world_size().is_valid(cursor) {
-                let (tile, verb) = match self.game.inner_ref().cell_visibility_at_coord(cursor) {
+                let (tile, verb, end) = match self.game.inner_ref().cell_visibility_at_coord(cursor)
+                {
                     CellVisibility::Never => {
                         Text::new(vec![StyledString {
-                            string: "You don't know what is here.".to_string(),
+                            string: "UNDISCOVERED LOCATION".to_string(),
                             style: Style::new()
                                 .with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
                         }])
@@ -332,9 +339,11 @@ impl GameInstance {
                         return;
                     }
                     CellVisibility::Previous(data) => {
-                        (visible_tile(&data.tiles), "remember seeing")
+                        (visible_tile(&data.tiles), "remember seeing", Some("here"))
                     }
-                    CellVisibility::Current { data, .. } => (visible_tile(&data.tiles), "see"),
+                    CellVisibility::Current { data, .. } => {
+                        (visible_tile(&data.tiles), "see", None)
+                    }
                 };
                 if let Some(tile) = tile {
                     let Description {
@@ -342,13 +351,12 @@ impl GameInstance {
                         description,
                     } = describe_tile(tile);
                     let mut text = Text {
-                        parts: vec![
-                            StyledString::plain_text("You ".to_string()),
-                            StyledString::plain_text(verb.to_string()),
-                            StyledString::plain_text(" ".to_string()),
-                        ],
+                        parts: vec![StyledString::plain_text(format!("You {verb} "))],
                     };
                     text.parts.append(&mut name.parts);
+                    if let Some(end) = end {
+                        text.parts.push(StyledString::plain_text(format!(" {end}")));
+                    }
                     text.parts.push(StyledString::plain_text(".".to_string()));
                     if let Some(mut description) = description {
                         text.parts
@@ -368,7 +376,20 @@ impl GameInstance {
         .render(&(), ctx, fb);
     }
 
-    pub fn render(&self, ctx: Ctx, fb: &mut FrameBuffer, cursor: Option<Coord>) {
+    fn render_mode(&self, ctx: Ctx, fb: &mut FrameBuffer, mode: Mode) {
+        use text::*;
+        let text = match mode {
+            Mode::Normal => Text::new(vec![StyledString::plain_text(format!(
+                "Move with ←↑→↓.\nPress ? for more info."
+            ))]),
+            Mode::Aiming => Text::new(vec![StyledString::plain_text(format!(
+                "Aim with the mouse or ←↑→↓. Click or ENTER to fire."
+            ))]),
+        };
+        text.wrap_word().render(&(), ctx, fb);
+    }
+
+    pub fn render(&self, ctx: Ctx, fb: &mut FrameBuffer, cursor: Option<Coord>, mode: Mode) {
         use text::*;
         self.render_game(ctx, fb);
         self.render_messages(
@@ -455,6 +476,54 @@ impl GameInstance {
                     .add_xy(2, 1),
                 fb,
                 cursor,
+            );
+        }
+        // mode
+        {
+            let offset_y = 15;
+            let render_cell = box_render_cell.with_character('═');
+            for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
+                let coord = Coord::new(i as i32, offset_y);
+                fb.set_cell_relative_to_ctx(ctx, coord, 0, render_cell);
+            }
+            Text::new(vec![
+                StyledString {
+                    string: "╡".to_string(),
+                    style: border_style,
+                },
+                StyledString {
+                    string: "Mode: ".to_string(),
+                    style: border_text_style,
+                },
+                match mode {
+                    Mode::Normal => StyledString {
+                        string: "NORMAL".to_string(),
+                        style: border_text_style
+                            .with_foreground(colours::NORMAL_MODE.to_rgba32(255)),
+                    },
+                    Mode::Aiming => StyledString {
+                        string: "AIMING".to_string(),
+                        style: border_text_style
+                            .with_foreground(colours::AIMING_MODE.to_rgba32(255)),
+                    },
+                },
+                StyledString {
+                    string: "╞".to_string(),
+                    style: border_style,
+                },
+            ])
+            .render(&(), ctx.add_xy(game_size.width() as i32 + 1, offset_y), fb);
+            fb.set_cell_relative_to_ctx(
+                ctx,
+                game_size.to_coord().unwrap().set_y(offset_y),
+                0,
+                box_render_cell.with_character('╠'),
+            );
+            self.render_mode(
+                ctx.add_offset(game_size.to_coord().unwrap().set_y(offset_y + 1))
+                    .add_xy(2, 1),
+                fb,
+                mode,
             );
         }
     }
@@ -599,5 +668,10 @@ fn message_to_text(message: Message) -> Text {
         Message::CloseDoor => Text::new(vec![StyledString::plain_text(
             "You close the door.".to_string(),
         )]),
+        Message::ActionError(ActionError::InvalidMove) => {
+            Text::new(vec![StyledString::plain_text(
+                "You can't walk there.".to_string(),
+            )])
+        }
     }
 }

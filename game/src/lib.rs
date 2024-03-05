@@ -64,6 +64,7 @@ pub enum ExternalEvent {}
 pub enum Message {
     OpenDoor,
     CloseDoor,
+    ActionError(ActionError),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -98,6 +99,7 @@ pub enum GameControlFlow {
 pub enum Input {
     Walk(CardinalDirection),
     Wait,
+    FireEquipped(Coord),
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -158,7 +160,10 @@ impl VisibleWorld for World {
     }
 }
 
-pub enum ActionError {}
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ActionError {
+    InvalidMove,
+}
 
 #[derive(Serialize, Deserialize)]
 struct Level {
@@ -351,12 +356,15 @@ impl Game {
         );
     }
 
-    fn player_walk(&mut self, direction: CardinalDirection) -> Option<GameControlFlow> {
+    fn player_walk(
+        &mut self,
+        direction: CardinalDirection,
+    ) -> Result<Option<GameControlFlow>, ActionError> {
         let player_coord = self.player_coord();
         let new_player_coord = player_coord + direction.coord();
         if !new_player_coord.is_valid(self.world.size()) {
             // player would walk outside bounds of map
-            return None;
+            return Err(ActionError::InvalidMove);
         }
         if let Some(&Layers {
             feature: Some(feature_entity),
@@ -367,7 +375,7 @@ impl Game {
             if let Some(DoorState::Closed) = self.world.components.door_state.get(feature_entity) {
                 self.open_door(feature_entity);
                 self.message_log.push(Message::OpenDoor);
-                return None;
+                return Ok(None);
             }
             // Don't let the player walk through solid entities
             if self.world.components.solid.contains(feature_entity) {
@@ -376,8 +384,9 @@ impl Game {
                 {
                     self.close_door(open_door_entity);
                     self.message_log.push(Message::CloseDoor);
+                    return Ok(None);
                 }
-                return None;
+                return Err(ActionError::InvalidMove);
             }
         }
         self.world
@@ -385,7 +394,7 @@ impl Game {
             .update_coord(self.player_entity, new_player_coord)
             .unwrap();
         self.change_level_if_player_is_on_stairs();
-        None
+        Ok(None)
     }
 
     fn change_level_if_player_is_on_stairs(&mut self) {
@@ -489,6 +498,7 @@ impl Game {
                             return Some(control_flow);
                         }
                     }
+                    _ => (),
                 }
             }
         }
@@ -517,12 +527,24 @@ impl Game {
     pub(crate) fn handle_input(
         &mut self,
         input: Input,
-        _config: &Config,
     ) -> Result<Option<GameControlFlow>, ActionError> {
         let game_control_flow = match input {
-            Input::Walk(direction) => self.player_walk(direction),
+            Input::Walk(direction) => {
+                let result = self.player_walk(direction);
+                match result {
+                    Ok(x) => x,
+                    Err(action_error) => {
+                        self.message_log.push(Message::ActionError(action_error));
+                        return Err(action_error);
+                    }
+                }
+            }
             Input::Wait => {
                 self.pass_time();
+                None
+            }
+            Input::FireEquipped(coord) => {
+                println!("{coord:?}");
                 None
             }
         };
