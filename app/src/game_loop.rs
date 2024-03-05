@@ -9,7 +9,7 @@ use crate::{
 use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
 use game::{
     witness::{self, FireEquipped, Running, Witness},
-    Config as GameConfig, GameOverReason, Victory,
+    Config as GameConfig, ExternalEvent, GameOverReason, Victory,
 };
 use general_storage_static::{self as storage, format, StaticStorage as Storage};
 use line_2d;
@@ -891,8 +891,16 @@ fn fire_equipped(fire_equipped: FireEquipped) -> AppCF<Witness> {
         .no_peek()
         .map_side_effect(|(result, fire_equipped), state: &mut State| match result {
             Ok(coord) => {
-                let (witness, _) =
-                    fire_equipped.commit(&mut state.instance.as_mut().unwrap().game, coord);
+                let instance = state.instance.as_mut().unwrap();
+                let (witness, _) = fire_equipped.commit(&mut instance.game, coord);
+                for external_event in instance.game.take_external_events() {
+                    match external_event {
+                        ExternalEvent::FirePistol => state.music_state.sfx_pistol(),
+                        ExternalEvent::FireShotgun => state.music_state.sfx_shotgun(),
+                        ExternalEvent::FireRocket => state.music_state.sfx_rocket(),
+                        _ => (),
+                    }
+                }
                 witness
             }
             Err(Cancel) => fire_equipped.cancel(),

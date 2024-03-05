@@ -58,7 +58,12 @@ impl Default for Config {
 /// Events which the game can report back to the io layer so it can
 /// respond with a sound/visual effect.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
-pub enum ExternalEvent {}
+pub enum ExternalEvent {
+    FirePistol,
+    FireShotgun,
+    FireRocket,
+    Explosion,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Message {
@@ -556,6 +561,7 @@ impl Game {
             }
             Input::FireEquipped(target) => {
                 let start = self.player_coord();
+                self.external_events.push(ExternalEvent::FirePistol);
                 self.world
                     .spawn_bullet(start, target, &mut self.animation_rng);
                 None
@@ -599,5 +605,10 @@ impl Game {
 
     pub fn world_size(&self) -> Size {
         self.world.spatial_table.grid_size()
+    }
+
+    pub fn take_external_events(&mut self) -> Vec<ExternalEvent> {
+        use std::mem;
+        mem::replace(&mut self.external_events, Vec::new())
     }
 }

@@ -1,4 +1,6 @@
-use crate::{ActionError, Config, GameControlFlow, GameOverReason, Input, Menu as GameMenu};
+use crate::{
+    ActionError, Config, ExternalEvent, GameControlFlow, GameOverReason, Input, Menu as GameMenu,
+};
 use coord_2d::Coord;
 use direction::CardinalDirection;
 use rand::Rng;
@@ -187,6 +189,10 @@ impl Game {
 
     pub fn into_running_game(self, running: Running) -> RunningGame {
         RunningGame::new(self, running)
+    }
+
+    pub fn take_external_events(&mut self) -> Vec<ExternalEvent> {
+        self.inner_game.take_external_events()
     }
 }
 

@@ -306,7 +306,7 @@ impl World {
                 high: Rgb24::new(255, 255, 255).to_rgba32(31),
             };
             ParticleEmitter {
-                emit_particle_every_period: Duration::from_millis(16),
+                emit_particle_every_period: Duration::from_millis(32),
                 fade_out_duration: None,
                 particle: Particle {
                     tile: None,
@@ -318,7 +318,7 @@ impl World {
                             high: Duration::from_millis(500),
                         },
                     }),
-                    fade_duration: Some(Duration::from_millis(2000)),
+                    fade_duration: Some(Duration::from_millis(1000)),
                     possible_light: None,
                     ..Default::default()
                 },
