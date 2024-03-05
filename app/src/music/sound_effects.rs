@@ -62,7 +62,7 @@ pub fn rocket(trigger: Trigger) -> Sf64 {
 pub fn explosion(trigger: Trigger) -> Sf64 {
     let make_noise = || noise().filter(sample_and_hold(trigger.clone()).build());
     let duration = 0.8;
-    let sweep = (adsr_linear_01(trigger.to_gate_with_duration_s(duration))
+    let env = (adsr_linear_01(trigger.to_gate_with_duration_s(duration))
         .key_press(&trigger)
         .attack_s(duration / 4.0)
         .decay_s(3.0 * (duration / 4.0))
@@ -75,18 +75,16 @@ pub fn explosion(trigger: Trigger) -> Sf64 {
             .build()
             .exp_01(1.0))
         / 2.0;
-    let osc = oscillator_hz(
-        Waveform::Sine,
-        (&sweep * (100.0 + make_noise() * 100)) + 20.0,
-    )
-    .pulse_width_01(0.1)
-    .build();
-    let env = &sweep;
+    let osc = oscillator_hz(Waveform::Sine, (&env * (100.0 + make_noise() * 100)) + 20.0)
+        .pulse_width_01(0.1)
+        .build();
     let noise = noise().filter(low_pass_moog_ladder(2000.0).build()) * 10.0;
     let filtered_osc = (osc + noise).filter(
-        low_pass_moog_ladder(env * (10000.0 + make_noise() * 5000))
+        low_pass_moog_ladder(&env * (10000.0 + make_noise() * 5000))
             .resonance(2.0)
             .build(),
     );
-    filtered_osc.mix(|dry| dry.filter(reverb().room_size(0.8).build()))
+    filtered_osc
+        .mix(|dry| dry.filter(reverb().room_size(0.8).build()))
+        .lazy_zero(&env)
 }
