@@ -4,6 +4,8 @@ use entity_table::{Entity, EntityAllocator};
 use grid_search_cardinal::distance_map::DistanceMap;
 use serde::{Deserialize, Serialize};
 
+mod explosion;
+
 pub mod spatial;
 use spatial::SpatialTable;
 

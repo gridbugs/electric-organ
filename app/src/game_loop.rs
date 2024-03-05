@@ -450,7 +450,14 @@ impl GameLoopData {
                 }
             }
             Event::Tick(since_previous) => {
-                running.tick(&mut instance.game, since_previous, &self.game_config)
+                let witness = running.tick(&mut instance.game, since_previous, &self.game_config);
+                for external_event in instance.game.take_external_events() {
+                    match external_event {
+                        ExternalEvent::Explosion(_) => self.music_state.sfx_explosion(),
+                        _ => (),
+                    }
+                }
+                witness
             }
             _ => Witness::Running(running),
         };
@@ -517,6 +524,11 @@ impl Component for GameInstanceFireEquippedComponent {
                 if let Input::Mouse(MouseInput::MouseMove { coord, .. }) = input {
                     if coord.is_valid(instance.game.inner_ref().world_size()) {
                         state.cursor = Some(coord);
+                    }
+                }
+                if let Input::Keyboard(input::keys::RETURN) = input {
+                    if let Some(coord) = state.cursor {
+                        return Some((Ok(coord), self.0.take().unwrap()));
                     }
                 }
                 if let Input::Mouse(MouseInput::MousePress { coord, .. }) = input {

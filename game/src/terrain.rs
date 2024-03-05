@@ -76,6 +76,7 @@ impl Terrain {
                     } else {
                         world.spawn_debris(coord);
                     }
+                    world.spawn_floor(coord);
                     debris_count += 1;
                 }
                 Tile::Door => {

@@ -5,7 +5,8 @@ use chargrid::{
 };
 use game::{
     witness::{self, Game, RunningGame},
-    ActionError, CellVisibility, Config, Layer, LayerTable, Message, Tile, Victory, VisibleEntity,
+    ActionError, CellVisibility, Config, Layer, LayerTable, Message, Meter, Tile, Victory,
+    VisibleEntity,
 };
 use rand::Rng;
 use rgb_int::Rgb24;
@@ -36,20 +37,28 @@ pub struct GameInstance {
     pub game: Game,
 }
 
-fn visible_tile(layers: &LayerTable<VisibleEntity>) -> Option<Tile> {
-    if let Some(x) = layers.character.tile {
-        return Some(x);
+fn visible_entity_on_top(layers: &LayerTable<VisibleEntity>) -> Option<&VisibleEntity> {
+    if layers.character.tile.is_some() {
+        return Some(&layers.character);
     }
-    if let Some(x) = layers.item.tile {
-        return Some(x);
+    if layers.item.tile.is_some() {
+        return Some(&layers.item);
     }
-    if let Some(x) = layers.feature.tile {
-        return Some(x);
+    if layers.feature.tile.is_some() {
+        return Some(&layers.feature);
     }
-    if let Some(x) = layers.floor.tile {
-        return Some(x);
+    if layers.floor.tile.is_some() {
+        return Some(&layers.floor);
     }
     None
+}
+
+fn render_meter(meter: Meter, colour: Rgb24, ctx: Ctx, fb: &mut FrameBuffer) {
+    use text::*;
+    let width = 10;
+    let text = format!("{}/{}", meter.current(), meter.max());
+    let centre_offset = (width / 2) - (text.len() / 2);
+    StyledString::plain_text(text).render(&(), ctx.add_y(centre_offset as i32), fb);
 }
 
 impl GameInstance {
@@ -339,45 +348,64 @@ impl GameInstance {
         use text::*;
         if let Some(cursor) = cursor {
             if self.game.inner_ref().world_size().is_valid(cursor) {
-                let (tile, verb, end) = match self.game.inner_ref().cell_visibility_at_coord(cursor)
-                {
-                    CellVisibility::Never => {
-                        Text::new(vec![StyledString {
-                            string: "UNDISCOVERED LOCATION".to_string(),
-                            style: Style::new()
-                                .with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
-                        }])
-                        .wrap_word()
-                        .render(&(), ctx, fb);
+                let (visible_entity, verb, end, currently_visible) =
+                    match self.game.inner_ref().cell_visibility_at_coord(cursor) {
+                        CellVisibility::Never => {
+                            Text::new(vec![StyledString {
+                                string: "UNDISCOVERED LOCATION".to_string(),
+                                style: Style::new()
+                                    .with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
+                            }])
+                            .wrap_word()
+                            .render(&(), ctx, fb);
+                            return;
+                        }
+                        CellVisibility::Previous(data) => (
+                            visible_entity_on_top(&data.tiles),
+                            "remember seeing",
+                            Some("here"),
+                            false,
+                        ),
+                        CellVisibility::Current { data, .. } => {
+                            (visible_entity_on_top(&data.tiles), "see", None, true)
+                        }
+                    };
+                if let Some(visible_entity) = visible_entity {
+                    if let Some(tile) = visible_entity.tile {
+                        let Description {
+                            mut name,
+                            description,
+                        } = describe_tile(tile);
+                        let mut text = Text {
+                            parts: vec![StyledString::plain_text(format!("You {verb} "))],
+                        };
+                        text.parts.append(&mut name.parts);
+                        if let Some(end) = end {
+                            text.parts.push(StyledString::plain_text(format!(" {end}")));
+                        }
+                        text.parts.push(StyledString::plain_text(".".to_string()));
+                        if currently_visible {
+                            if let Some(health) = visible_entity.health {
+                                text.parts
+                                    .push(StyledString::plain_text("\n\n".to_string()));
+                                text.parts
+                                    .push(StyledString::plain_text(format!("Its health is ")));
+                                text.parts.push(StyledString {
+                                    string: format!("{}/{}", health.current(), health.max()),
+                                    style: Style::default()
+                                        .with_bold(true)
+                                        .with_foreground(colours::HEALTH.to_rgba32(255)),
+                                });
+                            }
+                        }
+                        if let Some(mut description) = description {
+                            text.parts
+                                .push(StyledString::plain_text("\n\n".to_string()));
+                            text.parts.append(&mut description.parts);
+                        }
+                        text.wrap_word().render(&(), ctx, fb);
                         return;
                     }
-                    CellVisibility::Previous(data) => {
-                        (visible_tile(&data.tiles), "remember seeing", Some("here"))
-                    }
-                    CellVisibility::Current { data, .. } => {
-                        (visible_tile(&data.tiles), "see", None)
-                    }
-                };
-                if let Some(tile) = tile {
-                    let Description {
-                        mut name,
-                        description,
-                    } = describe_tile(tile);
-                    let mut text = Text {
-                        parts: vec![StyledString::plain_text(format!("You {verb} "))],
-                    };
-                    text.parts.append(&mut name.parts);
-                    if let Some(end) = end {
-                        text.parts.push(StyledString::plain_text(format!(" {end}")));
-                    }
-                    text.parts.push(StyledString::plain_text(".".to_string()));
-                    if let Some(mut description) = description {
-                        text.parts
-                            .push(StyledString::plain_text("\n\n".to_string()));
-                        text.parts.append(&mut description.parts);
-                    }
-                    text.wrap_word().render(&(), ctx, fb);
-                    return;
                 }
             }
         }
@@ -629,6 +657,10 @@ fn describe_tile(tile: Tile) -> Description {
                 "Return here once your mission is complete!".to_string(),
             )])),
         },
+        Tile::Bullet => Description {
+            name: Text::new(vec![StyledString::plain_text("a bullet".to_string())]),
+            description: None,
+        },
         Tile::Zombie => Description {
             name: Text::new(vec![
                 StyledString::plain_text("a ".to_string()),
@@ -639,11 +671,7 @@ fn describe_tile(tile: Tile) -> Description {
                         .with_foreground(colours::ZOMBIE.to_rgba32(255)),
                 },
             ]),
-            description: Some(Text::new(vec![StyledString::plain_text(
-                "A basic former human. Not particularly strong but there are a lot of them. \
-                        Some of their organs may still be intact."
-                    .to_string(),
-            )])),
+            description: None,
         },
         Tile::Climber => Description {
             name: Text::new(vec![
@@ -655,7 +683,9 @@ fn describe_tile(tile: Tile) -> Description {
                         .with_foreground(colours::CLIMBER.to_rgba32(255)),
                 },
             ]),
-            description: None,
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "It can climb over debris.".to_string(),
+            )])),
         },
         Tile::Trespasser => Description {
             name: Text::new(vec![
@@ -667,11 +697,9 @@ fn describe_tile(tile: Tile) -> Description {
                         .with_foreground(colours::TRESPASSER.to_rgba32(255)),
                 },
             ]),
-            description: None,
-        },
-        Tile::Bullet => Description {
-            name: Text::new(vec![StyledString::plain_text("a bullet".to_string())]),
-            description: None,
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "It knows how to open doors.".to_string(),
+            )])),
         },
     }
 }

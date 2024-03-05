@@ -62,7 +62,7 @@ pub enum ExternalEvent {
     FirePistol,
     FireShotgun,
     FireRocket,
-    Explosion,
+    Explosion(Coord),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -111,6 +111,7 @@ pub enum Input {
 pub struct VisibleEntity {
     pub tile: Option<Tile>,
     pub colour_hint: Option<Rgba32>,
+    pub health: Option<Meter>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -138,7 +139,12 @@ impl VisibleCellData {
                 .map(|entity| {
                     let tile = world.components.tile.get(entity).cloned();
                     let colour_hint = world.components.colour_hint.get(entity).cloned();
-                    VisibleEntity { tile, colour_hint }
+                    let health = world.components.health.get(entity).cloned();
+                    VisibleEntity {
+                        tile,
+                        colour_hint,
+                        health,
+                    }
                 })
                 .unwrap_or_default()
         });
@@ -510,6 +516,18 @@ impl Game {
         None
     }
 
+    fn cleanup(&mut self) {
+        let to_remove = self
+            .world
+            .components
+            .to_remove
+            .entities()
+            .collect::<Vec<_>>();
+        for entity in to_remove {
+            self.world.remove_entity(entity);
+        }
+    }
+
     #[must_use]
     pub(crate) fn handle_tick(
         &mut self,
@@ -529,6 +547,7 @@ impl Game {
                 return result;
             }
         }
+        self.cleanup();
         self.update_visibility();
         None
     }
@@ -561,9 +580,9 @@ impl Game {
             }
             Input::FireEquipped(target) => {
                 let start = self.player_coord();
-                self.external_events.push(ExternalEvent::FirePistol);
+                self.external_events.push(ExternalEvent::FireRocket);
                 self.world
-                    .spawn_bullet(start, target, &mut self.animation_rng);
+                    .spawn_rocket(start, target, &mut self.animation_rng);
                 None
             }
         };
@@ -596,6 +615,7 @@ impl Game {
                     let visible_entity = VisibleEntity {
                         tile: self.world.components.tile.get(entity).cloned(),
                         colour_hint: self.world.components.colour_hint.get(entity).cloned(),
+                        health: self.world.components.health.get(entity).cloned(),
                     };
                     f(coord, visible_entity, light_colour);
                 }

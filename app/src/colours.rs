@@ -10,3 +10,4 @@ pub const CLIMBER: Rgb24 = Rgb24::new(153, 255, 51);
 pub const TRESPASSER: Rgb24 = Rgb24::new(0, 153, 255);
 pub const NORMAL_MODE: Rgb24 = Rgb24::new(0, 255, 255);
 pub const AIMING_MODE: Rgb24 = Rgb24::new(255, 0, 0);
+pub const HEALTH: Rgb24 = Rgb24::new(255, 0, 0);

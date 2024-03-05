@@ -1,3 +1,4 @@
+use crate::world::explosion;
 pub use crate::world::spatial::{Layer, Location};
 use entity_table::declare_entity_module;
 use rgb_int::Rgba32;
@@ -25,6 +26,10 @@ declare_entity_module! {
         projectile_damage: ProjectileDamage,
         on_collision: OnCollision,
         npc: Npc,
+        health: Meter,
+        destructible: (),
+        to_remove: (),
+        explodes_on_death: (),
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -58,7 +63,7 @@ pub enum DoorState {
     Closed,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Meter {
     current: u32,
     max: u32,
@@ -67,6 +72,9 @@ pub struct Meter {
 impl Meter {
     pub fn new(current: u32, max: u32) -> Self {
         Self { current, max }
+    }
+    pub fn new_full(max: u32) -> Self {
+        Self::new(max, max)
     }
     pub fn current_and_max(&self) -> (u32, u32) {
         (self.current, self.max)
@@ -116,6 +124,7 @@ pub struct ProjectileDamage {
 pub enum OnCollision {
     Remove,
     RemoveRealtime,
+    Explode(explosion::spec::Explosion),
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
