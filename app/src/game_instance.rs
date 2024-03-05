@@ -851,9 +851,12 @@ fn npc_type_to_styled_string(npc_type: NpcType) -> text::StyledString {
     }
 }
 
-fn message_to_text(message: Message) -> Text {
+pub fn message_to_text(message: Message) -> Text {
     use text::*;
     match message {
+        Message::Wait => Text::new(vec![StyledString::plain_text(
+            "You wait for a turn.".to_string(),
+        )]),
         Message::OpenDoor => Text::new(vec![StyledString::plain_text(
             "You open the door.".to_string(),
         )]),

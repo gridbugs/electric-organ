@@ -1,7 +1,7 @@
 use crate::{
     colours,
     controls::{AppInput, Controls},
-    game_instance::{GameInstance, GameInstanceStorable, Mode},
+    game_instance::{message_to_text, GameInstance, GameInstanceStorable, Mode},
     image::Images,
     music::{MusicState, Track},
     text,
@@ -442,6 +442,9 @@ impl GameLoopData {
                                 self.cursor = Some(instance.game.inner_ref().player_coord());
                                 (running.fire_equipped(), Ok(()))
                             }
+                            AppInput::MessageLog => {
+                                return GameLoopState::MessageLog(running);
+                            }
                         };
                         witness
                     }
@@ -510,6 +513,7 @@ pub enum GameLoopState {
     Playing(Witness),
     MainMenu,
     Help(witness::Running),
+    MessageLog(witness::Running),
 }
 
 impl Component for GameInstanceComponent {
@@ -820,6 +824,79 @@ fn help() -> AppCF<()> {
         .overlay(background(), 1)
 }
 
+struct MessageLog {
+    scroll_from_bottom: usize,
+}
+
+impl Component for MessageLog {
+    type Output = Option<()>;
+    type State = GameLoopData;
+
+    fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
+        use chargrid::text::*;
+        StyledString {
+            string: format!("Scroll with ↑↓. Press any other key to return to the game."),
+            style: Style::plain_text().with_foreground(Rgba32::new_grey(127)),
+        }
+        .render(&(), ctx.add_xy(1, 1), fb);
+        let ctx = ctx.add_xy(1, 3).constrain_size_by(Coord::new(1, 1));
+        let instance = state.instance.as_ref().unwrap();
+        let message_log = instance.game.inner_ref().message_log();
+        let num_messages = message_log.len();
+        if num_messages == 0 {
+            StyledString {
+                string: format!("(No messages in log.)"),
+                style: Style::plain_text(),
+            }
+            .render(&(), ctx.add_xy(1, 1), fb);
+        } else {
+            let message_log_start = message_log
+                .len()
+                .saturating_sub(ctx.bounding_box.size().height() as usize)
+                - self.scroll_from_bottom;
+            for (i, &ref message) in message_log[message_log_start..].into_iter().enumerate() {
+                message_to_text(message.clone()).render(&(), ctx.add_y(i as i32), fb);
+            }
+        }
+    }
+
+    fn update(&mut self, state: &mut Self::State, ctx: Ctx, event: Event) -> Self::Output {
+        let ctx = ctx.add_xy(1, 3).constrain_size_by(Coord::new(1, 1));
+        let instance = state.instance.as_ref().unwrap();
+        let message_log = instance.game.inner_ref().message_log();
+        let num_messages = message_log.len();
+        match event {
+            Event::Input(Input::Keyboard(key)) => match key {
+                KeyboardInput::Up => {
+                    if num_messages > ctx.bounding_box.size().height() as usize {
+                        let offset = num_messages - ctx.bounding_box.size().height() as usize;
+                        let new_scroll = self.scroll_from_bottom + 1;
+                        if new_scroll < offset {
+                            self.scroll_from_bottom = new_scroll;
+                        }
+                    }
+                }
+                KeyboardInput::Down => {
+                    self.scroll_from_bottom = self.scroll_from_bottom.saturating_sub(1);
+                }
+                _ => return Some(()),
+            },
+            _ => (),
+        }
+        None
+    }
+
+    fn size(&self, _state: &Self::State, ctx: Ctx) -> Size {
+        ctx.bounding_box.size()
+    }
+}
+
+fn message_log() -> AppCF<()> {
+    cf(MessageLog {
+        scroll_from_bottom: 0,
+    })
+}
+
 fn main_menu_loop() -> AppCF<MainMenuOutput> {
     use MainMenuEntry::*;
     title_decorate(
@@ -1059,6 +1136,9 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
                 MainMenuOutput::Quit => LoopControl::Break(()),
             }),
             Help(running) => help()
+                .map(|()| GameLoopState::Playing(running.into_witness()))
+                .continue_(),
+            MessageLog(running) => message_log()
                 .map(|()| GameLoopState::Playing(running.into_witness()))
                 .continue_(),
         })

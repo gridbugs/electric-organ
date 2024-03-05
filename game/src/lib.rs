@@ -67,6 +67,7 @@ pub enum ExternalEvent {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Message {
+    Wait,
     OpenDoor,
     CloseDoor,
     ActionError(ActionError),
@@ -600,6 +601,7 @@ impl Game {
                 }
             }
             Input::Wait => {
+                self.message_log.push(Message::Wait);
                 self.pass_time();
                 None
             }

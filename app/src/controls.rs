@@ -9,6 +9,7 @@ pub enum AppInput {
     Direction(CardinalDirection),
     Wait,
     FireEquipped,
+    MessageLog,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -25,6 +26,7 @@ impl Default for Controls {
             KeyboardInput::Down => AppInput::Direction(CardinalDirection::South),
             KeyboardInput::Char(' ') => AppInput::Wait,
             KeyboardInput::Char('f') => AppInput::FireEquipped,
+            KeyboardInput::Char('m') => AppInput::MessageLog,
         ];
         Self { keys }
     }
