@@ -3,10 +3,12 @@ pub use crate::world::spatial::{Layer, Location};
 use entity_table::declare_entity_module;
 use rgb_int::Rgba32;
 use serde::{Deserialize, Serialize};
+use std::ops::RangeInclusive;
 use visible_area_detection::{vision_distance, Light};
 
 declare_entity_module! {
     components {
+        player: (),
         realtime: (),
         blocks_gameplay: (),
         tile: Tile,
@@ -30,6 +32,7 @@ declare_entity_module! {
         destructible: (),
         to_remove: (),
         explodes_on_death: (),
+        npc_type: NpcType,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -115,9 +118,9 @@ pub struct CollidesWith {
     pub character: bool,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectileDamage {
-    pub hit_points: u32,
+    pub hit_points: RangeInclusive<u32>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -164,4 +167,11 @@ impl NpcMovement {
 pub struct Npc {
     pub disposition: Disposition,
     pub movement: NpcMovement,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NpcType {
+    Zombie,
+    Climber,
+    Trespasser,
 }

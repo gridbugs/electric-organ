@@ -5,7 +5,7 @@ use chargrid::{
 };
 use game::{
     witness::{self, Game, RunningGame},
-    ActionError, CellVisibility, Config, Layer, LayerTable, Message, Meter, Tile, Victory,
+    ActionError, CellVisibility, Config, Layer, LayerTable, Message, Meter, NpcType, Tile, Victory,
     VisibleEntity,
 };
 use rand::Rng;
@@ -430,9 +430,16 @@ impl GameInstance {
         text.wrap_word().render(&(), ctx, fb);
     }
 
-    pub fn render(&self, ctx: Ctx, fb: &mut FrameBuffer, cursor: Option<Coord>, mode: Mode) {
+    pub fn render(
+        &self,
+        ctx: Ctx,
+        fb: &mut FrameBuffer,
+        cursor: Option<Coord>,
+        mode: Mode,
+        offset: Coord,
+    ) {
         use text::*;
-        self.render_game(ctx, fb);
+        self.render_game(ctx.add_offset(offset), fb);
         self.render_messages(
             ctx.add_xy(1, ctx.bounding_box.size().height() as i32 - 4)
                 .add_depth(20),
@@ -704,6 +711,31 @@ fn describe_tile(tile: Tile) -> Description {
     }
 }
 
+fn npc_type_to_styled_string(npc_type: NpcType) -> text::StyledString {
+    use text::*;
+    match npc_type {
+        NpcType::Zombie => StyledString {
+            string: "zombie".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::ZOMBIE.to_rgba32(255)),
+        },
+        NpcType::Climber => StyledString {
+            string: "climber".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::CLIMBER.to_rgba32(255)),
+        },
+
+        NpcType::Trespasser => StyledString {
+            string: "trespasser".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::TRESPASSER.to_rgba32(255)),
+        },
+    }
+}
+
 fn message_to_text(message: Message) -> Text {
     use text::*;
     match message {
@@ -718,5 +750,21 @@ fn message_to_text(message: Message) -> Text {
                 "You can't walk there.".to_string(),
             )])
         }
+        Message::NpcHit { npc_type, damage } => Text::new(vec![
+            StyledString::plain_text("The ".to_string()),
+            npc_type_to_styled_string(npc_type),
+            StyledString::plain_text(" is hit for ".to_string()),
+            StyledString {
+                string: format!("{damage}"),
+                style: Style::plain_text().with_bold(true),
+            },
+            StyledString::plain_text(" damage.".to_string()),
+        ]),
+
+        Message::NpcDies(npc_type) => Text::new(vec![
+            StyledString::plain_text("The ".to_string()),
+            npc_type_to_styled_string(npc_type),
+            StyledString::plain_text(" dies.".to_string()),
+        ]),
     }
 }

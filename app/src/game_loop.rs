@@ -274,6 +274,12 @@ fn new_game(
     GameInstance::new(game_config, victories, &mut rng)
 }
 
+#[derive(Clone, Copy)]
+struct ScreenShake {
+    countdown: u32,
+    offset: Coord,
+}
+
 pub struct GameLoopData {
     instance: Option<GameInstance>,
     controls: Controls,
@@ -284,6 +290,7 @@ pub struct GameLoopData {
     images: Images,
     cursor: Option<Coord>,
     music_state: MusicState,
+    screen_shake: Option<ScreenShake>,
 }
 
 impl GameLoopData {
@@ -346,6 +353,7 @@ impl GameLoopData {
                 images: Images::new(),
                 cursor: None,
                 music_state,
+                screen_shake: None,
             },
             state,
         )
@@ -388,7 +396,11 @@ impl GameLoopData {
 
     fn render(&self, ctx: Ctx, fb: &mut FrameBuffer, mode: Mode) {
         let instance = self.instance.as_ref().unwrap();
-        instance.render(ctx, fb, self.cursor, mode);
+        let offset = self
+            .screen_shake
+            .map(|s| s.offset)
+            .unwrap_or(Coord::new(0, 0));
+        instance.render(ctx, fb, self.cursor, mode, offset);
         match mode {
             Mode::Normal => {
                 let colour = colours::NORMAL_MODE.to_rgba32(127);
@@ -451,9 +463,29 @@ impl GameLoopData {
             }
             Event::Tick(since_previous) => {
                 let witness = running.tick(&mut instance.game, since_previous, &self.game_config);
+                self.screen_shake = self.screen_shake.and_then(|mut screen_shake| {
+                    if screen_shake.countdown == 0 {
+                        None
+                    } else {
+                        screen_shake.countdown -= 1;
+                        Some(screen_shake)
+                    }
+                });
                 for external_event in instance.game.take_external_events() {
                     match external_event {
-                        ExternalEvent::Explosion(_) => self.music_state.sfx_explosion(),
+                        ExternalEvent::Explosion(_) => {
+                            self.music_state.sfx_explosion();
+                            let mut rng = Isaac64Rng::from_entropy();
+                            let screen_shake = ScreenShake {
+                                countdown: 2,
+                                offset: if rng.gen() {
+                                    Coord::new(-1, 0)
+                                } else {
+                                    Coord::new(1, 0)
+                                },
+                            };
+                            self.screen_shake = Some(screen_shake);
+                        }
                         _ => (),
                     }
                 }

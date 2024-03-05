@@ -29,7 +29,7 @@ use world::{
     World,
 };
 pub use world::{
-    data::{Layer, Location, Meter, Tile},
+    data::{Layer, Location, Meter, NpcType, Tile},
     spatial::LayerTable,
 };
 
@@ -70,6 +70,8 @@ pub enum Message {
     OpenDoor,
     CloseDoor,
     ActionError(ActionError),
+    NpcHit { npc_type: NpcType, damage: u32 },
+    NpcDies(NpcType),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -580,9 +582,9 @@ impl Game {
             }
             Input::FireEquipped(target) => {
                 let start = self.player_coord();
-                self.external_events.push(ExternalEvent::FireRocket);
+                self.external_events.push(ExternalEvent::FirePistol);
                 self.world
-                    .spawn_rocket(start, target, &mut self.animation_rng);
+                    .spawn_bullet(start, target, &mut self.animation_rng);
                 None
             }
         };

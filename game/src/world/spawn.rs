@@ -3,7 +3,7 @@ use crate::{
     world::{
         data::{
             CollidesWith, Disposition, DoorState, EntityData, Layer, Location, Meter, Npc,
-            NpcMovement, OnCollision, ProjectileDamage, Tile,
+            NpcMovement, NpcType, OnCollision, ProjectileDamage, Tile,
         },
         explosion, World,
     },
@@ -17,6 +17,7 @@ use visible_area_detection::{vision_distance, Light, Rational};
 
 pub fn make_player() -> EntityData {
     EntityData {
+        player: Some(()),
         character: Some(()),
         tile: Some(Tile::Player),
         light: Some(Light {
@@ -58,6 +59,7 @@ impl World {
                 solid: (),
                 solid_for_particles: (),
                 opacity: 255,
+                destructible: (),
             },
         )
     }
@@ -214,6 +216,7 @@ impl World {
                 solid_for_particles: (),
                 door_state: DoorState::Closed,
                 opacity: 255,
+                destructible: (),
             },
         )
     }
@@ -335,14 +338,14 @@ impl World {
             entity,
             CollidesWith {
                 solid: true,
-                character: false,
+                character: true,
             },
         );
         self.components.tile.insert(entity, Tile::Bullet);
         self.components.particle.insert(entity, ());
         self.components
             .projectile_damage
-            .insert(entity, ProjectileDamage { hit_points: 1 });
+            .insert(entity, ProjectileDamage { hit_points: 1..=2 });
         entity
     }
 
@@ -407,20 +410,20 @@ impl World {
             entity,
             CollidesWith {
                 solid: true,
-                character: false,
+                character: true,
             },
         );
         self.components.tile.insert(entity, Tile::Bullet);
         self.components.particle.insert(entity, ());
         self.components
             .projectile_damage
-            .insert(entity, ProjectileDamage { hit_points: 1 });
+            .insert(entity, ProjectileDamage { hit_points: 3..=4 });
         self.components.on_collision.insert(
             entity,
             OnCollision::Explode({
                 use explosion::spec::*;
                 Explosion {
-                    mechanics: Mechanics { range: 8 },
+                    mechanics: Mechanics { range: 2 },
                     particle_emitter: ParticleEmitter {
                         duration: Duration::from_millis(100),
                         num_particles_per_frame: 25,
@@ -546,6 +549,7 @@ impl World {
                     },
                 },
                 character: (),
+                npc_type: NpcType::Zombie,
                 health: Meter::new_full(4),
             },
         )
@@ -564,6 +568,7 @@ impl World {
                     },
                 },
                 character: (),
+                npc_type: NpcType::Climber,
                 health: Meter::new_full(3),
             },
         )
@@ -581,6 +586,7 @@ impl World {
                     },
                 },
                 character: (),
+                npc_type: NpcType::Trespasser,
                 health: Meter::new_full(3),
             },
         )

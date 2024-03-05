@@ -162,6 +162,7 @@ fn make_sfx() -> (Sfx, Sf64) {
         sound_effects::shotgun(sfx.shotgun.trigger()),
         sound_effects::rocket(sfx.rocket.trigger()),
         sound_effects::explosion(sfx.explosion.trigger()),
-    ]);
+    ])
+    .mix(|dry| dry.filter(reverb().room_size(0.8).build()));
     (sfx, signal)
 }

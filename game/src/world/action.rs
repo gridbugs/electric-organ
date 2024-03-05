@@ -31,8 +31,11 @@ impl World {
                 });
             if let Some(&spatial_cell) = self.spatial_table.layers_at(next_coord) {
                 if let Some(character_entity) = spatial_cell.character {
-                    if let Some(&projectile_damage) =
-                        self.components.projectile_damage.get(projectile_entity)
+                    if let Some(projectile_damage) = self
+                        .components
+                        .projectile_damage
+                        .get(projectile_entity)
+                        .cloned()
                     {
                         self.apply_projectile_damage(
                             projectile_entity,
@@ -77,13 +80,20 @@ impl World {
     fn apply_projectile_damage<R: Rng>(
         &mut self,
         _projectile_entity: Entity,
-        _projectile_damage: ProjectileDamage,
+        projectile_damage: ProjectileDamage,
         _projectile_movement_direction: Direction,
-        _entity_to_damage: Entity,
-        _rng: &mut R,
-        _external_events: &mut Vec<ExternalEvent>,
-        _message_log: &mut Vec<Message>,
+        entity_to_damage: Entity,
+        rng: &mut R,
+        external_events: &mut Vec<ExternalEvent>,
+        message_log: &mut Vec<Message>,
     ) {
+        self.damage_character(
+            entity_to_damage,
+            rng.gen_range(projectile_damage.hit_points),
+            rng,
+            external_events,
+            message_log,
+        );
     }
 
     pub fn projectile_stop<R: Rng>(
@@ -141,6 +151,12 @@ impl World {
             // prevent cascading damage on explosions
             return;
         }
+        if let Some(&npc_type) = self.components.npc_type.get(character) {
+            message_log.push(Message::NpcHit {
+                npc_type,
+                damage: hit_points_to_lose,
+            });
+        }
         let hit_points = self
             .components
             .health
@@ -161,6 +177,9 @@ impl World {
         external_events: &mut Vec<ExternalEvent>,
         message_log: &mut Vec<Message>,
     ) {
+        if let Some(npc_type) = self.components.npc_type.get(character) {
+            message_log.push(Message::NpcDies(*npc_type));
+        }
         self.components.to_remove.insert(character, ());
         if self.components.explodes_on_death.contains(character) {
             if let Some(coord) = self.spatial_table.coord_of(character) {
