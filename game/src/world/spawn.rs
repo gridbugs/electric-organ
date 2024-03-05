@@ -1,7 +1,10 @@
 use crate::{
-    realtime::{flicker, particle},
+    realtime::{flicker, movement, particle},
     world::{
-        data::{Disposition, DoorState, EntityData, Layer, Location, Npc, NpcMovement, Tile},
+        data::{
+            CollidesWith, Disposition, DoorState, EntityData, Layer, Location, Npc, NpcMovement,
+            OnCollision, ProjectileDamage, Tile,
+        },
         World,
     },
     Entity,
@@ -121,11 +124,6 @@ impl World {
                     colour_hint: Some(colour_range),
                     movement: Some(Movement {
                         angle_range: Radians::uniform_range_all(),
-                        /*
-                        angle_range: UniformLeftInclusiveRange {
-                            low: Radians::from_degrees(-135.0),
-                            high: Radians::from_degrees(-45.0),
-                        }, */
                         cardinal_period_range: UniformInclusiveRange {
                             low: Duration::from_millis(500),
                             high: Duration::from_millis(1000),
@@ -271,6 +269,78 @@ impl World {
                 },
             },
         )
+    }
+
+    pub fn spawn_bullet<R: Rng>(&mut self, start: Coord, target: Coord, rng: &mut R) -> Entity {
+        let entity = self.entity_allocator.alloc();
+        self.spatial_table
+            .update(
+                entity,
+                Location {
+                    coord: start,
+                    layer: None,
+                },
+            )
+            .unwrap();
+        self.components.realtime.insert(entity, ());
+        self.components.blocks_gameplay.insert(entity, ());
+        self.components
+            .on_collision
+            .insert(entity, OnCollision::Remove);
+        self.realtime_components.movement.insert(
+            entity,
+            {
+                use movement::spec::*;
+                Movement {
+                    path: target - start,
+                    cardinal_step_duration: Duration::from_millis(24),
+                    repeat: Repeat::Once,
+                }
+            }
+            .build(),
+        );
+        let particle_emitter_ = {
+            use particle::spec::*;
+            let colour_range = UniformInclusiveRange {
+                low: Rgb24::new(0, 0, 0).to_rgba32(31),
+                high: Rgb24::new(255, 255, 255).to_rgba32(31),
+            };
+            ParticleEmitter {
+                emit_particle_every_period: Duration::from_millis(16),
+                fade_out_duration: None,
+                particle: Particle {
+                    tile: None,
+                    colour_hint: Some(colour_range),
+                    movement: Some(Movement {
+                        angle_range: Radians::uniform_range_all(),
+                        cardinal_period_range: UniformInclusiveRange {
+                            low: Duration::from_millis(200),
+                            high: Duration::from_millis(500),
+                        },
+                    }),
+                    fade_duration: Some(Duration::from_millis(2000)),
+                    possible_light: None,
+                    ..Default::default()
+                },
+            }
+        }
+        .build(rng);
+        self.realtime_components
+            .particle_emitter
+            .insert(entity, particle_emitter_);
+        self.components.collides_with.insert(
+            entity,
+            CollidesWith {
+                solid: true,
+                character: false,
+            },
+        );
+        self.components.tile.insert(entity, Tile::Bullet);
+        self.components.particle.insert(entity, ());
+        self.components
+            .projectile_damage
+            .insert(entity, ProjectileDamage { hit_points: 1 });
+        entity
     }
 
     pub fn spawn_zombie(&mut self, coord: Coord) -> Entity {

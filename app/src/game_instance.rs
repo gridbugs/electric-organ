@@ -220,6 +220,14 @@ impl GameInstance {
                         .with_foreground(colours::TRESPASSER.to_rgba32(255)),
                 };
             }
+            Tile::Bullet => {
+                return RenderCell {
+                    character: Some('●'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgb24::new(187, 187, 187).to_rgba32(255)),
+                };
+            }
         };
     }
 
@@ -275,10 +283,15 @@ impl GameInstance {
         self.game
             .inner_ref()
             .for_each_visible_particle(|coord, visible_entity, _light_colour| {
+                let mut render_cell = if let Some(tile) = visible_entity.tile {
+                    Self::tile_to_render_cell(tile)
+                } else {
+                    RenderCell::default()
+                };
                 if let Some(colour_hint) = visible_entity.colour_hint {
-                    let render_cell = RenderCell::default().with_background(colour_hint);
-                    fb.set_cell_relative_to_ctx(ctx, coord, 10, render_cell);
+                    render_cell = render_cell.with_background(colour_hint);
                 }
+                fb.set_cell_relative_to_ctx(ctx, coord, 10, render_cell);
             });
     }
 
@@ -654,6 +667,10 @@ fn describe_tile(tile: Tile) -> Description {
                         .with_foreground(colours::TRESPASSER.to_rgba32(255)),
                 },
             ]),
+            description: None,
+        },
+        Tile::Bullet => Description {
+            name: Text::new(vec![StyledString::plain_text("a bullet".to_string())]),
             description: None,
         },
     }

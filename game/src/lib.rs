@@ -511,17 +511,28 @@ impl Game {
         _since_last_tick: Duration,
         _config: &Config,
     ) -> Option<GameControlFlow> {
+        let initially_blockd = self.is_gameplay_blocked();
         self.animation_context.tick(
             &mut self.world,
             &mut self.external_events,
             &mut self.message_log,
             &mut self.animation_rng,
         );
+        if initially_blockd && !self.is_gameplay_blocked() {
+            let result = self.npc_turn();
+            if result.is_some() {
+                return result;
+            }
+        }
         self.update_visibility();
         None
     }
 
     fn pass_time(&mut self) {}
+
+    pub fn is_gameplay_blocked(&self) -> bool {
+        !self.world.components.blocks_gameplay.is_empty()
+    }
 
     #[must_use]
     pub(crate) fn handle_input(
@@ -543,17 +554,21 @@ impl Game {
                 self.pass_time();
                 None
             }
-            Input::FireEquipped(coord) => {
-                println!("{coord:?}");
+            Input::FireEquipped(target) => {
+                let start = self.player_coord();
+                self.world
+                    .spawn_bullet(start, target, &mut self.animation_rng);
                 None
             }
         };
         if game_control_flow.is_some() {
             return Ok(game_control_flow);
         }
-        let game_control_flow = self.npc_turn();
-        if game_control_flow.is_some() {
-            return Ok(game_control_flow);
+        if !self.is_gameplay_blocked() {
+            let game_control_flow = self.npc_turn();
+            if game_control_flow.is_some() {
+                return Ok(game_control_flow);
+            }
         }
         self.update_visibility();
         Ok(None)

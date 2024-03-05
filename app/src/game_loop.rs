@@ -418,17 +418,21 @@ impl GameLoopData {
             Event::Input(input) => {
                 self.cursor = None;
                 if let Some(app_input) = self.controls.get(input) {
-                    let (witness, _action_result) = match app_input {
-                        AppInput::Direction(direction) => {
-                            running.walk(&mut instance.game, direction)
-                        }
-                        AppInput::Wait => running.wait(&mut instance.game),
-                        AppInput::FireEquipped => {
-                            self.cursor = Some(instance.game.inner_ref().player_coord());
-                            (running.fire_equipped(), Ok(()))
-                        }
-                    };
-                    witness
+                    if instance.game.inner_ref().is_gameplay_blocked() {
+                        running.into_witness()
+                    } else {
+                        let (witness, _action_result) = match app_input {
+                            AppInput::Direction(direction) => {
+                                running.walk(&mut instance.game, direction)
+                            }
+                            AppInput::Wait => running.wait(&mut instance.game),
+                            AppInput::FireEquipped => {
+                                self.cursor = Some(instance.game.inner_ref().player_coord());
+                                (running.fire_equipped(), Ok(()))
+                            }
+                        };
+                        witness
+                    }
                 } else {
                     if let Input::Mouse(MouseInput::MouseMove { coord, .. }) = input {
                         self.cursor = Some(coord);

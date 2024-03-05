@@ -49,6 +49,7 @@ pub enum Tile {
     Zombie,
     Climber,
     Trespasser,
+    Bullet,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
