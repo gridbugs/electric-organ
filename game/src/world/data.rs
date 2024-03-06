@@ -1,6 +1,7 @@
 use crate::world::explosion;
 pub use crate::world::spatial::{Layer, Location};
 use entity_table::declare_entity_module;
+use rand::{seq::SliceRandom, Rng};
 use rgb_int::Rgba32;
 use serde::{Deserialize, Serialize};
 use std::ops::RangeInclusive;
@@ -33,6 +34,7 @@ declare_entity_module! {
         to_remove: (),
         explodes_on_death: (),
         npc_type: NpcType,
+        item: Item,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -59,6 +61,8 @@ pub enum Tile {
     Climber,
     Trespasser,
     Boomer,
+    Money,
+    Item(Item),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -176,4 +180,106 @@ pub enum NpcType {
     Climber,
     Trespasser,
     Boomer,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum OrganTrait {
+    Prolific,
+    Vampiric,
+    Radioactitve,
+    Damaged,
+    Embedded,
+    Transient,
+}
+
+impl OrganTrait {
+    const ALL: &[OrganTrait] = &[
+        OrganTrait::Prolific,
+        OrganTrait::Vampiric,
+        OrganTrait::Radioactitve,
+        OrganTrait::Damaged,
+        OrganTrait::Embedded,
+        OrganTrait::Transient,
+    ];
+    pub fn choose<R: Rng>(rng: &mut R) -> Self {
+        *Self::ALL.choose(rng).unwrap()
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct OrganTraits {
+    pub prolific: bool,
+    pub vampiric: bool,
+    pub radioactitve: bool,
+    pub damaged: bool,
+    pub embedded: bool,
+    pub transient: bool,
+}
+
+impl OrganTraits {
+    pub fn traits(&self) -> Vec<OrganTrait> {
+        let mut ret = Vec::new();
+        if self.prolific {
+            ret.push(OrganTrait::Prolific);
+        }
+        if self.vampiric {
+            ret.push(OrganTrait::Vampiric);
+        }
+        if self.radioactitve {
+            ret.push(OrganTrait::Radioactitve);
+        }
+        if self.damaged {
+            ret.push(OrganTrait::Damaged);
+        }
+        if self.embedded {
+            ret.push(OrganTrait::Embedded);
+        }
+        if self.transient {
+            ret.push(OrganTrait::Transient);
+        }
+        ret
+    }
+
+    pub fn get_mut(&mut self, trait_: OrganTrait) -> &mut bool {
+        match trait_ {
+            OrganTrait::Prolific => &mut self.prolific,
+            OrganTrait::Vampiric => &mut self.vampiric,
+            OrganTrait::Radioactitve => &mut self.radioactitve,
+            OrganTrait::Damaged => &mut self.damaged,
+            OrganTrait::Embedded => &mut self.embedded,
+            OrganTrait::Transient => &mut self.transient,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum OrganType {
+    Heart,
+    Liver,
+    Lung,
+    Stomach,
+    Appendix,
+    Tumour,
+    CronenbergPistol,
+    CronenbergShotgun,
+    CyberCore,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Organ {
+    pub type_: OrganType,
+    pub traits: OrganTraits,
+    pub cybernetic: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Item {
+    Stimpack,
+    Antidote,
+    BloodVialEmpty,
+    BloodVialFull,
+    Battery,
+    Food,
+    AntiRads,
+    OrganContainer(Option<Organ>),
 }

@@ -29,7 +29,9 @@ use world::{
     World,
 };
 pub use world::{
-    data::{Layer, Location, Meter, NpcType, Tile},
+    data::{
+        Item, Layer, Location, Meter, NpcType, Organ, OrganTrait, OrganTraits, OrganType, Tile,
+    },
     spatial::LayerTable,
 };
 
@@ -63,6 +65,7 @@ pub enum ExternalEvent {
     FireShotgun,
     FireRocket,
     Explosion(Coord),
+    ChangeLevel,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -116,6 +119,7 @@ pub struct PlayerStats {
     pub food: Meter,
     pub poison: Meter,
     pub radiation: Meter,
+    pub power: Option<Meter>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -294,6 +298,7 @@ impl Game {
             player_data,
         );
         self.update_visibility();
+        self.external_events.push(ExternalEvent::ChangeLevel);
     }
 
     pub fn message_log(&self) -> &[Message] {
@@ -671,6 +676,7 @@ impl Game {
             food: Meter::new(8, 10),
             poison: Meter::new(3, 10),
             radiation: Meter::new(4, 10),
+            power: None,
         }
     }
 }

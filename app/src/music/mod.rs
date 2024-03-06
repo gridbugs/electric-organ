@@ -1,14 +1,16 @@
 use currawong::{prelude::*, signal_player::SignalPlayer};
 use std::{cell::RefCell, rc::Rc};
 
-mod level;
+mod level1;
+mod level2;
 mod menu;
 mod sound_effects;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Track {
     Menu,
-    Level,
+    Level1,
+    Level2,
 }
 
 struct Control {
@@ -78,7 +80,8 @@ impl MusicState {
         let mut control = self.control.borrow_mut();
         control.signal = match track {
             None => const_(0.0),
-            Some(Track::Level) => level::signal(),
+            Some(Track::Level1) => level1::signal(),
+            Some(Track::Level2) => level2::signal(),
             Some(Track::Menu) => menu::signal(),
         }
     }

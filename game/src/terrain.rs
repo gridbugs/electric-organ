@@ -12,7 +12,7 @@ impl Terrain {
     pub fn generate_text() -> Self {
         let txt = include_str!("terrain.txt");
         let rows = txt.split('\n').collect::<Vec<_>>();
-        let mut world = World::new(Size::new(rows[0].len() as u32, rows.len() as u32));
+        let mut world = World::new(Size::new(50, 25));
         for (y, row) in rows.into_iter().enumerate() {
             for (x, ch) in row.chars().enumerate() {
                 let coord = Coord::new(x as i32, y as i32);
@@ -28,6 +28,12 @@ impl Terrain {
                     '>' => {
                         world.spawn_stairs_down(coord);
                     }
+                    '<' => {
+                        world.spawn_stairs_up(coord);
+                    }
+                    '$' => {
+                        world.spawn_money(coord);
+                    }
                     _ => log::warn!("unexpected char: {}", ch),
                 }
             }
@@ -36,6 +42,7 @@ impl Terrain {
     }
 
     pub fn generate<R: Rng>(level_index: usize, rng: &mut R) -> Self {
+        return Self::generate_text();
         let tentacle_spec = TentacleSpec {
             num_tentacles: 3,
             segment_length: 1.5,
@@ -113,22 +120,22 @@ impl Terrain {
             .filter(|coord| coord.manhattan_distance(player_spawn) > 8)
             .collect::<Vec<_>>();
         npc_spawn_candidates.shuffle(rng);
-        for _ in 0..5 {
+        for _ in 0..0 {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_zombie(coord);
             }
         }
-        for _ in 0..5 {
+        for _ in 0..0 {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_climber(coord);
             }
         }
-        for _ in 0..5 {
+        for _ in 0..0 {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_trespasser(coord);
             }
         }
-        for _ in 0..5 {
+        for _ in 0..0 {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_boomer(coord);
             }

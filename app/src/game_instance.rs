@@ -5,8 +5,8 @@ use chargrid::{
 };
 use game::{
     witness::{self, Game, RunningGame},
-    ActionError, CellVisibility, Config, Layer, LayerTable, Message, Meter, NpcType, Tile, Victory,
-    VisibleEntity,
+    ActionError, CellVisibility, Config, Item, Layer, LayerTable, Message, Meter, NpcType, Organ,
+    OrganTrait, OrganTraits, OrganType, Tile, Victory, VisibleEntity,
 };
 use rand::Rng;
 use rgb_int::Rgb24;
@@ -66,6 +66,22 @@ fn render_meter(meter: Meter, colour: Rgb24, ctx: Ctx, fb: &mut FrameBuffer) {
         let coord = Coord::new(i as i32, 0);
         let alpha = if i < filled_width as usize { 255 } else { 63 };
         let rc = RenderCell::default().with_background(colour.to_rgba32(alpha));
+        fb.set_cell_relative_to_ctx(ctx, coord, 0, rc);
+    }
+    StyledString { string, style }.render(&(), ctx.add_x(centre_offset as i32), fb);
+}
+
+fn render_meter_disabled(ctx: Ctx, fb: &mut FrameBuffer) {
+    use text::*;
+    let width = 15;
+    let string = format!("N/A");
+    let centre_offset = (width / 2) - ((string.len() + 1) / 2);
+    let style = Style::plain_text()
+        .with_bold(true)
+        .with_foreground(Rgb24::new_grey(255).to_rgba32(187));
+    for i in 0..width {
+        let coord = Coord::new(i as i32, 0);
+        let rc = RenderCell::default().with_background(Rgba32::new_grey(63));
         fb.set_cell_relative_to_ctx(ctx, coord, 0, rc);
     }
     StyledString { string, style }.render(&(), ctx.add_x(centre_offset as i32), fb);
@@ -221,6 +237,78 @@ impl GameInstance {
                     style: Style::new()
                         .with_bold(true)
                         .with_foreground(Rgb24::new(187, 187, 187).to_rgba32(255)),
+                };
+            }
+            Tile::Money => {
+                return RenderCell {
+                    character: Some('$'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::MONEY.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::Stimpack) => {
+                return RenderCell {
+                    character: Some('{'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::STIMPACK.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::Antidote) => {
+                return RenderCell {
+                    character: Some('}'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ANTIDOTE.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::BloodVialEmpty) => {
+                return RenderCell {
+                    character: Some('['),
+                    style: Style::new()
+                        .with_bold(false)
+                        .with_foreground(colours::BLOOD_VIAL_EMPTY.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::Battery) => {
+                return RenderCell {
+                    character: Some('='),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::BATTERY.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::Food) => {
+                return RenderCell {
+                    character: Some('*'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::BATTERY.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::AntiRads) => {
+                return RenderCell {
+                    character: Some(']'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ANTIRADS.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::BloodVialFull) => {
+                return RenderCell {
+                    character: Some('['),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::BLOOD_VIAL_FULL.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::OrganContainer(_)) => {
+                return RenderCell {
+                    character: Some('ɸ'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ORGAN_CONTAINER.to_rgba32(255)),
                 };
             }
             Tile::Zombie => {
@@ -404,18 +492,20 @@ impl GameInstance {
                         text.parts.push(StyledString::plain_text(".".to_string()));
                         if currently_visible {
                             if let Some(health) = visible_entity.health {
-                                text.parts
-                                    .push(StyledString::plain_text("\n\n".to_string()));
-                                text.parts
-                                    .push(StyledString::plain_text(format!("Its health is ")));
-                                text.parts.push(StyledString {
-                                    string: format!("{}/{}", health.current(), health.max()),
-                                    style: Style::default().with_bold(true).with_foreground(
-                                        colours::HEALTH
-                                            .to_rgba32(255)
-                                            .saturating_scalar_mul_div(3, 2),
-                                    ),
-                                });
+                                if tile != Tile::Player {
+                                    text.parts
+                                        .push(StyledString::plain_text("\n\n".to_string()));
+                                    text.parts
+                                        .push(StyledString::plain_text(format!("Its health is ")));
+                                    text.parts.push(StyledString {
+                                        string: format!("{}/{}", health.current(), health.max()),
+                                        style: Style::default().with_bold(true).with_foreground(
+                                            colours::HEALTH
+                                                .to_rgba32(255)
+                                                .saturating_scalar_mul_div(3, 2),
+                                        ),
+                                    });
+                                }
                             }
                         }
                         if let Some(mut description) = description {
@@ -488,6 +578,17 @@ impl GameInstance {
         }
         .render(&(), ctx, fb);
         render_meter(stats.radiation, colours::RADIATION, ctx.add_x(x_offset), fb);
+        let ctx = ctx.add_y(1);
+        StyledString {
+            string: "Power:".to_string(),
+            style: Style::plain_text(),
+        }
+        .render(&(), ctx, fb);
+        if let Some(power) = stats.power {
+            render_meter(power, colours::POWER, ctx.add_x(x_offset), fb);
+        } else {
+            render_meter_disabled(ctx.add_x(x_offset), fb);
+        }
     }
 
     pub fn render(
@@ -552,7 +653,7 @@ impl GameInstance {
         );
         // description
         {
-            let offset_y = 20;
+            let offset_y = 19;
             let render_cell = box_render_cell.with_character('═');
             for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
                 let coord = Coord::new(i as i32, offset_y);
@@ -588,7 +689,7 @@ impl GameInstance {
         }
         // mode
         {
-            let offset_y = 15;
+            let offset_y = 14;
             let render_cell = box_render_cell.with_character('═');
             for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
                 let coord = Coord::new(i as i32, offset_y);
@@ -636,7 +737,7 @@ impl GameInstance {
         }
         // stats
         {
-            let offset_y = 0;
+            let offset_y = 5;
             let render_cell = box_render_cell.with_character('═');
             for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
                 let coord = Coord::new(i as i32, offset_y);
@@ -667,36 +768,6 @@ impl GameInstance {
                 ctx.add_offset(game_size.to_coord().unwrap().set_y(offset_y + 1))
                     .add_xy(2, 1),
                 fb,
-            );
-        }
-        // equipment
-        {
-            let offset_y = 10;
-            let render_cell = box_render_cell.with_character('═');
-            for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
-                let coord = Coord::new(i as i32, offset_y);
-                fb.set_cell_relative_to_ctx(ctx, coord, 0, render_cell);
-            }
-            Text::new(vec![
-                StyledString {
-                    string: "╡".to_string(),
-                    style: border_style,
-                },
-                StyledString {
-                    string: "Equipment".to_string(),
-                    style: border_text_style,
-                },
-                StyledString {
-                    string: "╞".to_string(),
-                    style: border_style,
-                },
-            ])
-            .render(&(), ctx.add_xy(game_size.width() as i32 + 1, offset_y), fb);
-            fb.set_cell_relative_to_ctx(
-                ctx,
-                game_size.to_coord().unwrap().set_y(offset_y),
-                0,
-                box_render_cell.with_character('╠'),
             );
         }
     }
@@ -793,6 +864,184 @@ fn describe_tile(tile: Tile) -> Description {
             name: Text::new(vec![StyledString::plain_text("a bullet".to_string())]),
             description: None,
         },
+        Tile::Money => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "CyberCoin™".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::MONEY.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "A unit of cybernetically-secure decentralized currency.".to_string(),
+            )])),
+        },
+        Tile::Item(Item::Stimpack) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "stimpack".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::STIMPACK.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![
+                StyledString::plain_text("Consume to increase ".to_string()),
+                StyledString {
+                    string: "health".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::HEALTH.to_rgba32(255)),
+                },
+                StyledString::plain_text(".".to_string()),
+            ])),
+        },
+        Tile::Item(Item::Antidote) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("an ".to_string()),
+                StyledString {
+                    string: "antidote".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ANTIDOTE.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![
+                StyledString::plain_text("Consume to decrease ".to_string()),
+                StyledString {
+                    string: "poison".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::POISON.to_rgba32(255)),
+                },
+                StyledString::plain_text(".".to_string()),
+            ])),
+        },
+        Tile::Item(Item::BloodVialEmpty) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("an ".to_string()),
+                StyledString {
+                    string: "empty blood vial".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::BLOOD_VIAL_EMPTY.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Can be filled with blood from a corpse for later consumption.".to_string(),
+            )])),
+        },
+        Tile::Item(Item::BloodVialFull) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "full blood vial".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::BLOOD_VIAL_FULL.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![
+                StyledString::plain_text(
+                    "The blood is oxygenated. Consume to increase ".to_string(),
+                ),
+                StyledString {
+                    string: "oxygen".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::OXYGEN.to_rgba32(255)),
+                },
+                StyledString::plain_text(".".to_string()),
+            ])),
+        },
+        Tile::Item(Item::Food) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("some ".to_string()),
+                StyledString {
+                    string: "food".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::FOOD.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![
+                StyledString::plain_text("Consume to increase ".to_string()),
+                StyledString {
+                    string: "food".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::FOOD.to_rgba32(255)),
+                },
+                StyledString::plain_text(".".to_string()),
+            ])),
+        },
+        Tile::Item(Item::AntiRads) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("some ".to_string()),
+                StyledString {
+                    string: "AntiRads™".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ANTIRADS.to_rgba32(255)),
+                },
+                StyledString::plain_text("medication.".to_string()),
+            ]),
+            description: Some(Text::new(vec![
+                StyledString::plain_text("Consume to decrease ".to_string()),
+                StyledString {
+                    string: "radiation".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::RADIATION.to_rgba32(255)),
+                },
+                StyledString::plain_text(".".to_string()),
+            ])),
+        },
+        Tile::Item(Item::Battery) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "battery".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::BATTERY.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![
+                StyledString::plain_text("Consume to increase ".to_string()),
+                StyledString {
+                    string: "power".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::POWER.to_rgba32(255)),
+                },
+                StyledString::plain_text(" (requires CyberCore).".to_string()),
+            ])),
+        },
+        Tile::Item(Item::OrganContainer(organ)) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("an ".to_string()),
+                StyledString {
+                    string: "organ container".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ORGAN_CONTAINER.to_rgba32(255)),
+                },
+            ]),
+            description: Some(if let Some(ref organ) = organ {
+                Text::new(vec![StyledString::plain_text(format!(
+                    "Contains a {}.",
+                    organ_string_for_description(organ)
+                ))])
+            } else {
+                Text::new(vec![StyledString::plain_text(
+                    "Empty. Can be filled with an organ from a corpse.".to_string(),
+                )])
+            }),
+        },
         Tile::Zombie => Description {
             name: Text::new(vec![
                 StyledString::plain_text("a ".to_string()),
@@ -803,7 +1052,9 @@ fn describe_tile(tile: Tile) -> Description {
                         .with_foreground(colours::ZOMBIE.to_rgba32(255)),
                 },
             ]),
-            description: None,
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Some of its organs may still be intact.".to_string(),
+            )])),
         },
         Tile::Climber => Description {
             name: Text::new(vec![
@@ -926,4 +1177,63 @@ pub fn message_to_text(message: Message) -> Text {
             StyledString::plain_text(" damage.".to_string()),
         ]),
     }
+}
+
+pub fn organ_type_name(organ_type: OrganType) -> &'static str {
+    use OrganType::*;
+    match organ_type {
+        Heart => "heart",
+        Liver => "liver",
+        Lung => "lung",
+        Stomach => "stomach",
+        Appendix => "appendix",
+        Tumour => "tumour",
+        CronenbergPistol => "cronenberg pistol",
+        CronenbergShotgun => "cronenberg shotgun",
+        CyberCore => "CyberCore™",
+    }
+}
+
+pub fn organ_trait_name(organ_trait: OrganTrait) -> &'static str {
+    use OrganTrait::*;
+    match organ_trait {
+        Prolific => "prolific",
+        Vampiric => "vampiric",
+        Radioactitve => "radioactive",
+        Damaged => "damaged",
+        Transient => "transient",
+        Embedded => "embedded",
+    }
+}
+
+pub fn organ_traits_string(organ_traits: OrganTraits) -> String {
+    let traits = organ_traits.traits();
+    if traits.is_empty() {
+        "".to_string()
+    } else {
+        let num_traits = traits.len();
+        let mut string = " (".to_string();
+        for (i, trait_) in traits.into_iter().enumerate() {
+            string.push_str(organ_trait_name(trait_));
+            if i == num_traits - 1 {
+                string.push(')');
+            } else {
+                string.push(',');
+            }
+        }
+        string
+    }
+}
+
+pub fn organ_string_for_description(organ: &Organ) -> String {
+    let article = match organ.type_ {
+        OrganType::Appendix => "an",
+        _ => "a",
+    };
+    let cybernetic = if organ.cybernetic { " cybernetic" } else { "" };
+    format!(
+        "{article}{cybernetic} {}{}",
+        organ_type_name(organ.type_),
+        organ_traits_string(organ.traits)
+    )
 }

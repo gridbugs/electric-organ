@@ -18,6 +18,8 @@ use rand_isaac::Isaac64Rng;
 use rgb_int::Rgb24;
 use serde::{Deserialize, Serialize};
 
+const LEVEL_TRACKS: &[Track] = &[Track::Level1, Track::Level2];
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Config {
     music_volume: f32,
@@ -291,6 +293,7 @@ pub struct GameLoopData {
     cursor: Option<Coord>,
     music_state: MusicState,
     screen_shake: Option<ScreenShake>,
+    level_track_index: usize,
 }
 
 impl GameLoopData {
@@ -338,7 +341,7 @@ impl GameLoopData {
             music_state.set_volume(0.5);
         }
         if instance.is_some() {
-            music_state.set_track(Some(Track::Level));
+            music_state.set_track(Some(Track::Level1));
         } else {
             music_state.set_track(Some(Track::Menu));
         };
@@ -354,6 +357,7 @@ impl GameLoopData {
                 cursor: None,
                 music_state,
                 screen_shake: None,
+                level_track_index: 0,
             },
             state,
         )
@@ -386,7 +390,7 @@ impl GameLoopData {
         let victories = self.config.victories.clone();
         let (instance, running) = new_game(&mut self.rng_seed_source, &self.game_config, victories);
         self.instance = Some(instance);
-        self.music_state.set_track(Some(Track::Level));
+        self.music_state.set_track(Some(Track::Level1));
         running
     }
 
@@ -435,7 +439,20 @@ impl GameLoopData {
                     } else {
                         let (witness, _action_result) = match app_input {
                             AppInput::Direction(direction) => {
-                                running.walk(&mut instance.game, direction)
+                                let witness = running.walk(&mut instance.game, direction);
+                                for external_event in instance.game.take_external_events() {
+                                    match external_event {
+                                        ExternalEvent::ChangeLevel => {
+                                            self.level_track_index += 1;
+                                            self.music_state.set_track(Some(
+                                                LEVEL_TRACKS
+                                                    [self.level_track_index % LEVEL_TRACKS.len()],
+                                            ));
+                                        }
+                                        _ => (),
+                                    }
+                                }
+                                witness
                             }
                             AppInput::Wait => running.wait(&mut instance.game),
                             AppInput::FireEquipped => {

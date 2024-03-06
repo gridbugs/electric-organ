@@ -2,7 +2,7 @@ use crate::{
     realtime::{self, flicker, movement, particle},
     world::{
         data::{
-            CollidesWith, Disposition, DoorState, EntityData, Layer, Location, Meter, Npc,
+            CollidesWith, Disposition, DoorState, EntityData, Item, Layer, Location, Meter, Npc,
             NpcMovement, NpcType, OnCollision, ProjectileDamage, Tile,
         },
         explosion, World,
@@ -534,6 +534,25 @@ impl World {
             },
         );
         emitter_entity
+    }
+
+    pub fn spawn_money(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Item),
+            entity_data! {
+                tile: Tile::Money,
+            },
+        )
+    }
+
+    pub fn spawn_item(&mut self, coord: Coord, item: Item) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Item),
+            entity_data! {
+                tile: Tile::Item(item),
+                item,
+            },
+        )
     }
 
     pub fn spawn_zombie(&mut self, coord: Coord) -> Entity {
