@@ -133,6 +133,11 @@ impl Running {
         game.witness_handle_input(Input::Wait, private)
     }
 
+    pub fn get(self, game: &mut Game) -> (Witness, Result<(), ActionError>) {
+        let Self(private) = self;
+        game.witness_handle_input(Input::Get, private)
+    }
+
     pub fn fire_equipped(self) -> Witness {
         Witness::FireEquipped(FireEquipped(self.0))
     }

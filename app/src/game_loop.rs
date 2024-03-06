@@ -45,7 +45,9 @@ impl Default for Config {
 pub type AppCF<T> = CF<Option<T>, GameLoopData>;
 pub type State = GameLoopData;
 
-const MENU_BACKGROUND: Rgba32 = Rgba32::new_rgb(0, 0, 0);
+const MENU_BACKGROUND: Rgba32 = colours::VAPORWAVE_BACKGROUND
+    .to_rgba32(255)
+    .saturating_scalar_mul_div(1, 4);
 const MENU_FADE_SPEC: menu::identifier::fade_spec::FadeSpec = {
     use menu::identifier::fade_spec::*;
     FadeSpec {
@@ -384,6 +386,7 @@ impl GameLoopData {
     fn clear_saved_game(&mut self) {
         self.music_state.set_track(Some(Track::Menu));
         self.storage.clear_game();
+        self.instance = None;
     }
 
     fn new_game(&mut self) -> witness::Running {
@@ -399,29 +402,31 @@ impl GameLoopData {
     }
 
     fn render(&self, ctx: Ctx, fb: &mut FrameBuffer, mode: Mode) {
-        let instance = self.instance.as_ref().unwrap();
-        let offset = self
-            .screen_shake
-            .map(|s| s.offset)
-            .unwrap_or(Coord::new(0, 0));
-        instance.render(ctx, fb, self.cursor, mode, offset);
-        match mode {
-            Mode::Normal => {
-                let colour = colours::NORMAL_MODE.to_rgba32(127);
-                if let Some(cursor) = self.cursor {
-                    let render_cell = RenderCell::default().with_background(colour);
-                    fb.set_cell_relative_to_ctx(ctx, cursor, 50, render_cell);
+        if let Some(instance) = self.instance.as_ref() {
+            let offset = self
+                .screen_shake
+                .map(|s| s.offset)
+                .unwrap_or(Coord::new(0, 0));
+            instance.render(ctx, fb, self.cursor, mode, offset);
+            match mode {
+                Mode::Normal => {
+                    let colour = colours::NORMAL_MODE.to_rgba32(127);
+                    if let Some(cursor) = self.cursor {
+                        let render_cell = RenderCell::default().with_background(colour);
+                        fb.set_cell_relative_to_ctx(ctx, cursor, 50, render_cell);
+                    }
                 }
-            }
-            Mode::Aiming => {
-                if let Some(cursor) = self.cursor {
-                    let colour = colours::AIMING_MODE.to_rgba32(127);
-                    let render_cell = RenderCell::default().with_background(colour);
-                    let instance = self.instance.as_ref().unwrap();
-                    for coord in
-                        line_2d::coords_between(instance.game.inner_ref().player_coord(), cursor)
-                    {
-                        fb.set_cell_relative_to_ctx(ctx, coord, 50, render_cell);
+                Mode::Aiming => {
+                    if let Some(cursor) = self.cursor {
+                        let colour = colours::AIMING_MODE.to_rgba32(127);
+                        let render_cell = RenderCell::default().with_background(colour);
+                        let instance = self.instance.as_ref().unwrap();
+                        for coord in line_2d::coords_between(
+                            instance.game.inner_ref().player_coord(),
+                            cursor,
+                        ) {
+                            fb.set_cell_relative_to_ctx(ctx, coord, 50, render_cell);
+                        }
                     }
                 }
             }
@@ -455,6 +460,7 @@ impl GameLoopData {
                                 witness
                             }
                             AppInput::Wait => running.wait(&mut instance.game),
+                            AppInput::Get => running.get(&mut instance.game),
                             AppInput::FireEquipped => {
                                 self.cursor = Some(instance.game.inner_ref().player_coord());
                                 (running.fire_equipped(), Ok(()))
@@ -617,7 +623,9 @@ impl Component for GameInstanceFireEquippedComponent {
 }
 
 fn menu_style<T: 'static>(menu: AppCF<T>) -> AppCF<T> {
-    menu.border(BorderStyle::default())
+    let mut border_style = BorderStyle::default();
+    border_style.foreground = colours::VAPORWAVE_FOREGROUND.to_rgba32(255);
+    menu.border(border_style)
         .fill(MENU_BACKGROUND)
         .centre()
         .overlay_tint(
@@ -836,9 +844,7 @@ impl Component for MainMenuBackground {
 }
 
 fn help() -> AppCF<()> {
-    text::help(MAIN_MENU_TEXT_WIDTH)
-        .centre()
-        .overlay(background(), 1)
+    menu_style(text::help(MAIN_MENU_TEXT_WIDTH).overlay(background(), 1))
 }
 
 struct MessageLog {
@@ -851,12 +857,14 @@ impl Component for MessageLog {
 
     fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
         use chargrid::text::*;
-        StyledString {
+        let ctx = ctx.set_size(self.size(state, ctx));
+        Text::new(vec![StyledString {
             string: format!("Scroll with ↑↓. Press any other key to return to the game."),
             style: Style::plain_text().with_foreground(Rgba32::new_grey(127)),
-        }
-        .render(&(), ctx.add_xy(1, 1), fb);
-        let ctx = ctx.add_xy(1, 3).constrain_size_by(Coord::new(1, 1));
+        }])
+        .wrap_word()
+        .render(&(), ctx, fb);
+        let ctx = ctx.add_xy(0, 3);
         let instance = state.instance.as_ref().unwrap();
         let message_log = instance.game.inner_ref().message_log();
         let num_messages = message_log.len();
@@ -865,7 +873,7 @@ impl Component for MessageLog {
                 string: format!("(No messages in log.)"),
                 style: Style::plain_text(),
             }
-            .render(&(), ctx.add_xy(1, 1), fb);
+            .render(&(), ctx, fb);
         } else {
             let message_log_start = message_log
                 .len()
@@ -878,7 +886,8 @@ impl Component for MessageLog {
     }
 
     fn update(&mut self, state: &mut Self::State, ctx: Ctx, event: Event) -> Self::Output {
-        let ctx = ctx.add_xy(1, 3).constrain_size_by(Coord::new(1, 1));
+        let ctx = ctx.set_size(self.size(state, ctx));
+        let ctx = ctx.add_xy(0, 3);
         let instance = state.instance.as_ref().unwrap();
         let message_log = instance.game.inner_ref().message_log();
         let num_messages = message_log.len();
@@ -903,15 +912,15 @@ impl Component for MessageLog {
         None
     }
 
-    fn size(&self, _state: &Self::State, ctx: Ctx) -> Size {
-        ctx.bounding_box.size()
+    fn size(&self, _state: &Self::State, _ctx: Ctx) -> Size {
+        Size::new(60, 25)
     }
 }
 
 fn message_log() -> AppCF<()> {
-    cf(MessageLog {
+    menu_style(cf(MessageLog {
         scroll_from_bottom: 0,
-    })
+    }))
 }
 
 fn main_menu_loop() -> AppCF<MainMenuOutput> {

@@ -2,8 +2,8 @@ use crate::{
     realtime::{self, flicker, movement, particle},
     world::{
         data::{
-            CollidesWith, Disposition, DoorState, EntityData, Item, Layer, Location, Meter, Npc,
-            NpcMovement, NpcType, OnCollision, ProjectileDamage, Tile,
+            CollidesWith, Disposition, DoorState, EntityData, Inventory, Item, Layer, Location,
+            Meter, Npc, NpcMovement, NpcType, OnCollision, ProjectileDamage, Tile,
         },
         explosion, World,
     },
@@ -29,6 +29,8 @@ pub fn make_player() -> EntityData {
             },
         }),
         health: Some(Meter::new_full(10)),
+        inventory: Some(Inventory::new(20)),
+        money: Some(0),
         ..Default::default()
     }
 }
@@ -541,6 +543,7 @@ impl World {
             (coord, Layer::Item),
             entity_data! {
                 tile: Tile::Money,
+                money_item: (),
             },
         )
     }

@@ -127,6 +127,7 @@ pub enum Input {
     Walk(CardinalDirection),
     Wait,
     FireEquipped(Coord),
+    Get,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -196,6 +197,8 @@ impl VisibleWorld for World {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActionError {
     InvalidMove,
+    NothingToGet,
+    InventoryIsFull,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -617,6 +620,12 @@ impl Game {
                     .spawn_bullet(start, target, &mut self.animation_rng);
                 None
             }
+            Input::Get => {
+                if let Err(e) = self.player_get_item() {
+                    self.message_log.push(Message::ActionError(e));
+                }
+                None
+            }
         };
         if game_control_flow.is_some() {
             return Ok(game_control_flow);
@@ -629,6 +638,25 @@ impl Game {
         }
         self.update_visibility();
         Ok(None)
+    }
+
+    fn player_get_item(&mut self) -> Result<(), ActionError> {
+        let player_coord = self.player_coord();
+        let layers = self.world.spatial_table.layers_at_checked(player_coord);
+        if let Some(item_entity) = layers.item {
+            if self.world.components.money_item.contains(item_entity) {
+                *self
+                    .world
+                    .components
+                    .money
+                    .get_mut(self.player_entity)
+                    .unwrap() += 1;
+                self.world.remove_entity(item_entity);
+            }
+            Ok(())
+        } else {
+            Err(ActionError::NothingToGet)
+        }
     }
 
     pub(crate) fn handle_choice(&mut self, _choice: MenuChoice) -> Option<GameControlFlow> {
@@ -678,5 +706,9 @@ impl Game {
             radiation: Meter::new(4, 10),
             power: None,
         }
+    }
+
+    pub fn player_money(&self) -> u32 {
+        *self.world.components.money.get(self.player_entity).unwrap()
     }
 }

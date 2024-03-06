@@ -542,9 +542,7 @@ impl GameInstance {
                         _ => (),
                     }
                     text.wrap_word().render(&(), ctx, fb);
-                }
-            } else {
-                if let Some(tile) = visible_entity.tile {
+                } else {
                     let Description {
                         mut name,
                         description,
@@ -581,7 +579,6 @@ impl GameInstance {
                         text.parts.append(&mut description.parts);
                     }
                     text.wrap_word().render(&(), ctx, fb);
-                    return;
                 }
             }
         }
@@ -649,6 +646,23 @@ impl GameInstance {
         } else {
             render_meter_disabled(ctx.add_x(x_offset), fb);
         }
+    }
+
+    fn render_info(&self, ctx: Ctx, fb: &mut FrameBuffer) {
+        use text::*;
+        Text::new(vec![
+            StyledString {
+                string: "CyberCoinz™: ".to_string(),
+                style: Style::plain_text(),
+            },
+            StyledString {
+                string: format!("{}", self.game.inner_ref().player_money()),
+                style: Style::plain_text()
+                    .with_bold(true)
+                    .with_foreground(colours::MONEY.to_rgba32(255)),
+            },
+        ])
+        .render(&(), ctx, fb);
     }
 
     pub fn render(
@@ -846,6 +860,15 @@ impl GameInstance {
             self.render_stats(
                 ctx.add_offset(game_size.to_coord().unwrap().set_y(offset_y + 1))
                     .add_xy(2, 1),
+                fb,
+            );
+        }
+        // info
+        {
+            let offset_y = 0;
+            self.render_info(
+                ctx.add_offset(game_size.to_coord().unwrap().set_y(offset_y + 1))
+                    .add_xy(2, 0),
                 fb,
             );
         }
@@ -1222,11 +1245,13 @@ pub fn message_to_text(message: Message) -> Text {
         Message::CloseDoor => Text::new(vec![StyledString::plain_text(
             "You close the door.".to_string(),
         )]),
-        Message::ActionError(ActionError::InvalidMove) => {
-            Text::new(vec![StyledString::plain_text(
-                "You can't walk there.".to_string(),
-            )])
-        }
+        Message::ActionError(e) => Text::new(vec![StyledString::plain_text(match e {
+            ActionError::InvalidMove => format!("You can't walk there."),
+            ActionError::NothingToGet => format!("There is nothing here to pick up."),
+            ActionError::InventoryIsFull => {
+                format!("Your inventory is full. (Press d to select an itme to drop.)")
+            }
+        })]),
         Message::NpcHit { npc_type, damage } => Text::new(vec![
             StyledString::plain_text("The ".to_string()),
             npc_type_to_styled_string(npc_type),

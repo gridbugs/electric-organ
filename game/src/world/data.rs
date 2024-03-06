@@ -1,6 +1,6 @@
 use crate::world::explosion;
 pub use crate::world::spatial::{Layer, Location};
-use entity_table::declare_entity_module;
+use entity_table::{declare_entity_module, Entity};
 use rand::{seq::SliceRandom, Rng};
 use rgb_int::Rgba32;
 use serde::{Deserialize, Serialize};
@@ -35,6 +35,9 @@ declare_entity_module! {
         explodes_on_death: (),
         npc_type: NpcType,
         item: Item,
+        money_item: (),
+        inventory: Inventory,
+        money: u32,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -282,4 +285,17 @@ pub enum Item {
     Food,
     AntiRads,
     OrganContainer(Option<Organ>),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Inventory {
+    items: Vec<Option<Entity>>,
+}
+
+impl Inventory {
+    pub fn new(size: usize) -> Self {
+        Self {
+            items: (0..size).map(|_| None).collect(),
+        }
+    }
 }
