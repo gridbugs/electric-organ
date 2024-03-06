@@ -22,6 +22,12 @@ impl Terrain {
                     'z' => {
                         world.spawn_zombie(coord);
                     }
+                    's' => {
+                        world.spawn_snatcher(coord);
+                    }
+                    'c' => {
+                        world.spawn_climber(coord);
+                    }
                     '#' => {
                         world.spawn_wall(coord);
                     }
@@ -38,22 +44,22 @@ impl Terrain {
                         world.spawn_money(coord);
                     }
                     '1' => {
-                        world.spawn_item(coord, Item::Stimpack);
+                        world.spawn_item(coord, Item::Pistol);
                     }
                     '2' => {
-                        world.spawn_item(coord, Item::Antidote);
+                        world.spawn_item(coord, Item::PistolAmmo);
                     }
                     '3' => {
-                        world.spawn_item(coord, Item::Food);
+                        world.spawn_item(coord, Item::Shotgun);
                     }
                     '4' => {
-                        world.spawn_item(coord, Item::BloodVialEmpty);
+                        world.spawn_item(coord, Item::ShotgunAmmo);
                     }
                     '5' => {
-                        world.spawn_item(coord, Item::BloodVialFull);
+                        world.spawn_item(coord, Item::RocketLauncher);
                     }
                     '6' => {
-                        world.spawn_item(coord, Item::Battery);
+                        world.spawn_item(coord, Item::Rocket);
                     }
                     '7' => {
                         world.spawn_item(coord, Item::AntiRads);

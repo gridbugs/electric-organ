@@ -90,6 +90,7 @@ pub struct AiContext {
     distance_map_search_context: DistanceMapSearchContext,
     player_approach: HashMap<NpcMovement, DistanceMap>,
     player_flee: HashMap<NpcMovement, DistanceMap>,
+    item_distance: DistanceMap,
     wander_path: Path,
     shadowcast: ShadowcastContext<u8>,
 }
@@ -109,6 +110,7 @@ impl AiContext {
                 .iter()
                 .map(|&npc_movement| (npc_movement, DistanceMap::new(size)))
                 .collect(),
+            item_distance: DistanceMap::new(size),
             wander_path: Path::default(),
             shadowcast: ShadowcastContext::default(),
         }
@@ -141,6 +143,27 @@ impl AiContext {
             self.player_approach.clear();
             self.player_flee.clear();
         }
+        for item_entity in world.components.item.entities() {
+            if let Some(coord) = world.spatial_table.coord_of(item_entity) {
+                self.distance_map_populate_context.add(coord);
+            }
+        }
+        for item_entity in world.components.money_item.entities() {
+            if let Some(coord) = world.spatial_table.coord_of(item_entity) {
+                self.distance_map_populate_context.add(coord);
+            }
+        }
+        self.distance_map_populate_context.populate_approach(
+            &WorldCanEnterIgnoreCharacters {
+                world,
+                npc_movement: NpcMovement {
+                    can_traverse_difficult: true,
+                    can_open_doors: true,
+                },
+            },
+            20,
+            &mut self.item_distance,
+        );
     }
 }
 
@@ -279,6 +302,7 @@ enum Behaviour {
         accurate: bool,
     },
     Flee,
+    Steal,
 }
 
 impl Agent {
@@ -316,6 +340,7 @@ impl Agent {
             );
             if let Some(CanSeePlayer) = can_see_player {
                 match npc.disposition {
+                    Disposition::Thief => Behaviour::Steal,
                     Disposition::Hostile => Behaviour::Chase {
                         last_seen_player_coord: player_coord,
                         accurate: true,
@@ -336,6 +361,7 @@ impl Agent {
                 }
             } else {
                 match self.behaviour {
+                    Behaviour::Steal => Behaviour::Steal,
                     Behaviour::Chase {
                         last_seen_player_coord,
                         ..
@@ -363,6 +389,21 @@ impl Agent {
             Behaviour::Wander { avoid: false }
         };
         match self.behaviour {
+            Behaviour::Steal => {
+                let maybe_cardinal_direction = ai_context.distance_map_search_context.search_first(
+                    &WorldCanEnterAvoidNpcs {
+                        world,
+                        npc_movement: npc.movement,
+                    },
+                    coord,
+                    5,
+                    &ai_context.item_distance,
+                );
+                match maybe_cardinal_direction {
+                    None => None,
+                    Some(cardinal_direction) => Some(Input::Walk(cardinal_direction)),
+                }
+            }
             Behaviour::Wander { avoid } => {
                 let mut path_node = ai_context.wander_path.pop();
                 let need_new_path = if let Some(path_node) = path_node {

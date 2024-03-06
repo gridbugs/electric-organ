@@ -639,4 +639,24 @@ impl World {
             },
         )
     }
+
+    pub fn spawn_snatcher(&mut self, coord: Coord) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Snatcher,
+                npc: Npc { disposition: Disposition::Thief,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: true,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::Snatcher,
+                health: Meter::new_full(10),
+                simple_inventory: Vec::new(),
+                get_on_touch: (),
+            },
+        )
+    }
 }

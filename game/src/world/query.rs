@@ -102,8 +102,12 @@ impl World {
 
     pub fn nearest_itemless_coord(&self, start: Coord) -> Option<Coord> {
         use std::collections::{HashSet, VecDeque};
-        if self.spatial_table.layers_at_checked(start).item.is_none() {
-            return Some(start);
+        if let Some(layers) = self.spatial_table.layers_at(start) {
+            if layers.feature.is_none() {
+                if layers.item.is_none() {
+                    return Some(start);
+                }
+            }
         }
         let mut seen = HashSet::new();
         seen.insert(start);

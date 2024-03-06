@@ -2,7 +2,7 @@ use crate::{
     world::{
         data::{CollidesWith, OnCollision, ProjectileDamage, Tile},
         explosion,
-        spatial::{Layer, Location},
+        spatial::{Layer, Layers, Location},
     },
     ExternalEvent, Message, World,
 };
@@ -249,6 +249,22 @@ impl World {
                 explosion::explode(self, coord, spec, external_events, message_log, rng);
             }
         }
+        if let Some(simple_inventory) = self.components.simple_inventory.get_mut(character) {
+            use std::mem;
+            let simple_inventory = mem::replace(simple_inventory, Vec::new());
+            let current_coord = self.spatial_table.coord_of(character).unwrap();
+            for entity in simple_inventory {
+                if let Some(coord) = self.nearest_itemless_coord(current_coord) {
+                    let _ = self.spatial_table.update(
+                        entity,
+                        Location {
+                            coord,
+                            layer: Some(Layer::Item),
+                        },
+                    );
+                }
+            }
+        }
     }
 
     fn resurrect(&mut self, entity: Entity) {
@@ -292,6 +308,25 @@ impl World {
         }
         for entity in to_resurrect {
             self.resurrect(entity);
+        }
+    }
+
+    pub fn handle_get_on_touch(&mut self) {
+        for entity in self.components.get_on_touch.entities() {
+            if self.components.character.contains(entity) {
+                if let Some(simple_inventory) = self.components.simple_inventory.get_mut(entity) {
+                    if let Some(coord) = self.spatial_table.coord_of(entity) {
+                        if let Some(Layers {
+                            item: Some(item_entity),
+                            ..
+                        }) = self.spatial_table.layers_at(coord).cloned()
+                        {
+                            self.spatial_table.remove(item_entity);
+                            simple_inventory.push(item_entity);
+                        }
+                    }
+                }
+            }
         }
     }
 }

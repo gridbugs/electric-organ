@@ -286,9 +286,17 @@ impl GameInstance {
                         .with_foreground(colours::BLOOD_VIAL_EMPTY.to_rgba32(255)),
                 };
             }
+            Tile::Item(Item::BloodVialFull) => {
+                return RenderCell {
+                    character: Some('['),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::BLOOD_VIAL_FULL.to_rgba32(255)),
+                };
+            }
             Tile::Item(Item::Battery) => {
                 return RenderCell {
-                    character: Some('!'),
+                    character: Some('ϟ'),
                     style: Style::new()
                         .with_bold(true)
                         .with_foreground(colours::BATTERY.to_rgba32(255)),
@@ -310,20 +318,61 @@ impl GameInstance {
                         .with_foreground(colours::ANTIRADS.to_rgba32(255)),
                 };
             }
-            Tile::Item(Item::BloodVialFull) => {
-                return RenderCell {
-                    character: Some('['),
-                    style: Style::new()
-                        .with_bold(true)
-                        .with_foreground(colours::BLOOD_VIAL_FULL.to_rgba32(255)),
-                };
-            }
+
             Tile::Item(Item::OrganContainer(_)) => {
                 return RenderCell {
                     character: Some('ɸ'),
                     style: Style::new()
                         .with_bold(true)
                         .with_foreground(colours::ORGAN_CONTAINER.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::Pistol) => {
+                return RenderCell {
+                    character: Some('!'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::PISTOL.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::Shotgun) => {
+                return RenderCell {
+                    character: Some('!'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOTGUN.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::RocketLauncher) => {
+                return RenderCell {
+                    character: Some('!'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ROCKET_LAUNCHER.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::PistolAmmo) => {
+                return RenderCell {
+                    character: Some('"'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::PISTOL.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::ShotgunAmmo) => {
+                return RenderCell {
+                    character: Some('"'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOTGUN.to_rgba32(255)),
+                };
+            }
+            Tile::Item(Item::Rocket) => {
+                return RenderCell {
+                    character: Some('"'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ROCKET_LAUNCHER.to_rgba32(255)),
                 };
             }
             Tile::Zombie => {
@@ -358,12 +407,21 @@ impl GameInstance {
                         .with_foreground(colours::BOOMER.to_rgba32(255)),
                 };
             }
+            Tile::Snatcher => {
+                return RenderCell {
+                    character: Some('s'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SNATCHER.to_rgba32(255)),
+                };
+            }
             Tile::Corpse(npc_type) => {
                 let colour = match npc_type {
                     NpcType::Zombie => colours::ZOMBIE,
                     NpcType::Climber => colours::CLIMBER,
                     NpcType::Boomer => colours::BOOMER,
                     NpcType::Trespasser => colours::TRESPASSER,
+                    NpcType::Snatcher => colours::SNATCHER,
                 };
                 return RenderCell {
                     character: Some('?'),
@@ -1158,6 +1216,78 @@ fn describe_tile(tile: Tile) -> Description {
                 )])
             }),
         },
+        Tile::Item(Item::Pistol) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "pistol".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::PISTOL.to_rgba32(255)),
+                },
+            ]),
+            description: None,
+        },
+        Tile::Item(Item::Shotgun) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "shotgun".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOTGUN.to_rgba32(255)),
+                },
+            ]),
+            description: None,
+        },
+        Tile::Item(Item::RocketLauncher) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "rocket launcher".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ROCKET_LAUNCHER.to_rgba32(255)),
+                },
+            ]),
+            description: None,
+        },
+        Tile::Item(Item::PistolAmmo) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("some ".to_string()),
+                StyledString {
+                    string: "pistol bullets".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::PISTOL.to_rgba32(255)),
+                },
+            ]),
+            description: None,
+        },
+        Tile::Item(Item::ShotgunAmmo) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("some ".to_string()),
+                StyledString {
+                    string: "shotgun shells".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOTGUN.to_rgba32(255)),
+                },
+            ]),
+            description: None,
+        },
+        Tile::Item(Item::Rocket) => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "rocket".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ROCKET_LAUNCHER.to_rgba32(255)),
+                },
+            ]),
+            description: None,
+        },
         Tile::Zombie => Description {
             name: Text::new(vec![
                 StyledString::plain_text("a ".to_string()),
@@ -1214,6 +1344,20 @@ fn describe_tile(tile: Tile) -> Description {
                 "Explodes on when it dies.".to_string(),
             )])),
         },
+        Tile::Snatcher => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "snatcher".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SNATCHER.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Ignores you but steals items. Drops them on death.".to_string(),
+            )])),
+        },
         Tile::Corpse(npc_type) => match npc_type {
             NpcType::Zombie => Description {
                 name: Text::new(vec![
@@ -1265,6 +1409,18 @@ fn describe_tile(tile: Tile) -> Description {
                 ]),
                 description: None,
             },
+            NpcType::Snatcher => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "snatcher".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::SNATCHER.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
         },
     }
 }
@@ -1295,6 +1451,12 @@ fn npc_type_to_styled_string(npc_type: NpcType) -> text::StyledString {
             style: Style::new()
                 .with_bold(true)
                 .with_foreground(colours::BOOMER.to_rgba32(255)),
+        },
+        NpcType::Snatcher => StyledString {
+            string: "snatcher".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::SNATCHER.to_rgba32(255)),
         },
     }
 }
@@ -1391,6 +1553,7 @@ pub fn organ_type_name(organ_type: OrganType) -> &'static str {
         CronenbergPistol => "cronenberg pistol",
         CronenbergShotgun => "cronenberg shotgun",
         CyberCore => "CyberCore™",
+        Claw => "Claw™",
     }
 }
 
@@ -1495,6 +1658,42 @@ fn item_styled_string_for_message(item: Item) -> text::StyledString {
                 .with_bold(true)
                 .with_foreground(colours::ORGAN_CONTAINER.to_rgba32(255)),
         },
+        Item::Pistol => StyledString {
+            string: "pistol".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::PISTOL.to_rgba32(255)),
+        },
+        Item::Shotgun => StyledString {
+            string: "shotgun".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::SHOTGUN.to_rgba32(255)),
+        },
+        Item::RocketLauncher => StyledString {
+            string: "rocket launcher".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::ROCKET_LAUNCHER.to_rgba32(255)),
+        },
+        Item::PistolAmmo => StyledString {
+            string: "pistol bullets".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::PISTOL.to_rgba32(255)),
+        },
+        Item::ShotgunAmmo => StyledString {
+            string: "shotgun shells".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::SHOTGUN.to_rgba32(255)),
+        },
+        Item::Rocket => StyledString {
+            string: "rocket".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::ROCKET_LAUNCHER.to_rgba32(255)),
+        },
     }
 }
 
@@ -1512,5 +1711,11 @@ pub fn item_string_for_menu(item: Item) -> String {
             "Organ Container with {}",
             organ_string_for_description(&organ)
         ),
+        Item::Pistol => "Pistol".to_string(),
+        Item::Shotgun => "Shotgun".to_string(),
+        Item::RocketLauncher => "Rocket Launcher".to_string(),
+        Item::PistolAmmo => "Pistol Bullets".to_string(),
+        Item::ShotgunAmmo => "Shotgun Shells".to_string(),
+        Item::Rocket => "Rocket".to_string(),
     }
 }

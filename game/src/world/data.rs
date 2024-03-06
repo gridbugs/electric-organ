@@ -46,6 +46,8 @@ declare_entity_module! {
         leaves_corpse: (),
         corpse: (),
         resurrects_in: Meter,
+        simple_inventory: Vec<Entity>,
+        get_on_touch: (),
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -72,6 +74,7 @@ pub enum Tile {
     Climber,
     Trespasser,
     Boomer,
+    Snatcher,
     Money,
     Item(Item),
     Corpse(NpcType),
@@ -151,6 +154,7 @@ pub enum OnCollision {
 pub enum Disposition {
     Hostile,
     Afraid,
+    Thief,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -192,6 +196,7 @@ pub enum NpcType {
     Climber,
     Trespasser,
     Boomer,
+    Snatcher,
 }
 
 impl NpcType {
@@ -201,6 +206,7 @@ impl NpcType {
             Self::Climber => Tile::Climber,
             Self::Trespasser => Tile::Trespasser,
             Self::Boomer => Tile::Boomer,
+            Self::Snatcher => Tile::Snatcher,
         }
     }
 }
@@ -297,6 +303,7 @@ pub enum OrganType {
     CronenbergPistol,
     CronenbergShotgun,
     CyberCore,
+    Claw,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -316,6 +323,12 @@ pub enum Item {
     Food,
     AntiRads,
     OrganContainer(Option<Organ>),
+    Shotgun,
+    Pistol,
+    RocketLauncher,
+    ShotgunAmmo,
+    PistolAmmo,
+    Rocket,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
