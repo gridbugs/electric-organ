@@ -37,18 +37,33 @@ pub struct GameInstance {
     pub game: Game,
 }
 
-fn visible_entity_on_top(layers: &LayerTable<VisibleEntity>) -> Option<&VisibleEntity> {
+fn visible_entity_on_top(layers: &LayerTable<VisibleEntity>) -> Option<(&VisibleEntity, Layer)> {
     if layers.character.tile.is_some() {
-        return Some(&layers.character);
+        return Some((&layers.character, Layer::Character));
     }
     if layers.item.tile.is_some() {
-        return Some(&layers.item);
+        return Some((&layers.item, Layer::Item));
     }
     if layers.feature.tile.is_some() {
-        return Some(&layers.feature);
+        return Some((&layers.feature, Layer::Feature));
     }
     if layers.floor.tile.is_some() {
-        return Some(&layers.floor);
+        return Some((&layers.floor, Layer::Floor));
+    }
+    None
+}
+
+fn visible_entity_on_top_excluding_character(
+    layers: &LayerTable<VisibleEntity>,
+) -> Option<(&VisibleEntity, Layer)> {
+    if layers.item.tile.is_some() {
+        return Some((&layers.item, Layer::Item));
+    }
+    if layers.feature.tile.is_some() {
+        return Some((&layers.feature, Layer::Feature));
+    }
+    if layers.floor.tile.is_some() {
+        return Some((&layers.floor, Layer::Floor));
     }
     None
 }
@@ -452,79 +467,124 @@ impl GameInstance {
 
     fn render_description(&self, ctx: Ctx, fb: &mut FrameBuffer, cursor: Option<Coord>) {
         use text::*;
-        if let Some(cursor) = cursor {
+        let (cursor, player) = if let Some(cursor) = cursor {
             if self.game.inner_ref().world_size().is_valid(cursor) {
-                let (visible_entity, verb, end, currently_visible) =
-                    match self.game.inner_ref().cell_visibility_at_coord(cursor) {
-                        CellVisibility::Never => {
-                            Text::new(vec![StyledString {
-                                string: "UNDISCOVERED LOCATION".to_string(),
-                                style: Style::new()
-                                    .with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
-                            }])
-                            .wrap_word()
-                            .render(&(), ctx, fb);
-                            return;
-                        }
-                        CellVisibility::Previous(data) => (
-                            visible_entity_on_top(&data.tiles),
-                            "remember seeing",
-                            Some("here"),
-                            false,
-                        ),
-                        CellVisibility::Current { data, .. } => {
-                            (visible_entity_on_top(&data.tiles), "see", None, true)
-                        }
+                (cursor, false)
+            } else {
+                (self.game.inner_ref().player_coord(), true)
+            }
+        } else {
+            (self.game.inner_ref().player_coord(), true)
+        };
+        let (visible_entity, verb, end, currently_visible) =
+            match self.game.inner_ref().cell_visibility_at_coord(cursor) {
+                CellVisibility::Never => {
+                    Text::new(vec![StyledString {
+                        string: "UNDISCOVERED LOCATION".to_string(),
+                        style: Style::new().with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
+                    }])
+                    .wrap_word()
+                    .render(&(), ctx, fb);
+                    return;
+                }
+                CellVisibility::Previous(data) => (
+                    visible_entity_on_top(&data.tiles),
+                    "remember seeing",
+                    Some("here"),
+                    false,
+                ),
+                CellVisibility::Current { data, .. } => {
+                    if player {
+                        (
+                            visible_entity_on_top_excluding_character(&data.tiles),
+                            "see",
+                            None,
+                            true,
+                        )
+                    } else {
+                        (visible_entity_on_top(&data.tiles), "see", None, true)
+                    }
+                }
+            };
+        if let Some((visible_entity, layer)) = visible_entity {
+            if let Some(tile) = visible_entity.tile {
+                if player {
+                    let Description {
+                        mut name,
+                        description,
+                    } = describe_tile(tile);
+                    let mut text = Text {
+                        parts: vec![StyledString::plain_text(format!("There is "))],
                     };
-                if let Some(visible_entity) = visible_entity {
-                    if let Some(tile) = visible_entity.tile {
-                        let Description {
-                            mut name,
-                            description,
-                        } = describe_tile(tile);
-                        let mut text = Text {
-                            parts: vec![StyledString::plain_text(format!("You {verb} "))],
-                        };
-                        text.parts.append(&mut name.parts);
-                        if let Some(end) = end {
-                            text.parts.push(StyledString::plain_text(format!(" {end}")));
-                        }
-                        text.parts.push(StyledString::plain_text(".".to_string()));
-                        if currently_visible {
-                            if let Some(health) = visible_entity.health {
-                                if tile != Tile::Player {
-                                    text.parts
-                                        .push(StyledString::plain_text("\n\n".to_string()));
-                                    text.parts
-                                        .push(StyledString::plain_text(format!("Its health is ")));
-                                    text.parts.push(StyledString {
-                                        string: format!("{}/{}", health.current(), health.max()),
-                                        style: Style::default().with_bold(true).with_foreground(
-                                            colours::HEALTH
-                                                .to_rgba32(255)
-                                                .saturating_scalar_mul_div(3, 2),
-                                        ),
-                                    });
-                                }
+                    text.parts.append(&mut name.parts);
+                    if let Some(end) = end {
+                        text.parts.push(StyledString::plain_text(format!(" {end}")));
+                    }
+                    text.parts
+                        .push(StyledString::plain_text(" here.".to_string()));
+                    if let Some(mut description) = description {
+                        text.parts
+                            .push(StyledString::plain_text("\n\n".to_string()));
+                        text.parts.append(&mut description.parts);
+                    }
+                    match layer {
+                        Layer::Floor => text.parts.push(StyledString {
+                            string: "\n\n(Move the cursor over a tile to see a description.)"
+                                .to_string(),
+                            style: Style::new()
+                                .with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
+                        }),
+                        Layer::Item => text.parts.push(StyledString {
+                            string: "\n\n(Press g to pick it up.)".to_string(),
+                            style: Style::new()
+                                .with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
+                        }),
+                        _ => (),
+                    }
+                    text.wrap_word().render(&(), ctx, fb);
+                }
+            } else {
+                if let Some(tile) = visible_entity.tile {
+                    let Description {
+                        mut name,
+                        description,
+                    } = describe_tile(tile);
+                    let mut text = Text {
+                        parts: vec![StyledString::plain_text(format!("You {verb} "))],
+                    };
+                    text.parts.append(&mut name.parts);
+                    if let Some(end) = end {
+                        text.parts.push(StyledString::plain_text(format!(" {end}")));
+                    }
+                    text.parts.push(StyledString::plain_text(".".to_string()));
+                    if currently_visible {
+                        if let Some(health) = visible_entity.health {
+                            if tile != Tile::Player {
+                                text.parts
+                                    .push(StyledString::plain_text("\n\n".to_string()));
+                                text.parts
+                                    .push(StyledString::plain_text(format!("Its health is ")));
+                                text.parts.push(StyledString {
+                                    string: format!("{}/{}", health.current(), health.max()),
+                                    style: Style::default().with_bold(true).with_foreground(
+                                        colours::HEALTH
+                                            .to_rgba32(255)
+                                            .saturating_scalar_mul_div(3, 2),
+                                    ),
+                                });
                             }
                         }
-                        if let Some(mut description) = description {
-                            text.parts
-                                .push(StyledString::plain_text("\n\n".to_string()));
-                            text.parts.append(&mut description.parts);
-                        }
-                        text.wrap_word().render(&(), ctx, fb);
-                        return;
                     }
+                    if let Some(mut description) = description {
+                        text.parts
+                            .push(StyledString::plain_text("\n\n".to_string()));
+                        text.parts.append(&mut description.parts);
+                    }
+                    text.wrap_word().render(&(), ctx, fb);
+                    return;
                 }
             }
         }
-        Text::new(vec![StyledString {
-            string: "(Move the cursor over a tile to see a description.)".to_string(),
-            style: Style::new().with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
-        }])
-        .wrap_word()
-        .render(&(), ctx, fb);
     }
 
     fn render_mode(&self, ctx: Ctx, fb: &mut FrameBuffer, mode: Mode) {
@@ -665,8 +725,27 @@ impl GameInstance {
                     style: border_style,
                 },
                 StyledString {
-                    string: "Description".to_string(),
+                    string: format!("Description: "),
                     style: border_text_style,
+                },
+                if cursor.is_some() {
+                    match mode {
+                        Mode::Normal => StyledString {
+                            string: format!("AT CURSOR"),
+                            style: border_text_style
+                                .with_foreground(colours::NORMAL_MODE.to_rgba32(255)),
+                        },
+                        Mode::Aiming => StyledString {
+                            string: format!("AT TARGET"),
+                            style: border_text_style
+                                .with_foreground(colours::AIMING_MODE.to_rgba32(255)),
+                        },
+                    }
+                } else {
+                    StyledString {
+                        string: format!("AT PLAYER"),
+                        style: border_text_style.with_foreground(Rgba32::new_grey(255)),
+                    }
                 },
                 StyledString {
                     string: "╞".to_string(),
