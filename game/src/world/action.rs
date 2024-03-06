@@ -1,7 +1,8 @@
 use crate::{
     world::{
-        data::{CollidesWith, OnCollision, ProjectileDamage},
+        data::{CollidesWith, OnCollision, ProjectileDamage, Tile},
         explosion,
+        spatial::{Layer, Location},
     },
     ExternalEvent, Message, World,
 };
@@ -209,10 +210,28 @@ impl World {
         external_events: &mut Vec<ExternalEvent>,
         message_log: &mut Vec<Message>,
     ) {
-        if let Some(npc_type) = self.components.npc_type.get(character) {
-            message_log.push(Message::NpcDies(*npc_type));
+        if let Some(&npc_type) = self.components.npc_type.get(character) {
+            message_log.push(Message::NpcDies(npc_type));
+            self.components.corpse.insert(character, ());
+            self.components.character.remove(character);
+            self.components
+                .tile
+                .insert(character, Tile::Corpse(npc_type));
+            let current_coord = self.spatial_table.coord_of(character).unwrap();
+            if let Some(coord) = self.nearest_itemless_coord(current_coord) {
+                let _ = self.spatial_table.update(
+                    character,
+                    Location {
+                        coord,
+                        layer: Some(Layer::Item),
+                    },
+                );
+            } else {
+                self.components.to_remove.insert(character, ());
+            }
+        } else {
+            self.components.to_remove.insert(character, ());
         }
-        self.components.to_remove.insert(character, ());
         if self.components.explodes_on_death.contains(character) {
             if let Some(coord) = self.spatial_table.coord_of(character) {
                 self.components.explodes_on_death.remove(character);
@@ -229,6 +248,50 @@ impl World {
                 };
                 explosion::explode(self, coord, spec, external_events, message_log, rng);
             }
+        }
+    }
+
+    fn resurrect(&mut self, entity: Entity) {
+        let current_coord = self.spatial_table.coord_of(entity).unwrap();
+        if let Some(coord) = self.nearest_characterless_coord(current_coord) {
+            let _ = self.spatial_table.update(
+                entity,
+                Location {
+                    coord,
+                    layer: Some(Layer::Character),
+                },
+            );
+        } else {
+            return;
+        }
+        if let Some(resurrects_in) = self.components.resurrects_in.get_mut(entity) {
+            resurrects_in.set_current(resurrects_in.max());
+        }
+        if let Some(health) = self.components.health.get_mut(entity) {
+            health.set_current(health.max());
+        }
+        self.components.corpse.remove(entity);
+        self.components.character.insert(entity, ());
+        if let Some(&Tile::Corpse(npc_type)) = self.components.tile.get(entity) {
+            self.components.tile.insert(entity, npc_type.tile());
+        }
+    }
+
+    pub fn handle_resurrection(&mut self) {
+        let mut to_resurrect = Vec::new();
+        for (entity, resurrects_in) in self.components.resurrects_in.iter_mut() {
+            if let Some(health) = self.components.health.get(entity) {
+                if health.current() == 0 {
+                    if resurrects_in.current() == 0 {
+                        to_resurrect.push(entity);
+                    } else {
+                        resurrects_in.decrease(1);
+                    }
+                }
+            }
+        }
+        for entity in to_resurrect {
+            self.resurrect(entity);
         }
     }
 }

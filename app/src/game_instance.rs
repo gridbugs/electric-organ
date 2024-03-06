@@ -358,6 +358,20 @@ impl GameInstance {
                         .with_foreground(colours::BOOMER.to_rgba32(255)),
                 };
             }
+            Tile::Corpse(npc_type) => {
+                let colour = match npc_type {
+                    NpcType::Zombie => colours::ZOMBIE,
+                    NpcType::Climber => colours::CLIMBER,
+                    NpcType::Boomer => colours::BOOMER,
+                    NpcType::Trespasser => colours::TRESPASSER,
+                };
+                return RenderCell {
+                    character: Some('?'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colour.to_rgba32(255)),
+                };
+            }
         };
     }
 
@@ -1155,7 +1169,7 @@ fn describe_tile(tile: Tile) -> Description {
                 },
             ]),
             description: Some(Text::new(vec![StyledString::plain_text(
-                "Some of its organs may still be intact.".to_string(),
+                "Resurrects unless its corpse is destroyed.".to_string(),
             )])),
         },
         Tile::Climber => Description {
@@ -1199,6 +1213,58 @@ fn describe_tile(tile: Tile) -> Description {
             description: Some(Text::new(vec![StyledString::plain_text(
                 "Explodes on when it dies.".to_string(),
             )])),
+        },
+        Tile::Corpse(npc_type) => match npc_type {
+            NpcType::Zombie => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "zombie".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::ZOMBIE.to_rgba32(255)),
+                    },
+                ]),
+                description: Some(Text::new(vec![StyledString::plain_text(
+                    "Remove the heart to prevent resurrection.".to_string(),
+                )])),
+            },
+            NpcType::Climber => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "climber".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::CLIMBER.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
+            NpcType::Trespasser => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "trespasser".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::TRESPASSER.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
+            NpcType::Boomer => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "boomer".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::BOOMER.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
         },
     }
 }

@@ -43,6 +43,9 @@ declare_entity_module! {
         money_item: (),
         inventory: Inventory,
         money: u32,
+        leaves_corpse: (),
+        corpse: (),
+        resurrects_in: Meter,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -71,6 +74,7 @@ pub enum Tile {
     Boomer,
     Money,
     Item(Item),
+    Corpse(NpcType),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,12 +186,23 @@ pub struct Npc {
     pub movement: NpcMovement,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NpcType {
     Zombie,
     Climber,
     Trespasser,
     Boomer,
+}
+
+impl NpcType {
+    pub fn tile(self) -> Tile {
+        match self {
+            Self::Zombie => Tile::Zombie,
+            Self::Climber => Tile::Climber,
+            Self::Trespasser => Tile::Trespasser,
+            Self::Boomer => Tile::Boomer,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]

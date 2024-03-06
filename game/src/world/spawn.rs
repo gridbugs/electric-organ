@@ -579,6 +579,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Zombie,
                 health: Meter::new_full(4),
+                resurrects_in: Meter::new_full(10),
             },
         )
     }

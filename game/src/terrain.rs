@@ -19,6 +19,9 @@ impl Terrain {
                 world.spawn_floor(coord);
                 match ch {
                     '.' => (),
+                    'z' => {
+                        world.spawn_zombie(coord);
+                    }
                     '#' => {
                         world.spawn_wall(coord);
                     }

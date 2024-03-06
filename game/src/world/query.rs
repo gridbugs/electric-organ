@@ -6,6 +6,7 @@ use crate::{
     World,
 };
 use coord_2d::Coord;
+use direction::CardinalDirection;
 use entity_table::Entity;
 
 impl World {
@@ -97,5 +98,66 @@ impl World {
     }
     pub fn entity_npc(&self, entity: Entity) -> Option<&Npc> {
         self.components.npc.get(entity)
+    }
+
+    pub fn nearest_itemless_coord(&self, start: Coord) -> Option<Coord> {
+        use std::collections::{HashSet, VecDeque};
+        if self.spatial_table.layers_at_checked(start).item.is_none() {
+            return Some(start);
+        }
+        let mut seen = HashSet::new();
+        seen.insert(start);
+        let mut queue = VecDeque::new();
+        queue.push_back(start);
+        while let Some(coord) = queue.pop_front() {
+            for d in CardinalDirection::all() {
+                let coord = coord + d.coord();
+                if seen.insert(coord) {
+                    if let Some(layers) = self.spatial_table.layers_at(coord) {
+                        if layers.feature.is_none() {
+                            if layers.item.is_none() {
+                                return Some(coord);
+                            } else {
+                                queue.push_back(coord);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    pub fn nearest_characterless_coord(&self, start: Coord) -> Option<Coord> {
+        use std::collections::{HashSet, VecDeque};
+        if self
+            .spatial_table
+            .layers_at_checked(start)
+            .character
+            .is_none()
+        {
+            return Some(start);
+        }
+        let mut seen = HashSet::new();
+        seen.insert(start);
+        let mut queue = VecDeque::new();
+        queue.push_back(start);
+        while let Some(coord) = queue.pop_front() {
+            for d in CardinalDirection::all() {
+                let coord = coord + d.coord();
+                if seen.insert(coord) {
+                    if let Some(layers) = self.spatial_table.layers_at(coord) {
+                        if layers.feature.is_none() {
+                            if layers.character.is_none() {
+                                return Some(coord);
+                            } else {
+                                queue.push_back(coord);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 }

@@ -532,6 +532,9 @@ impl Game {
         self.ai_context.update(self.player_entity, &self.world);
         let agent_entities = self.agents.entities().collect::<Vec<_>>();
         for agent_entity in agent_entities {
+            if self.world.components.corpse.contains(agent_entity) {
+                continue;
+            }
             let ai_input = self.agents.get_mut(agent_entity).unwrap().act(
                 agent_entity,
                 &self.world,
@@ -551,6 +554,7 @@ impl Game {
                 }
             }
         }
+        self.world.handle_resurrection();
         None
     }
 
@@ -657,7 +661,6 @@ impl Game {
                     .unwrap() += 1;
                 self.world.remove_entity(item_entity);
                 self.message_log.push(Message::GetMoney);
-                return Ok(());
             }
             if let Some(&item) = self.world.components.item.get(item_entity) {
                 let inventry = self
@@ -670,12 +673,11 @@ impl Game {
                     *slot = Some(item_entity);
                     self.world.spatial_table.remove(item_entity);
                     self.message_log.push(Message::GetItem(item));
-                    return Ok(());
                 } else {
                     return Err(ActionError::InventoryIsFull);
                 }
             }
-            panic!("invalid item");
+            Ok(())
         } else {
             Err(ActionError::NothingToGet)
         }
@@ -700,7 +702,7 @@ impl Game {
             if let Some(&item) = self.world.components.item.get(item_entity) {
                 self.message_log.push(Message::DropItem(item));
             }
-            if let Some(coord) = self.nearest_itemless_coord(self.player_coord()) {
+            if let Some(coord) = self.world.nearest_itemless_coord(self.player_coord()) {
                 let _ = self.world.spatial_table.update(
                     item_entity,
                     Location {
@@ -710,40 +712,6 @@ impl Game {
                 );
             }
         }
-    }
-
-    fn nearest_itemless_coord(&self, start: Coord) -> Option<Coord> {
-        use std::collections::{HashSet, VecDeque};
-        if self
-            .world
-            .spatial_table
-            .layers_at_checked(start)
-            .item
-            .is_none()
-        {
-            return Some(start);
-        }
-        let mut seen = HashSet::new();
-        seen.insert(start);
-        let mut queue = VecDeque::new();
-        queue.push_back(start);
-        while let Some(coord) = queue.pop_front() {
-            for d in CardinalDirection::all() {
-                let coord = coord + d.coord();
-                if seen.insert(coord) {
-                    if let Some(layers) = self.world.spatial_table.layers_at(coord) {
-                        if layers.feature.is_none() {
-                            if layers.item.is_none() {
-                                return Some(coord);
-                            } else {
-                                queue.push_back(coord);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        None
     }
 
     pub fn for_each_visible_particle<F: FnMut(Coord, VisibleEntity, Option<Rgb24>)>(
