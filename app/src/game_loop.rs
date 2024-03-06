@@ -11,7 +11,7 @@ use crate::{
 use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
 use game::{
     witness::{self, FireEquipped, Running, Witness},
-    Config as GameConfig, ExternalEvent, GameOverReason, Menu as GameMenu,
+    Config as GameConfig, ExternalEvent, GameOverReason, Item, Menu as GameMenu,
     MenuChoice as GameMenuChoice, Victory,
 };
 use general_storage_static::{self as storage, format, StaticStorage as Storage};
@@ -475,6 +475,10 @@ impl GameLoopData {
                                 drop_menu_witness(instance.game.inner_ref(), running),
                                 Ok(()),
                             ),
+                            AppInput::ApplyItem => (
+                                apply_menu_witness(instance.game.inner_ref(), running),
+                                Ok(()),
+                            ),
                         };
                         witness
                     }
@@ -538,6 +542,18 @@ fn drop_menu_witness(game: &game::Game, running: witness::Running) -> Witness {
         .collect::<Vec<_>>();
     let menu = GameMenu {
         text: format!("Select an item to drop (escape to cancel):"),
+        choices,
+        image: None,
+    };
+    running.menu(menu)
+}
+
+fn apply_menu_witness(game: &game::Game, running: witness::Running) -> Witness {
+    let choices = (0..game.inventory_size())
+        .map(|i| GameMenuChoice::ApplyItem(i))
+        .collect::<Vec<_>>();
+    let menu = GameMenu {
+        text: format!("Select an item to apply (escape to cancel):"),
         choices,
         image: None,
     };
@@ -1087,12 +1103,40 @@ fn game_over(reason: GameOverReason) -> AppCF<()> {
     .overlay(background(), 1)
 }
 
+fn apply_item_description(item: Item) -> String {
+    use Item::*;
+    match item {
+        Stimpack => "Consume to increase health".to_string(),
+        Antidote => "Consume to decrease poison".to_string(),
+        BloodVialEmpty => "Fill with blood (must be standing on corpse)".to_string(),
+        BloodVialFull => "Consume to increase oxygen".to_string(),
+        Battery => "Consume to increase power (requires CyberCore™)".to_string(),
+        Food => "Consume to gain food".to_string(),
+        AntiRads => "Consume to reduce radiation".to_string(),
+        OrganContainer(Some(_)) => "Dump contents".to_string(),
+        OrganContainer(None) => "Harvest organ (must be standing on corpse)".to_string(),
+        Pistol | Shotgun | RocketLauncher => "Swap with current weapon".to_string(),
+        PistolAmmo | ShotgunAmmo | Rocket => "Load into current weapon".to_string(),
+    }
+}
+
 fn menu_choice_string(game: &game::Game, choice: GameMenuChoice) -> String {
     match choice {
         GameMenuChoice::Dummy => panic!(),
         GameMenuChoice::DropItem(i) => {
             if let Some(item) = game.inventory_item(i) {
                 item_string_for_menu(item)
+            } else {
+                format!("(empty)")
+            }
+        }
+        GameMenuChoice::ApplyItem(i) => {
+            if let Some(item) = game.inventory_item(i) {
+                format!(
+                    "{} - {}",
+                    item_string_for_menu(item),
+                    apply_item_description(item)
+                )
             } else {
                 format!("(empty)")
             }

@@ -94,6 +94,7 @@ pub enum MenuImage {}
 #[derive(Debug, Clone, Copy)]
 pub enum MenuChoice {
     DropItem(usize),
+    ApplyItem(usize),
     Dummy,
 }
 
@@ -688,8 +689,13 @@ impl Game {
         match choice {
             MenuChoice::Dummy => panic!(),
             MenuChoice::DropItem(i) => self.player_drop_item(i),
+            MenuChoice::ApplyItem(i) => self.player_apply_item(i),
         }
         None
+    }
+
+    fn player_apply_item(&mut self, i: usize) {
+        println!("todo");
     }
 
     fn player_drop_item(&mut self, i: usize) {

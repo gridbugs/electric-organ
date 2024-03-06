@@ -44,7 +44,7 @@ impl Terrain {
                         world.spawn_money(coord);
                     }
                     '1' => {
-                        world.spawn_item(coord, Item::Pistol);
+                        world.spawn_item(coord, Item::BloodVialEmpty);
                     }
                     '2' => {
                         world.spawn_item(coord, Item::PistolAmmo);

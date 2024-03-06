@@ -1161,7 +1161,7 @@ fn describe_tile(tile: Tile) -> Description {
                         .with_bold(true)
                         .with_foreground(colours::ANTIRADS.to_rgba32(255)),
                 },
-                StyledString::plain_text("medication.".to_string()),
+                StyledString::plain_text(" medication.".to_string()),
             ]),
             description: Some(Text::new(vec![
                 StyledString::plain_text("Consume to decrease ".to_string()),
