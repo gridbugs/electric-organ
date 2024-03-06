@@ -29,7 +29,11 @@ pub fn make_player() -> EntityData {
             },
         }),
         health: Some(Meter::new_full(10)),
-        inventory: Some(Inventory::new(20)),
+        oxygen: Some(Meter::new_full(10)),
+        food: Some(Meter::new_full(10)),
+        poison: Some(Meter::new(0, 10)),
+        radiation: Some(Meter::new(0, 10)),
+        inventory: Some(Inventory::new(12)),
         money: Some(0),
         ..Default::default()
     }
@@ -544,6 +548,7 @@ impl World {
             entity_data! {
                 tile: Tile::Money,
                 money_item: (),
+                destructible: (),
             },
         )
     }
@@ -554,6 +559,7 @@ impl World {
             entity_data! {
                 tile: Tile::Item(item),
                 item,
+                destructible: (),
             },
         )
     }

@@ -30,6 +30,11 @@ declare_entity_module! {
         on_collision: OnCollision,
         npc: Npc,
         health: Meter,
+        oxygen: Meter,
+        food: Meter,
+        poison: Meter,
+        radiation: Meter,
+        power: Meter,
         destructible: (),
         to_remove: (),
         explodes_on_death: (),
@@ -196,7 +201,7 @@ pub enum OrganTrait {
 }
 
 impl OrganTrait {
-    const ALL: &[OrganTrait] = &[
+    const ALL: &'static [OrganTrait] = &[
         OrganTrait::Prolific,
         OrganTrait::Vampiric,
         OrganTrait::Radioactitve,
@@ -241,6 +246,17 @@ impl OrganTraits {
             ret.push(OrganTrait::Transient);
         }
         ret
+    }
+
+    pub fn none() -> Self {
+        Self {
+            prolific: false,
+            vampiric: false,
+            radioactitve: false,
+            damaged: false,
+            embedded: false,
+            transient: false,
+        }
     }
 
     pub fn get_mut(&mut self, trait_: OrganTrait) -> &mut bool {
@@ -297,5 +313,27 @@ impl Inventory {
         Self {
             items: (0..size).map(|_| None).collect(),
         }
+    }
+
+    pub fn first_free_slot(&mut self) -> Option<&mut Option<Entity>> {
+        for entry in self.items.iter_mut() {
+            if entry.is_none() {
+                return Some(entry);
+            }
+        }
+        None
+    }
+
+    pub fn size(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn get(&self, i: usize) -> Option<Entity> {
+        self.items[i]
+    }
+
+    pub fn remove(&mut self, i: usize) -> Option<Entity> {
+        use std::mem;
+        mem::replace(&mut self.items[i], None)
     }
 }

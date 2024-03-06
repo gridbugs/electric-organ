@@ -83,6 +83,9 @@ pub enum Message {
         attacker_npc_type: NpcType,
         damage: u32,
     },
+    GetMoney,
+    GetItem(Item),
+    DropItem(Item),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -90,6 +93,7 @@ pub enum MenuImage {}
 
 #[derive(Debug, Clone, Copy)]
 pub enum MenuChoice {
+    DropItem(usize),
     Dummy,
 }
 
@@ -97,7 +101,7 @@ pub enum MenuChoice {
 pub struct Menu {
     pub choices: Vec<MenuChoice>,
     pub text: String,
-    pub image: MenuImage,
+    pub image: Option<MenuImage>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -652,14 +656,93 @@ impl Game {
                     .get_mut(self.player_entity)
                     .unwrap() += 1;
                 self.world.remove_entity(item_entity);
+                self.message_log.push(Message::GetMoney);
+                return Ok(());
             }
-            Ok(())
+            if let Some(&item) = self.world.components.item.get(item_entity) {
+                let inventry = self
+                    .world
+                    .components
+                    .inventory
+                    .get_mut(self.player_entity)
+                    .unwrap();
+                if let Some(slot) = inventry.first_free_slot() {
+                    *slot = Some(item_entity);
+                    self.world.spatial_table.remove(item_entity);
+                    self.message_log.push(Message::GetItem(item));
+                    return Ok(());
+                } else {
+                    return Err(ActionError::InventoryIsFull);
+                }
+            }
+            panic!("invalid item");
         } else {
             Err(ActionError::NothingToGet)
         }
     }
 
-    pub(crate) fn handle_choice(&mut self, _choice: MenuChoice) -> Option<GameControlFlow> {
+    pub(crate) fn handle_choice(&mut self, choice: MenuChoice) -> Option<GameControlFlow> {
+        match choice {
+            MenuChoice::Dummy => panic!(),
+            MenuChoice::DropItem(i) => self.player_drop_item(i),
+        }
+        None
+    }
+
+    fn player_drop_item(&mut self, i: usize) {
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get_mut(self.player_entity)
+            .unwrap();
+        if let Some(item_entity) = inventory.remove(i) {
+            if let Some(&item) = self.world.components.item.get(item_entity) {
+                self.message_log.push(Message::DropItem(item));
+            }
+            if let Some(coord) = self.nearest_itemless_coord(self.player_coord()) {
+                let _ = self.world.spatial_table.update(
+                    item_entity,
+                    Location {
+                        coord,
+                        layer: Some(Layer::Item),
+                    },
+                );
+            }
+        }
+    }
+
+    fn nearest_itemless_coord(&self, start: Coord) -> Option<Coord> {
+        use std::collections::{HashSet, VecDeque};
+        if self
+            .world
+            .spatial_table
+            .layers_at_checked(start)
+            .item
+            .is_none()
+        {
+            return Some(start);
+        }
+        let mut seen = HashSet::new();
+        seen.insert(start);
+        let mut queue = VecDeque::new();
+        queue.push_back(start);
+        while let Some(coord) = queue.pop_front() {
+            for d in CardinalDirection::all() {
+                let coord = coord + d.coord();
+                if seen.insert(coord) {
+                    if let Some(layers) = self.world.spatial_table.layers_at(coord) {
+                        if layers.feature.is_none() {
+                            if layers.item.is_none() {
+                                return Some(coord);
+                            } else {
+                                queue.push_back(coord);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         None
     }
 
@@ -700,15 +783,51 @@ impl Game {
                 .health
                 .get(self.player_entity)
                 .unwrap(),
-            oxygen: Meter::new(4, 10),
-            food: Meter::new(8, 10),
-            poison: Meter::new(3, 10),
-            radiation: Meter::new(4, 10),
-            power: None,
+            oxygen: *self
+                .world
+                .components
+                .oxygen
+                .get(self.player_entity)
+                .unwrap(),
+            food: *self.world.components.food.get(self.player_entity).unwrap(),
+            poison: *self
+                .world
+                .components
+                .poison
+                .get(self.player_entity)
+                .unwrap(),
+            radiation: *self
+                .world
+                .components
+                .radiation
+                .get(self.player_entity)
+                .unwrap(),
+            power: self.world.components.power.get(self.player_entity).cloned(),
         }
     }
 
     pub fn player_money(&self) -> u32 {
         *self.world.components.money.get(self.player_entity).unwrap()
+    }
+
+    pub fn inventory_size(&self) -> usize {
+        self.world
+            .components
+            .inventory
+            .get(self.player_entity)
+            .unwrap()
+            .size()
+    }
+
+    pub fn inventory_item(&self, i: usize) -> Option<Item> {
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get(self.player_entity)
+            .unwrap();
+        inventory
+            .get(i)
+            .map(|entity| *self.world.components.item.get(entity).unwrap())
     }
 }

@@ -11,6 +11,7 @@ pub enum AppInput {
     FireEquipped,
     MessageLog,
     Get,
+    DropItem,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -29,6 +30,7 @@ impl Default for Controls {
             KeyboardInput::Char('f') => AppInput::FireEquipped,
             KeyboardInput::Char('m') => AppInput::MessageLog,
             KeyboardInput::Char('g') => AppInput::Get,
+            KeyboardInput::Char('d') => AppInput::DropItem,
         ];
         Self { keys }
     }

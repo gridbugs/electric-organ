@@ -1,7 +1,9 @@
 use crate::{
     colours,
     controls::{AppInput, Controls},
-    game_instance::{message_to_text, GameInstance, GameInstanceStorable, Mode},
+    game_instance::{
+        item_string_for_menu, message_to_text, GameInstance, GameInstanceStorable, Mode,
+    },
     image::Images,
     music::{MusicState, Track},
     text,
@@ -9,7 +11,8 @@ use crate::{
 use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
 use game::{
     witness::{self, FireEquipped, Running, Witness},
-    Config as GameConfig, ExternalEvent, GameOverReason, Victory,
+    Config as GameConfig, ExternalEvent, GameOverReason, Menu as GameMenu,
+    MenuChoice as GameMenuChoice, Victory,
 };
 use general_storage_static::{self as storage, format, StaticStorage as Storage};
 use line_2d;
@@ -72,7 +75,7 @@ const MENU_FADE_SPEC: menu::identifier::fade_spec::FadeSpec = {
             to: To {
                 rgba32: Layers {
                     foreground: colours::VAPORWAVE_FOREGROUND.to_rgba32(255),
-                    background: colours::VAPORWAVE_BACKGROUND.to_rgba32(127),
+                    background: MENU_BACKGROUND,
                 },
                 bold: false,
                 underline: false,
@@ -468,6 +471,10 @@ impl GameLoopData {
                             AppInput::MessageLog => {
                                 return GameLoopState::MessageLog(running);
                             }
+                            AppInput::DropItem => (
+                                drop_menu_witness(instance.game.inner_ref(), running),
+                                Ok(()),
+                            ),
                         };
                         witness
                     }
@@ -524,6 +531,18 @@ impl GameLoopData {
 }
 
 struct GameInstanceComponent(Option<witness::Running>);
+
+fn drop_menu_witness(game: &game::Game, running: witness::Running) -> Witness {
+    let choices = (0..game.inventory_size())
+        .map(|i| GameMenuChoice::DropItem(i))
+        .collect::<Vec<_>>();
+    let menu = GameMenu {
+        text: format!("Select an item to drop (escape to cancel):"),
+        choices,
+        image: None,
+    };
+    running.menu(menu)
+}
 
 impl GameInstanceComponent {
     fn new(running: witness::Running) -> Self {
@@ -1068,50 +1087,75 @@ fn game_over(reason: GameOverReason) -> AppCF<()> {
     .overlay(background(), 1)
 }
 
+fn menu_choice_string(game: &game::Game, choice: GameMenuChoice) -> String {
+    match choice {
+        GameMenuChoice::Dummy => panic!(),
+        GameMenuChoice::DropItem(i) => {
+            if let Some(item) = game.inventory_item(i) {
+                item_string_for_menu(item)
+            } else {
+                format!("(empty)")
+            }
+        }
+    }
+}
+
+const ALPHABET: &'static str = "abcdefghijklmnopqrstuvwxyz";
+
 fn game_menu(menu_witness: witness::Menu) -> AppCF<Witness> {
     use chargrid::align::*;
     use game::MenuChoice;
     use menu::builder::*;
-    let mut builder = menu_builder();
-    let mut add_item = |entry: MenuChoice, name: String, ch: char| {
-        let identifier = MENU_FADE_SPEC.identifier(move |b| write!(b, "{}. {}", ch, name).unwrap());
-        builder.add_item_mut(item(entry, identifier).add_hotkey_char(ch));
-    };
-    for (i, choice) in menu_witness.menu.choices.iter().enumerate() {
-        let ch = std::char::from_digit(i as u32 + 1, 10).unwrap();
-        match choice {
-            MenuChoice::Dummy => add_item(choice.clone(), "Dummy".to_string(), ch),
+    let game_menu = menu_witness.menu.clone();
+    let menu_cf = on_state_then(move |state: &mut State| {
+        let instance = state.instance.as_ref().unwrap();
+        let mut builder = menu_builder();
+        let mut add_item = |entry: MenuChoice, name: String, ch: char| {
+            let identifier =
+                MENU_FADE_SPEC.identifier(move |b| write!(b, "{}) {}", ch, name).unwrap());
+            builder.add_item_mut(item(entry, identifier).add_hotkey_char(ch));
+        };
+        for (choice, ch) in game_menu.choices.iter().zip(ALPHABET.chars()) {
+            add_item(
+                choice.clone(),
+                menu_choice_string(instance.game.inner_ref(), choice.clone()),
+                ch,
+            );
         }
-    }
-    let title = {
-        use chargrid::text::*;
-        Text::new(vec![StyledString {
-            string: menu_witness.menu.text.clone(),
-            style: Style::plain_text(),
-        }])
-        .wrap_word()
-        .cf::<State>()
-        .set_width(36)
-    };
-    let menu_cf = builder
-        .build_cf()
-        .menu_harness()
-        .add_x(2)
-        .with_title_vertical(title, 2)
-        .align(Alignment {
-            x: AlignmentX::Left,
-            y: AlignmentY::Centre,
-        })
-        .add_x(4)
-        .overlay(
-            render_state(move |state: &State, ctx, fb| {
-                state
-                    .images
-                    .image_from_menu_image(menu_witness.menu.image)
-                    .render(ctx, fb)
-            }),
-            1,
-        );
+        let title = {
+            use chargrid::text::*;
+            Text::new(vec![StyledString {
+                string: game_menu.text.clone(),
+                style: Style::plain_text(),
+            }])
+            .wrap_word()
+            .cf::<State>()
+            .set_width(50)
+        };
+        let menu = builder
+            .build_cf()
+            .menu_harness()
+            .with_title_vertical(title, 2);
+        if let Some(menu_image) = menu_witness.menu.image {
+            menu.add_x(2)
+                .align(Alignment {
+                    x: AlignmentX::Left,
+                    y: AlignmentY::Centre,
+                })
+                .add_x(4)
+                .overlay(
+                    render_state(move |state: &State, ctx, fb| {
+                        state
+                            .images
+                            .image_from_menu_image(menu_image)
+                            .render(ctx, fb);
+                    }),
+                    1,
+                )
+        } else {
+            menu_style(menu)
+        }
+    });
     menu_cf.and_then_side_effect(|result, state: &mut State| {
         let witness = match result {
             Err(Close) => menu_witness.cancel(),

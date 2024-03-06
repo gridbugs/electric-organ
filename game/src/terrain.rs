@@ -1,4 +1,4 @@
-use crate::world::World;
+use crate::world::{data::*, World};
 use coord_2d::{Coord, Size};
 use procgen::city::{Map, TentacleSpec, Tile};
 use rand::{seq::SliceRandom, Rng};
@@ -33,6 +33,44 @@ impl Terrain {
                     }
                     '$' => {
                         world.spawn_money(coord);
+                    }
+                    '1' => {
+                        world.spawn_item(coord, Item::Stimpack);
+                    }
+                    '2' => {
+                        world.spawn_item(coord, Item::Antidote);
+                    }
+                    '3' => {
+                        world.spawn_item(coord, Item::Food);
+                    }
+                    '4' => {
+                        world.spawn_item(coord, Item::BloodVialEmpty);
+                    }
+                    '5' => {
+                        world.spawn_item(coord, Item::BloodVialFull);
+                    }
+                    '6' => {
+                        world.spawn_item(coord, Item::Battery);
+                    }
+                    '7' => {
+                        world.spawn_item(coord, Item::AntiRads);
+                    }
+                    '8' => {
+                        world.spawn_item(coord, Item::OrganContainer(None));
+                    }
+                    '9' => {
+                        world.spawn_item(
+                            coord,
+                            Item::OrganContainer(Some(Organ {
+                                type_: OrganType::Lung,
+                                traits: OrganTraits {
+                                    vampiric: true,
+                                    damaged: true,
+                                    ..OrganTraits::none()
+                                },
+                                cybernetic: false,
+                            })),
+                        );
                     }
                     _ => log::warn!("unexpected char: {}", ch),
                 }

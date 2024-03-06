@@ -141,6 +141,13 @@ impl Running {
     pub fn fire_equipped(self) -> Witness {
         Witness::FireEquipped(FireEquipped(self.0))
     }
+
+    pub fn menu(self, menu: GameMenu) -> Witness {
+        Witness::Menu(Menu {
+            private: self.0,
+            menu,
+        })
+    }
 }
 
 impl Game {

@@ -288,7 +288,7 @@ impl GameInstance {
             }
             Tile::Item(Item::Battery) => {
                 return RenderCell {
-                    character: Some('='),
+                    character: Some('!'),
                     style: Style::new()
                         .with_bold(true)
                         .with_foreground(colours::BATTERY.to_rgba32(255)),
@@ -299,7 +299,7 @@ impl GameInstance {
                     character: Some('*'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::BATTERY.to_rgba32(255)),
+                        .with_foreground(colours::FOOD.to_rgba32(255)),
                 };
             }
             Tile::Item(Item::AntiRads) => {
@@ -1120,7 +1120,7 @@ fn describe_tile(tile: Tile) -> Description {
                         .with_bold(true)
                         .with_foreground(colours::POWER.to_rgba32(255)),
                 },
-                StyledString::plain_text(" (requires CyberCore).".to_string()),
+                StyledString::plain_text(" (requires CyberCore™).".to_string()),
             ])),
         },
         Tile::Item(Item::OrganContainer(organ)) => Description {
@@ -1249,7 +1249,17 @@ pub fn message_to_text(message: Message) -> Text {
             ActionError::InvalidMove => format!("You can't walk there."),
             ActionError::NothingToGet => format!("There is nothing here to pick up."),
             ActionError::InventoryIsFull => {
-                format!("Your inventory is full. (Press d to select an itme to drop.)")
+                return Text::new(vec![
+                    StyledString {
+                        string: format!("Your inventory is full. "),
+                        style: Style::plain_text(),
+                    },
+                    StyledString {
+                        string: format!("(Press d to drop items.)"),
+                        style: Style::plain_text()
+                            .with_foreground(Rgb24::new_grey(127).to_rgba32(255)),
+                    },
+                ]);
             }
         })]),
         Message::NpcHit { npc_type, damage } => Text::new(vec![
@@ -1279,6 +1289,26 @@ pub fn message_to_text(message: Message) -> Text {
                 style: Style::plain_text().with_bold(true),
             },
             StyledString::plain_text(" damage.".to_string()),
+        ]),
+        Message::GetMoney => Text::new(vec![
+            StyledString::plain_text("You pick up the ".to_string()),
+            StyledString {
+                string: format!("CyberCoin™"),
+                style: Style::plain_text()
+                    .with_bold(true)
+                    .with_foreground(colours::MONEY.to_rgba32(255)),
+            },
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::GetItem(item) => Text::new(vec![
+            StyledString::plain_text("You pick up the ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::DropItem(item) => Text::new(vec![
+            StyledString::plain_text("You drop the ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text(".".to_string()),
         ]),
     }
 }
@@ -1322,14 +1352,14 @@ pub fn organ_traits_string(organ_traits: OrganTraits) -> String {
             if i == num_traits - 1 {
                 string.push(')');
             } else {
-                string.push(',');
+                string.push_str(", ");
             }
         }
         string
     }
 }
 
-pub fn organ_string_for_description(organ: &Organ) -> String {
+fn organ_string_for_description(organ: &Organ) -> String {
     let article = match organ.type_ {
         OrganType::Appendix => "an",
         _ => "a",
@@ -1340,4 +1370,81 @@ pub fn organ_string_for_description(organ: &Organ) -> String {
         organ_type_name(organ.type_),
         organ_traits_string(organ.traits)
     )
+}
+
+fn item_styled_string_for_message(item: Item) -> text::StyledString {
+    use text::*;
+    match item {
+        Item::Stimpack => StyledString {
+            string: "stimpack".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::STIMPACK.to_rgba32(255)),
+        },
+        Item::Antidote => StyledString {
+            string: "antidote".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::ANTIDOTE.to_rgba32(255)),
+        },
+        Item::BloodVialEmpty => StyledString {
+            string: "empty blood vial".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::BLOOD_VIAL_EMPTY.to_rgba32(255)),
+        },
+        Item::BloodVialFull => StyledString {
+            string: "full blood vial".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::BLOOD_VIAL_FULL.to_rgba32(255)),
+        },
+        Item::Food => StyledString {
+            string: "food".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::FOOD.to_rgba32(255)),
+        },
+        Item::AntiRads => StyledString {
+            string: "AntiRads™".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::ANTIRADS.to_rgba32(255)),
+        },
+        Item::Battery => StyledString {
+            string: "battery".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::BATTERY.to_rgba32(255)),
+        },
+        Item::OrganContainer(None) => StyledString {
+            string: "empty organ container".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::ORGAN_CONTAINER.to_rgba32(255)),
+        },
+        Item::OrganContainer(Some(_)) => StyledString {
+            string: "full organ container".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::ORGAN_CONTAINER.to_rgba32(255)),
+        },
+    }
+}
+
+pub fn item_string_for_menu(item: Item) -> String {
+    match item {
+        Item::Stimpack => "Stimpack".to_string(),
+        Item::Antidote => "Antidote".to_string(),
+        Item::BloodVialEmpty => "Blood Vial (empty)".to_string(),
+        Item::BloodVialFull => "Blood Vial (full)".to_string(),
+        Item::Food => "Food".to_string(),
+        Item::AntiRads => "AntiRads™".to_string(),
+        Item::Battery => "Battery".to_string(),
+        Item::OrganContainer(None) => "Organ Container (empty)".to_string(),
+        Item::OrganContainer(Some(organ)) => format!(
+            "Organ Container with {}",
+            organ_string_for_description(&organ)
+        ),
+    }
 }
