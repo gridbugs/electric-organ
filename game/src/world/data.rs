@@ -422,6 +422,10 @@ impl Organs {
         }
         count
     }
+
+    pub fn organs(&self) -> &[Option<Organ>] {
+        &self.organs
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]

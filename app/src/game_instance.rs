@@ -1642,6 +1642,22 @@ pub fn organ_type_name(organ_type: OrganType) -> &'static str {
         CronenbergPistol => "cronenberg pistol",
         CronenbergShotgun => "cronenberg shotgun",
         CyberCore => "CyberCore™",
+        Claw => "claw™",
+    }
+}
+
+pub fn organ_type_name_cap(organ_type: OrganType) -> &'static str {
+    use OrganType::*;
+    match organ_type {
+        Heart => "Heart",
+        Liver => "Liver",
+        Lung => "Lung",
+        Stomach => "Stomach",
+        Appendix => "Appendix",
+        Tumour => "tumour",
+        CronenbergPistol => "Cronenberg pistol",
+        CronenbergShotgun => "Cronenberg shotgun",
+        CyberCore => "CyberCore™",
         Claw => "Claw™",
     }
 }
@@ -1691,7 +1707,12 @@ fn organ_string_for_description(organ: &Organ) -> String {
 }
 
 pub fn organ_string_for_menu(organ: &Organ) -> String {
-    organ_string_for_description(organ)
+    let cybernetic = if organ.cybernetic { "Cybernetic " } else { "" };
+    format!(
+        "{cybernetic}{}{}",
+        organ_type_name_cap(organ.type_),
+        organ_traits_string(organ.traits)
+    )
 }
 
 fn item_styled_string_for_message(item: Item) -> text::StyledString {

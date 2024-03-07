@@ -472,6 +472,9 @@ impl GameLoopData {
                             AppInput::MessageLog => {
                                 return GameLoopState::MessageLog(running);
                             }
+                            AppInput::ViewOrgans => {
+                                return GameLoopState::ViewOrgans(running);
+                            }
                             AppInput::DropItem => (
                                 drop_menu_witness(instance.game.inner_ref(), running),
                                 Ok(()),
@@ -575,6 +578,7 @@ pub enum GameLoopState {
     MainMenu,
     Help(witness::Running),
     MessageLog(witness::Running),
+    ViewOrgans(witness::Running),
 }
 
 impl Component for GameInstanceComponent {
@@ -961,6 +965,65 @@ fn message_log() -> AppCF<()> {
     }))
 }
 
+struct ViewOrgans;
+impl ViewOrgans {
+    const SIZE: Size = Size::new_u16(40, 14);
+}
+impl Component for ViewOrgans {
+    type Output = Option<()>;
+    type State = GameLoopData;
+
+    fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
+        use chargrid::text::*;
+        let ctx = ctx.set_size(Self::SIZE).add_xy(1, 1);
+        Text::new(vec![StyledString {
+            string: format!("Viewing your organs. Press any key to return to the game."),
+            style: Style::plain_text().with_foreground(Rgba32::new_grey(127)),
+        }])
+        .wrap_word()
+        .render(&(), ctx, fb);
+        let instance = state.instance.as_ref().unwrap();
+        let ctx = ctx.add_y(4);
+        for (i, slot) in instance
+            .game
+            .inner_ref()
+            .player_organs()
+            .into_iter()
+            .enumerate()
+        {
+            let s = if let Some(organ) = slot {
+                let string = organ_string_for_menu(&organ);
+                StyledString {
+                    string,
+                    style: Style::plain_text(),
+                }
+            } else {
+                StyledString {
+                    string: "(empty)".to_string(),
+                    style: Style::plain_text().with_foreground(Rgb24::new_grey(127).to_rgba32(255)),
+                }
+            };
+            s.render(&(), ctx.add_y(i as i32), fb);
+        }
+    }
+
+    fn update(&mut self, _state: &mut Self::State, _ctx: Ctx, event: Event) -> Self::Output {
+        if event.keyboard_input().is_some() {
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    fn size(&self, _state: &Self::State, _ctx: Ctx) -> Size {
+        Self::SIZE
+    }
+}
+
+fn view_organs() -> AppCF<()> {
+    menu_style(cf(ViewOrgans))
+}
+
 fn main_menu_loop() -> AppCF<MainMenuOutput> {
     use MainMenuEntry::*;
     title_decorate(
@@ -1266,6 +1329,9 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
                 .map(|()| GameLoopState::Playing(running.into_witness()))
                 .continue_(),
             MessageLog(running) => message_log()
+                .map(|()| GameLoopState::Playing(running.into_witness()))
+                .continue_(),
+            ViewOrgans(running) => view_organs()
                 .map(|()| GameLoopState::Playing(running.into_witness()))
                 .continue_(),
         })

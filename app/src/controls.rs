@@ -15,6 +15,7 @@ pub enum AppInput {
     ApplyItem,
     UnequipItem,
     Reload,
+    ViewOrgans,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -37,6 +38,7 @@ impl Default for Controls {
             KeyboardInput::Char('a') => AppInput::ApplyItem,
             KeyboardInput::Char('u') => AppInput::UnequipItem,
             KeyboardInput::Char('r') => AppInput::Reload,
+            KeyboardInput::Char('o') => AppInput::ViewOrgans,
         ];
         Self { keys }
     }

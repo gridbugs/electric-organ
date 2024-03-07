@@ -1553,4 +1553,13 @@ impl Game {
             (left, right)
         }
     }
+
+    pub fn player_organs(&self) -> &[Option<Organ>] {
+        self.world
+            .components
+            .organs
+            .get(self.player_entity)
+            .unwrap()
+            .organs()
+    }
 }
