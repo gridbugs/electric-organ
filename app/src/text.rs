@@ -22,11 +22,11 @@ pub fn help(width: u32) -> AppCF<()> {
     text_component(
         width,
         vec![
-            b("Controls:\n\n\n"),
+            b("Controls\n\n\n"),
             t("Walk: ←↑→↓\n\n"),
             t("Wait: Space\n\n"),
             t("Fire Equipped Weapon: f\n\n"),
-            t("Fire Body Weapon: b\n\n"),
+            t("Fire all Cronenberg Weapons (costs health): c\n\n"),
             t("Get item: g\n\n"),
             t("Apply item: a\n\n"),
             t("Drop item: d\n\n"),
@@ -35,6 +35,80 @@ pub fn help(width: u32) -> AppCF<()> {
             t("Display message log: m\n\n"),
             t("Display list of organs: o\n\n"),
             t("Display this help message: ?\n\n"),
+        ],
+    )
+    .press_any_key()
+    .then(move || help2(width))
+}
+
+pub fn help2(width: u32) -> AppCF<()> {
+    let t = |s: &str| StyledString {
+        string: s.to_string(),
+        style: Style::plain_text(),
+    };
+    let b = |s: &str| StyledString {
+        string: s.to_string(),
+        style: Style::plain_text().with_bold(true),
+    };
+    text_component(
+        width,
+        vec![
+            b("Organs\n"),
+            b("\nHeart: "),
+            t("Each heart increases your max health. If you have no hearts then you die."),
+            b("\nLiver: "),
+            t("Each liver speeds up poison recovery."),
+            b("\nLung: "),
+            t("With two or more your oxygen will increase over time. With one your oxygen will slowly decrease. \
+                With none your oxygen will quickly decrease. If your oxygen is zero then health decreases instead."),
+            b("\nStomach: "),
+            t("Your food will decrease over time and increase your health by an amount determined by how many stomachs you have."),
+            b("\nAppendix: "),
+            t("Does nothing. You start with one."),
+            b("\nTumour: "),
+            t("Does nothing. Can be caused by radiation. Often has the \"Prolific\" trait causing it to periodically duplicate."),
+            b("\nCronenberg Pistol: "),
+            t("A biological pistol attached to your body. Costs health to fire."),
+            b("\nCronenberg Shotgun: "),
+            t("A biological shotgun attached to your body. Costs health to fire."),
+            b("\nClaw: "),
+            t("Greatly increases melee damage. Replaces a hand. \
+                With one you can still hold a pistol. With two you can't hold any guns."),
+            b("\nCyberCore™: "),
+            t("Allows cybernetic organs to operate."),
+        ],
+    )
+    .press_any_key()
+    .then(move || help3(width))
+}
+
+pub fn help3(width: u32) -> AppCF<()> {
+    let t = |s: &str| StyledString {
+        string: s.to_string(),
+        style: Style::plain_text(),
+    };
+    let b = |s: &str| StyledString {
+        string: s.to_string(),
+        style: Style::plain_text().with_bold(true),
+    };
+    text_component(
+        width,
+        vec![
+            b("Organ Traits\n"),
+            b("\n\nCybernetic: "),
+            t("More effective."),
+            b("\n\nProlific: "),
+            t("Peridically makes copies of itself."),
+            b("\n\nVampiric: "),
+            t("Only functions if you have recently consumed a blood vial."),
+            b("\n\nRadioactive: "),
+            t("Increases rate of radiation buildup. When radiation fills up you gain a mutation."),
+            b("\n\nDamaged: "),
+            t("The organ is less effective. Cronenberg guns cost more health to fire."),
+            b("\n\nEmbedded: "),
+            t("Costs more money to remove."),
+            b("\n\nTransient: "),
+            t("May disappear at any time."),
         ],
     )
     .press_any_key()

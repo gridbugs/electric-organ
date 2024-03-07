@@ -818,7 +818,7 @@ impl GameInstance {
         if let Some(satiation) = stats.satiation {
             let ctx = ctx.add_y(1);
             StyledString {
-                string: "Satiation:".to_string(),
+                string: "Vampirism:".to_string(),
                 style: Style::plain_text(),
             }
             .render(&(), ctx, fb);
@@ -1947,6 +1947,14 @@ pub fn message_to_text(message: Message) -> Text {
             item_styled_string_for_message(item),
             StyledString::plain_text(".".to_string()),
         ]),
+        Message::FireOrgan(organ) => Text::new(vec![
+            StyledString::plain_text("You fire the ".to_string()),
+            StyledString::plain_text(organ_string_for_description(&organ)),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::FireOrganDamage(damage) => Text::new(vec![StyledString::plain_text(format!(
+            "You take {damage} damage to fire your Cr. guns."
+        ))]),
         Message::YouDie => Text::new(vec![StyledString {
             string: "You die!".to_string(),
             style: Style::plain_text().with_foreground(Rgb24::new(255, 0, 0).to_rgba32(255)),
@@ -1963,8 +1971,8 @@ pub fn organ_type_name(organ_type: OrganType) -> &'static str {
         Stomach => "stomach",
         Appendix => "appendix",
         Tumour => "tumour",
-        CronenbergPistol => "cronenberg pistol",
-        CronenbergShotgun => "cronenberg shotgun",
+        CronenbergPistol => "Cronenberg Pistol",
+        CronenbergShotgun => "Cronenberg Shotgun",
         CyberCore => "CyberCore™",
         Claw => "claw™",
     }
@@ -1979,8 +1987,8 @@ pub fn organ_type_name_cap(organ_type: OrganType) -> &'static str {
         Stomach => "Stomach",
         Appendix => "Appendix",
         Tumour => "tumour",
-        CronenbergPistol => "Cronenberg pistol",
-        CronenbergShotgun => "Cronenberg shotgun",
+        CronenbergPistol => "Cronenberg Pistol",
+        CronenbergShotgun => "Cronenberg Shotgun",
         CyberCore => "CyberCore™",
         Claw => "Claw™",
     }

@@ -47,6 +47,19 @@ fn player_starting_organs() -> Organs {
         original: true,
         cybernetic: false,
     });
+    *ret.first_free_slot().unwrap() = Some(Organ {
+        type_: OrganType::CronenbergPistol,
+        traits: OrganTraits::none(),
+        original: true,
+        cybernetic: false,
+    });
+    *ret.first_free_slot().unwrap() = Some(Organ {
+        type_: OrganType::CronenbergShotgun,
+        traits: OrganTraits::none(),
+        original: true,
+        cybernetic: false,
+    });
+
     ret
 }
 

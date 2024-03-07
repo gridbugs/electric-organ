@@ -11,7 +11,7 @@ use crate::{
 };
 use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
 use game::{
-    witness::{self, FireEquipped, Running, Witness},
+    witness::{self, FireBody, FireEquipped, Running, Witness},
     Config as GameConfig, ExternalEvent, GameOverReason, Item, Menu as GameMenu,
     MenuChoice as GameMenuChoice, Victory, WhichHand,
 };
@@ -469,6 +469,10 @@ impl GameLoopData {
                                 self.cursor = Some(instance.game.inner_ref().player_coord());
                                 (running.fire_equipped(), Ok(()))
                             }
+                            AppInput::FireBody => {
+                                self.cursor = Some(instance.game.inner_ref().player_coord());
+                                (running.fire_body(), Ok(()))
+                            }
                             AppInput::MessageLog => {
                                 return GameLoopState::MessageLog(running);
                             }
@@ -609,6 +613,65 @@ struct Cancel;
 
 impl Component for GameInstanceFireEquippedComponent {
     type Output = Option<(Result<Coord, Cancel>, FireEquipped)>;
+    type State = GameLoopData;
+
+    fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
+        state.render(ctx, fb, Mode::Aiming);
+    }
+
+    fn update(&mut self, state: &mut Self::State, _ctx: Ctx, event: Event) -> Self::Output {
+        let instance = state.instance.as_mut().unwrap();
+        if event.is_escape() {
+            return Some((Err(Cancel), self.0.take().unwrap()));
+        }
+        match event {
+            Event::Input(input) => {
+                if let Input::Mouse(MouseInput::MouseMove { coord, .. }) = input {
+                    if coord.is_valid(instance.game.inner_ref().world_size()) {
+                        state.cursor = Some(coord);
+                    }
+                }
+                if let Input::Keyboard(input::keys::RETURN) = input {
+                    if let Some(coord) = state.cursor {
+                        return Some((Ok(coord), self.0.take().unwrap()));
+                    }
+                }
+                if let Input::Mouse(MouseInput::MousePress { coord, .. }) = input {
+                    return Some((Ok(coord), self.0.take().unwrap()));
+                }
+                if let Input::Keyboard(key) = input {
+                    let delta = match key {
+                        KeyboardInput::Left => Coord::new(-1, 0),
+                        KeyboardInput::Right => Coord::new(1, 0),
+                        KeyboardInput::Up => Coord::new(0, -1),
+                        KeyboardInput::Down => Coord::new(0, 1),
+                        _ => Coord::new(0, 0),
+                    };
+                    if let Some(cursor) = state.cursor {
+                        let new_cursor = cursor + delta;
+                        if new_cursor.is_valid(instance.game.inner_ref().world_size()) {
+                            state.cursor = Some(new_cursor);
+                        }
+                    }
+                }
+            }
+            Event::Tick(since_previous) => {
+                Running::cheat().tick(&mut instance.game, since_previous, &state.game_config);
+            }
+            _ => (),
+        }
+        None
+    }
+
+    fn size(&self, _state: &Self::State, ctx: Ctx) -> Size {
+        ctx.bounding_box.size()
+    }
+}
+
+struct GameInstanceFireBodyComponent(Option<FireBody>);
+
+impl Component for GameInstanceFireBodyComponent {
+    type Output = Option<(Result<Coord, Cancel>, FireBody)>;
     type State = GameLoopData;
 
     fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
@@ -888,7 +951,7 @@ impl Component for MainMenuBackground {
 fn help() -> AppCF<()> {
     use chargrid::pad_by::Padding;
     menu_style(
-        text::help(MAIN_MENU_TEXT_WIDTH)
+        text::help(60)
             .pad_by(Padding {
                 left: 1,
                 right: 4,
@@ -1165,12 +1228,32 @@ fn fire_equipped(fire_equipped: FireEquipped) -> AppCF<Witness> {
         })
 }
 
+fn fire_body(fire_body: FireBody) -> AppCF<Witness> {
+    cf(GameInstanceFireBodyComponent(Some(fire_body)))
+        .no_peek()
+        .map_side_effect(|(result, fire_body), state: &mut State| match result {
+            Ok(coord) => {
+                let instance = state.instance.as_mut().unwrap();
+                let (witness, _) = fire_body.commit(&mut instance.game, coord);
+                for external_event in instance.game.take_external_events() {
+                    match external_event {
+                        ExternalEvent::FirePistol => state.music_state.sfx_pistol(),
+                        ExternalEvent::FireShotgun => state.music_state.sfx_shotgun(),
+                        _ => (),
+                    }
+                }
+                witness
+            }
+            Err(Cancel) => fire_body.cancel(),
+        })
+}
+
 fn win() -> AppCF<()> {
     text::win(MAIN_MENU_TEXT_WIDTH)
 }
 
 fn game_over(reason: GameOverReason) -> AppCF<()> {
-    menu_style(on_state_then(move |state: &mut State| {
+    menu_style(on_state_then(move |_state: &mut State| {
         text::game_over(MAIN_MENU_TEXT_WIDTH, reason)
     }))
     .map_side_effect(|_, state: &mut State| {
@@ -1321,6 +1404,7 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
                 Witness::FireEquipped(fire_equipped_) => {
                     fire_equipped(fire_equipped_).map(Playing).continue_()
                 }
+                Witness::FireBody(fire_body_) => fire_body(fire_body_).map(Playing).continue_(),
             },
             Paused(running) => pause(running).map(|pause_output| match pause_output {
                 PauseOutput::ContinueGame { running } => {

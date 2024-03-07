@@ -53,12 +53,16 @@ pub struct Menu {
 pub struct FireEquipped(Private);
 
 #[derive(Debug)]
+pub struct FireBody(Private);
+
+#[derive(Debug)]
 pub enum Witness {
     Running(Running),
     GameOver(GameOverReason),
     Win(Win),
     Menu(Menu),
     FireEquipped(FireEquipped),
+    FireBody(FireBody),
 }
 
 impl Witness {
@@ -152,6 +156,10 @@ impl Running {
         Witness::FireEquipped(FireEquipped(self.0))
     }
 
+    pub fn fire_body(self) -> Witness {
+        Witness::FireBody(FireBody(self.0))
+    }
+
     pub fn menu(self, menu: GameMenu) -> Witness {
         Witness::Menu(Menu {
             private: self.0,
@@ -225,5 +233,15 @@ impl FireEquipped {
 
     pub fn commit(self, game: &mut Game, coord: Coord) -> (Witness, Result<(), ActionError>) {
         game.witness_handle_input(Input::FireEquipped(coord), self.0)
+    }
+}
+
+impl FireBody {
+    pub fn cancel(self) -> Witness {
+        Witness::Running(Running(self.0))
+    }
+
+    pub fn commit(self, game: &mut Game, coord: Coord) -> (Witness, Result<(), ActionError>) {
+        game.witness_handle_input(Input::FireBody(coord), self.0)
     }
 }

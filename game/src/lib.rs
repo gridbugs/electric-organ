@@ -92,6 +92,8 @@ pub enum Message {
     EquipItem(Item),
     ReloadGun(Item),
     FireGun(Item),
+    FireOrgan(Organ),
+    FireOrganDamage(u32),
     YouDie,
 }
 
@@ -157,6 +159,7 @@ pub enum Input {
     Walk(CardinalDirection),
     Wait,
     FireEquipped(Coord),
+    FireBody(Coord),
     Get,
     Unequip,
     Reload,
@@ -746,6 +749,76 @@ impl Game {
         }
     }
 
+    fn fire_body_pistol(&mut self, target: Coord) {
+        let start = self.player_coord();
+        self.external_events.push(ExternalEvent::FirePistol);
+        self.world
+            .spawn_bullet(start, target, &mut self.animation_rng);
+    }
+
+    fn fire_body_shotgun(&mut self, target: Coord) {
+        let start = self.player_coord();
+        self.external_events.push(ExternalEvent::FireShotgun);
+        for _ in 0..8 {
+            let angle = Radians::random(&mut self.rng);
+            let target = Radial { angle, length: 3.0 }
+                .to_cartesian()
+                .to_coord_round_nearest()
+                + target;
+            self.world
+                .spawn_bullet(start, target, &mut self.animation_rng);
+        }
+    }
+
+    fn fire_body(&mut self, target: Coord) -> Result<(), ActionError> {
+        let organs = self
+            .world
+            .components
+            .organs
+            .get(self.player_entity)
+            .unwrap()
+            .clone();
+        let mut health_cost = 0;
+        for organ in organs.organs() {
+            if let Some(organ) = organ {
+                match organ.type_ {
+                    OrganType::CronenbergPistol => {
+                        self.message_log.push(Message::FireOrgan(*organ));
+                        self.fire_body_pistol(target);
+                        if organ.cybernetic {
+                            self.fire_body_pistol(target);
+                        }
+                        health_cost += 2;
+                        if organ.traits.damaged {
+                            health_cost += 2;
+                        }
+                    }
+                    OrganType::CronenbergShotgun => {
+                        self.message_log.push(Message::FireOrgan(*organ));
+                        self.fire_body_shotgun(target);
+                        if organ.cybernetic {
+                            self.fire_body_shotgun(target);
+                        }
+                        health_cost += 2;
+                        if organ.traits.damaged {
+                            health_cost += 2;
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+        self.message_log.push(Message::FireOrganDamage(health_cost));
+        self.world.damage_character(
+            self.player_entity,
+            health_cost,
+            &mut self.rng,
+            &mut self.external_events,
+            &mut self.message_log,
+        );
+        Ok(())
+    }
+
     #[must_use]
     pub(crate) fn handle_input(
         &mut self,
@@ -769,6 +842,13 @@ impl Game {
             }
             Input::FireEquipped(target) => {
                 if let Err(e) = self.fire_equipped(target) {
+                    self.message_log.push(Message::ActionError(e));
+                    return Err(e);
+                }
+                None
+            }
+            Input::FireBody(target) => {
+                if let Err(e) = self.fire_body(target) {
                     self.message_log.push(Message::ActionError(e));
                     return Err(e);
                 }
