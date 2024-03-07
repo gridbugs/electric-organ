@@ -53,6 +53,9 @@ declare_entity_module! {
         simple_organs: Vec<Organ>,
         gun: Gun,
         hands: Hands,
+        spread_poison: (),
+        split_on_damage: (),
+        floor_poison: (),
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -62,6 +65,7 @@ pub enum Tile {
     Player,
     Floor,
     FloorBloody,
+    FloorPoison,
     Wall,
     Street,
     Alley,

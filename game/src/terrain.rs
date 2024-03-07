@@ -29,6 +29,12 @@ impl Terrain {
                     'c' => {
                         world.spawn_climber(coord, &mut rng);
                     }
+                    'p' => {
+                        world.spawn_poisoner(coord, &mut rng);
+                    }
+                    'd' => {
+                        world.spawn_divider(coord, &mut rng);
+                    }
                     '#' => {
                         world.spawn_wall(coord);
                     }

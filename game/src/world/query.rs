@@ -5,6 +5,7 @@ use crate::{
 use coord_2d::Coord;
 use direction::CardinalDirection;
 use entity_table::Entity;
+use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
 impl World {
     pub fn stairs_up_or_exit_coord(&self) -> Option<Coord> {
@@ -154,6 +155,43 @@ impl World {
                             } else {
                                 queue.push_back(coord);
                             }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    pub fn nearest_non_poison_coord(&self, start: Coord) -> Option<Coord> {
+        use std::collections::{HashSet, VecDeque};
+        let layers = self.spatial_table.layers_at_checked(start);
+        if layers.feature.is_none() {
+            if let Some(e) = layers.floor {
+                if !self.components.floor_poison.contains(e) {
+                    return Some(start);
+                }
+            }
+        }
+        let mut seen = HashSet::new();
+        seen.insert(start);
+        let mut queue = VecDeque::new();
+        queue.push_back(start);
+        let mut rng = StdRng::from_entropy();
+        while let Some(coord) = queue.pop_front() {
+            let mut dirs = CardinalDirection::all().collect::<Vec<_>>();
+            dirs.shuffle(&mut rng);
+            for d in dirs {
+                let coord = coord + d.coord();
+                if seen.insert(coord) {
+                    if let Some(layers) = self.spatial_table.layers_at(coord) {
+                        if layers.feature.is_none() {
+                            if let Some(e) = layers.floor {
+                                if !self.components.floor_poison.contains(e) {
+                                    return Some(coord);
+                                }
+                            }
+                            queue.push_back(coord);
                         }
                     }
                 }

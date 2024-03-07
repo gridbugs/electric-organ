@@ -591,6 +591,7 @@ impl Game {
         }
         self.world.handle_resurrection();
         self.world.handle_get_on_touch();
+        self.world.handle_spread_poison();
         None
     }
 

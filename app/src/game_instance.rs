@@ -182,6 +182,19 @@ impl GameInstance {
                         .with_foreground(colours::FLOOR_BLOODY.to_rgba32(255)),
                 };
             }
+            Tile::FloorPoison => {
+                return RenderCell {
+                    character: Some('.'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::POISON.to_rgba32(255))
+                        .with_background(
+                            colours::POISON
+                                .to_rgba32(255)
+                                .saturating_scalar_mul_div(1, 2),
+                        ),
+                };
+            }
             Tile::Wall => {
                 return RenderCell {
                     character: Some('#'),
@@ -1091,6 +1104,12 @@ fn describe_tile(tile: Tile) -> Description {
         Tile::FloorBloody => Description {
             name: Text::new(vec![StyledString::plain_text(
                 "the floor (bloody)".to_string(),
+            )]),
+            description: None,
+        },
+        Tile::FloorPoison => Description {
+            name: Text::new(vec![StyledString::plain_text(
+                "the floor (poison)".to_string(),
             )]),
             description: None,
         },

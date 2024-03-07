@@ -169,6 +169,28 @@ impl World {
             self.character_die(character, rng, external_events, message_log);
         } else {
             hit_points.decrease(hit_points_to_lose);
+            if self.components.split_on_damage.contains(character) {
+                if hit_points.current() > 1 {
+                    if let Some(coord) = self.spatial_table.coord_of(character) {
+                        let copy_hit_poinst = hit_points.current() / 2;
+                        hit_points.decrease(copy_hit_poinst);
+                        let hit_points = hit_points.clone();
+                        let mut copy_data = self.components.clone_entity_data(character);
+                        copy_data.health = Some(Meter::new(copy_hit_poinst, hit_points.max()));
+                        if let Some(copy_coord) = self.nearest_characterless_coord(coord) {
+                            let copy_entity = self.entity_allocator.alloc();
+                            self.components.insert_entity_data(copy_entity, copy_data);
+                            let _ = self.spatial_table.update(
+                                copy_entity,
+                                Location {
+                                    coord: copy_coord,
+                                    layer: Some(Layer::Character),
+                                },
+                            );
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -324,6 +346,24 @@ impl World {
                         {
                             self.spatial_table.remove(item_entity);
                             simple_inventory.push(item_entity);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn handle_spread_poison(&mut self) {
+        for entity in self.components.spread_poison.entities() {
+            if self.components.character.contains(entity) {
+                if let Some(coord) = self.spatial_table.coord_of(entity) {
+                    if let Some(coord) = self.nearest_non_poison_coord(coord) {
+                        if let Some(Layers {
+                            floor: Some(floor), ..
+                        }) = self.spatial_table.layers_at(coord)
+                        {
+                            self.components.tile.insert(*floor, Tile::FloorPoison);
+                            self.components.floor_poison.insert(*floor, ());
                         }
                     }
                 }
