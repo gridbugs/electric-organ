@@ -220,7 +220,7 @@ impl World {
             .expect("character lacks hit_points");
         if hit_points_to_lose >= hit_points.current() {
             hit_points.set_current(0);
-            self.character_die(character, rng, external_events, message_log);
+            self.character_die(player_entity, rng, external_events, message_log);
         } else {
             hit_points.decrease(hit_points_to_lose);
         }
@@ -396,5 +396,26 @@ impl World {
                 .tile
                 .insert(*floor_entity, Tile::FloorBloody);
         }
+    }
+
+    pub fn player_bump_combat<R: Rng>(
+        &mut self,
+        character: Entity,
+        rng: &mut R,
+        external_events: &mut Vec<ExternalEvent>,
+        message_log: &mut Vec<Message>,
+    ) {
+        let player = self.components.player.entities().next().unwrap();
+        let organs = self.components.organs.get(player).unwrap();
+        let mut damage = rng.gen_range(1..=2);
+        for _ in 0..organs.num_claws() {
+            damage += rng.gen_range(2..=4);
+        }
+        self.damage_character(character, damage, rng, external_events, message_log);
+    }
+
+    pub fn handle_player_organs(&mut self) {
+        let player = self.components.player.entities().next().unwrap();
+        let _organs = self.components.organs.get(player).unwrap();
     }
 }

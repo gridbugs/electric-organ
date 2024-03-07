@@ -219,4 +219,20 @@ impl World {
         }
         None
     }
+
+    pub fn is_game_over(&self) -> bool {
+        if let Some(player_entity) = self.components.player.entities().next() {
+            if self.components.to_remove.contains(player_entity) {
+                return true;
+            }
+            if let Some(health) = self.components.health.get(player_entity) {
+                if health.current() == 0 {
+                    return true;
+                }
+            }
+            false
+        } else {
+            true
+        }
+    }
 }

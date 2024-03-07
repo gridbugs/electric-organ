@@ -142,6 +142,14 @@ impl GameInstance {
                         .with_foreground(Rgba32::new_grey(255)),
                 };
             }
+            Tile::DeadPlayer => {
+                return RenderCell {
+                    character: Some('@'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(Rgba32::new(255, 0, 0, 255)),
+                };
+            }
             Tile::Street => {
                 return RenderCell {
                     character: Some('.'),
@@ -1097,6 +1105,12 @@ fn describe_tile(tile: Tile) -> Description {
             name: Text::new(vec![StyledString::plain_text("yourself".to_string())]),
             description: None,
         },
+        Tile::DeadPlayer => Description {
+            name: Text::new(vec![StyledString::plain_text(
+                "yourself (dead)".to_string(),
+            )]),
+            description: None,
+        },
         Tile::Floor => Description {
             name: Text::new(vec![StyledString::plain_text("the floor".to_string())]),
             description: None,
@@ -1933,6 +1947,10 @@ pub fn message_to_text(message: Message) -> Text {
             item_styled_string_for_message(item),
             StyledString::plain_text(".".to_string()),
         ]),
+        Message::YouDie => Text::new(vec![StyledString {
+            string: "You die!".to_string(),
+            style: Style::plain_text().with_foreground(Rgb24::new(255, 0, 0).to_rgba32(255)),
+        }]),
     }
 }
 

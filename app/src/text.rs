@@ -62,7 +62,7 @@ fn game_over_text(width: u32, _reason: GameOverReason) -> CF<(), State> {
         string: s.to_string(),
         style: Style::plain_text(),
     };
-    let text = vec![t("TODO")];
+    let text = vec![t("You have died...")];
     text_component(width, text)
 }
 

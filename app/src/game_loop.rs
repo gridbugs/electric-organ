@@ -1160,13 +1160,13 @@ fn win() -> AppCF<()> {
 }
 
 fn game_over(reason: GameOverReason) -> AppCF<()> {
-    on_state_then(move |state: &mut State| {
+    menu_style(on_state_then(move |state: &mut State| {
+        text::game_over(MAIN_MENU_TEXT_WIDTH, reason)
+    }))
+    .map_side_effect(|_, state: &mut State| {
         state.clear_saved_game();
         state.save_config();
-        text::game_over(MAIN_MENU_TEXT_WIDTH, reason)
     })
-    .centre()
-    .overlay(background(), 1)
 }
 
 fn apply_item_description(item: Item) -> String {

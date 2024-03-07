@@ -92,6 +92,7 @@ pub enum Message {
     EquipItem(Item),
     ReloadGun(Item),
     FireGun(Item),
+    YouDie,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -130,7 +131,9 @@ pub struct Menu {
 pub struct Victory {}
 
 #[derive(Debug, Clone, Copy)]
-pub enum GameOverReason {}
+pub enum GameOverReason {
+    YouDied,
+}
 
 #[derive(Debug)]
 pub enum GameControlFlow {
@@ -442,34 +445,43 @@ impl Game {
             // player would walk outside bounds of map
             return Err(ActionError::InvalidMove);
         }
-        if let Some(&Layers {
-            feature: Some(feature_entity),
-            ..
-        }) = self.world.spatial_table.layers_at(new_player_coord)
-        {
-            // If the player bumps into a door, open the door
-            if let Some(DoorState::Closed) = self.world.components.door_state.get(feature_entity) {
-                self.open_door(feature_entity);
-                self.message_log.push(Message::OpenDoor);
-                return Ok(None);
-            }
-            // Don't let the player walk through solid entities
-            if self.world.components.solid.contains(feature_entity) {
-                if let Some(open_door_entity) =
-                    self.open_door_entity_adjacent_to_coord(player_coord, new_player_coord)
+        if let Some(layers) = self.world.spatial_table.layers_at(new_player_coord) {
+            if let Some(feature_entity) = layers.feature {
+                // If the player bumps into a door, open the door
+                if let Some(DoorState::Closed) =
+                    self.world.components.door_state.get(feature_entity)
                 {
-                    self.close_door(open_door_entity);
-                    self.message_log.push(Message::CloseDoor);
+                    self.open_door(feature_entity);
+                    self.message_log.push(Message::OpenDoor);
                     return Ok(None);
                 }
-                return Err(ActionError::InvalidMove);
+                // Don't let the player walk through solid entities
+                if self.world.components.solid.contains(feature_entity) {
+                    if let Some(open_door_entity) =
+                        self.open_door_entity_adjacent_to_coord(player_coord, new_player_coord)
+                    {
+                        self.close_door(open_door_entity);
+                        self.message_log.push(Message::CloseDoor);
+                        return Ok(None);
+                    }
+                    return Err(ActionError::InvalidMove);
+                }
             }
+            if let Some(character_entity) = layers.character {
+                self.world.player_bump_combat(
+                    character_entity,
+                    &mut self.rng,
+                    &mut self.external_events,
+                    &mut self.message_log,
+                );
+                return Ok(None);
+            }
+            self.world
+                .spatial_table
+                .update_coord(self.player_entity, new_player_coord)
+                .unwrap();
+            self.change_level_if_player_is_on_stairs();
         }
-        self.world
-            .spatial_table
-            .update_coord(self.player_entity, new_player_coord)
-            .unwrap();
-        self.change_level_if_player_is_on_stairs();
         Ok(None)
     }
 
@@ -519,9 +531,16 @@ impl Game {
             // Don't let them walk into other characters
             if let Some(character_entity) = character {
                 if self.world.components.player.contains(character_entity) {
+                    let damage_range = self
+                        .world
+                        .components
+                        .bump_damage
+                        .get(entity)
+                        .cloned()
+                        .unwrap_or_else(|| 1..=1);
                     self.world.damage_player(
                         entity,
-                        1,
+                        self.rng.gen_range(damage_range),
                         &mut self.rng,
                         &mut self.external_events,
                         &mut self.message_log,
@@ -592,7 +611,23 @@ impl Game {
         self.world.handle_resurrection();
         self.world.handle_get_on_touch();
         self.world.handle_spread_poison();
-        None
+        self.world.handle_player_organs();
+        self.check_game_over()
+    }
+
+    fn check_game_over(&mut self) -> Option<GameControlFlow> {
+        if self.world.is_game_over() {
+            self.world
+                .components
+                .tile
+                .insert(self.player_entity, Tile::DeadPlayer);
+            self.player_drop_all_items();
+            self.update_visibility();
+            self.message_log.push(Message::YouDie);
+            Some(GameControlFlow::GameOver(GameOverReason::YouDied))
+        } else {
+            None
+        }
     }
 
     fn cleanup(&mut self) {
@@ -628,7 +663,7 @@ impl Game {
         }
         self.cleanup();
         self.update_visibility();
-        None
+        self.check_game_over()
     }
 
     fn pass_time(&mut self) {}
@@ -791,7 +826,7 @@ impl Game {
             }
         }
         self.update_visibility();
-        Ok(None)
+        Ok(self.check_game_over())
     }
 
     fn player_reload_pistol(&mut self) -> Result<(), ActionError> {
@@ -1407,6 +1442,33 @@ impl Game {
             .push(Message::ActionError(ActionError::NoCorpseHere));
     }
 
+    fn player_drop_all_items(&mut self) {
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get(self.player_entity)
+            .unwrap();
+        for i in 0..inventory.size() {
+            let inventory = self
+                .world
+                .components
+                .inventory
+                .get_mut(self.player_entity)
+                .unwrap();
+            if let Some(item_entity) = inventory.remove(i) {
+                if let Some(coord) = self.world.nearest_itemless_coord(self.player_coord()) {
+                    let _ = self.world.spatial_table.update(
+                        item_entity,
+                        Location {
+                            coord,
+                            layer: Some(Layer::Item),
+                        },
+                    );
+                }
+            }
+        }
+    }
     fn player_drop_item(&mut self, i: usize) {
         let inventory = self
             .world

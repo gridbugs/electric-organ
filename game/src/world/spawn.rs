@@ -656,6 +656,7 @@ impl World {
                 npc_type: NpcType::Zombie,
                 health: Meter::new_full(4),
                 resurrects_in: Meter::new_full(10),
+                bump_damage: 1..=2,
                 simple_organs: vec![
                     Organ {
                         type_: OrganType::Heart,
@@ -684,6 +685,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Climber,
                 health: Meter::new_full(3),
+                bump_damage: 1..=2,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -706,6 +708,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Trespasser,
                 health: Meter::new_full(3),
+                bump_damage: 1..=2,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -728,6 +731,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Boomer,
                 health: Meter::new_full(2),
+                bump_damage: 1..=2,
                 explodes_on_death: (),
                 simple_organs: vec![
                     random_basic_organ(rng),
@@ -752,6 +756,7 @@ impl World {
                 npc_type: NpcType::Snatcher,
                 health: Meter::new_full(10),
                 simple_inventory: Vec::new(),
+                bump_damage: 1..=2,
                 get_on_touch: (),
                 simple_organs: vec![
                     random_basic_organ(rng),
@@ -775,6 +780,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Poisoner,
                 health: Meter::new_full(3),
+                bump_damage: 1..=2,
                 spread_poison: (),
                 simple_organs: vec![
                     random_basic_organ(rng),
@@ -798,6 +804,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Divider,
                 health: Meter::new_full(16),
+                bump_damage: 1..=2,
                 split_on_damage: (),
                 simple_organs: vec![
                     random_basic_organ(rng),
@@ -821,6 +828,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Corruptor,
                 health: Meter::new_full(20),
+                bump_damage: 1..=2,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -843,6 +851,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::GunStore,
                 health: Meter::new_full(50),
+                bump_damage: 5..=10,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -865,6 +874,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::ItemStore,
                 health: Meter::new_full(50),
+                bump_damage: 5..=10,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -887,6 +897,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::OrganClinic,
                 health: Meter::new_full(50),
+                bump_damage: 5..=10,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -909,6 +920,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::OrganClinic,
                 health: Meter::new_full(50),
+                bump_damage: 5..=10,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),

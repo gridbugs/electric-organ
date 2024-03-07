@@ -56,6 +56,7 @@ declare_entity_module! {
         spread_poison: (),
         split_on_damage: (),
         floor_poison: (),
+        bump_damage: RangeInclusive<u32>,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -63,6 +64,7 @@ pub use components::{Components, EntityData, EntityUpdate};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum Tile {
     Player,
+    DeadPlayer,
     Floor,
     FloorBloody,
     FloorPoison,
