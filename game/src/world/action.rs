@@ -1,11 +1,12 @@
 use crate::{
     world::{
-        data::{CollidesWith, OnCollision, ProjectileDamage, Tile},
+        data::*,
         explosion,
         spatial::{Layer, Layers, Location},
     },
     ExternalEvent, Message, World,
 };
+use coord_2d::Coord;
 use direction::Direction;
 use entity_table::Entity;
 use rand::Rng;
@@ -327,6 +328,33 @@ impl World {
                     }
                 }
             }
+        }
+    }
+
+    pub fn add_player_initial_items(&mut self) {
+        let entities = vec![
+            self.spawn_item_no_coord(Item::PistolAmmo),
+            self.spawn_item_no_coord(Item::OrganContainer(None)),
+        ];
+        let player = self.components.player.entities().next().unwrap();
+        let inventory = self.components.inventory.get_mut(player).unwrap();
+        for entity in entities {
+            *inventory.first_free_slot().unwrap() = Some(entity);
+        }
+        let pistol = self.spawn_item_no_coord(Item::Pistol);
+        self.components.hands.get_mut(player).unwrap().left = Hand::Holding(pistol);
+    }
+
+    pub fn make_floor_bloody(&mut self, coord: Coord) {
+        if let Some(Layers {
+            floor: Some(floor_entity),
+            ..
+        }) = self.spatial_table.layers_at(coord)
+        {
+            // XXX this changes non-floor tiles (road, footpath, etc) into floor tiles
+            self.components
+                .tile
+                .insert(*floor_entity, Tile::FloorBloody);
         }
     }
 }

@@ -77,6 +77,11 @@ fn render_meter(meter: Meter, colour: Rgb24, ctx: Ctx, fb: &mut FrameBuffer) {
         .with_foreground(Rgb24::new_grey(255).to_rgba32(187));
     let centre_offset = (width / 2) - ((string.len() + 1) / 2);
     let filled_width = (meter.current() * width as u32) / meter.max();
+    let filled_width = if filled_width == 0 && meter.current() > 0 {
+        1
+    } else {
+        filled_width
+    };
     for i in 0..width {
         let coord = Coord::new(i as i32, 0);
         let alpha = if i < filled_width as usize { 255 } else { 63 };
@@ -167,6 +172,14 @@ impl GameInstance {
                     style: Style::new()
                         .with_bold(true)
                         .with_foreground(colours::FLOOR.to_rgba32(255)),
+                };
+            }
+            Tile::FloorBloody => {
+                return RenderCell {
+                    character: Some('.'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::FLOOR_BLOODY.to_rgba32(255)),
                 };
             }
             Tile::Wall => {
@@ -718,10 +731,46 @@ impl GameInstance {
         } else {
             render_meter_disabled(ctx.add_x(x_offset), fb);
         }
+        if let Some(satiation) = stats.satiation {
+            let ctx = ctx.add_y(1);
+            StyledString {
+                string: "Satiation:".to_string(),
+                style: Style::plain_text(),
+            }
+            .render(&(), ctx, fb);
+            render_meter(satiation, colours::SATIATION, ctx.add_x(x_offset), fb);
+        } else {
+            //render_meter_disabled(ctx.add_x(x_offset), fb);
+        }
     }
 
     fn render_info(&self, ctx: Ctx, fb: &mut FrameBuffer) {
         use text::*;
+        let (left_hand, right_hand) = self.game.inner_ref().player_hand_contents();
+        Text::new(vec![
+            StyledString {
+                string: "L. Hand: ".to_string(),
+                style: Style::plain_text(),
+            },
+            StyledString {
+                string: left_hand,
+                style: Style::plain_text().with_bold(true),
+            },
+        ])
+        .render(&(), ctx, fb);
+        let ctx = ctx.add_y(1);
+        Text::new(vec![
+            StyledString {
+                string: "R. Hand: ".to_string(),
+                style: Style::plain_text(),
+            },
+            StyledString {
+                string: right_hand,
+                style: Style::plain_text().with_bold(true),
+            },
+        ])
+        .render(&(), ctx, fb);
+        let ctx = ctx.add_y(2);
         Text::new(vec![
             StyledString {
                 string: "CyberCoinz™: ".to_string(),
@@ -799,7 +848,7 @@ impl GameInstance {
         );
         // description
         {
-            let offset_y = 19;
+            let offset_y = 21;
             let render_cell = box_render_cell.with_character('═');
             for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
                 let coord = Coord::new(i as i32, offset_y);
@@ -854,7 +903,7 @@ impl GameInstance {
         }
         // mode
         {
-            let offset_y = 14;
+            let offset_y = 16;
             let render_cell = box_render_cell.with_character('═');
             for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
                 let coord = Coord::new(i as i32, offset_y);
@@ -902,7 +951,7 @@ impl GameInstance {
         }
         // stats
         {
-            let offset_y = 5;
+            let offset_y = 6;
             let render_cell = box_render_cell.with_character('═');
             for i in (game_size.width() + 1)..ctx.bounding_box.size().width() {
                 let coord = Coord::new(i as i32, offset_y);
@@ -974,6 +1023,12 @@ fn describe_tile(tile: Tile) -> Description {
         },
         Tile::Floor => Description {
             name: Text::new(vec![StyledString::plain_text("the floor".to_string())]),
+            description: None,
+        },
+        Tile::FloorBloody => Description {
+            name: Text::new(vec![StyledString::plain_text(
+                "the floor (bloody)".to_string(),
+            )]),
             description: None,
         },
         Tile::Wall => Description {
@@ -1479,7 +1534,7 @@ pub fn message_to_text(message: Message) -> Text {
             ActionError::InventoryIsFull => {
                 return Text::new(vec![
                     StyledString {
-                        string: format!("Your inventory is full. "),
+                        string: format!("Inv. is full. "),
                         style: Style::plain_text(),
                     },
                     StyledString {
@@ -1489,6 +1544,11 @@ pub fn message_to_text(message: Message) -> Text {
                     },
                 ]);
             }
+            ActionError::NoCorpseHere => "There is no corpse here.".to_string(),
+            ActionError::NoCyberCore => "You don't have a CyberCore™.".to_string(),
+            ActionError::NeedsTwoHands => "Weapon requires two non-claw hands.".to_string(),
+            ActionError::NeedsOneHand => "Weapon requires at least one non-claw hand.".to_string(),
+            ActionError::NothingToUnequip => "No equipped item to unequip.".to_string(),
         })]),
         Message::NpcHit { npc_type, damage } => Text::new(vec![
             StyledString::plain_text("The ".to_string()),
@@ -1535,6 +1595,21 @@ pub fn message_to_text(message: Message) -> Text {
         ]),
         Message::DropItem(item) => Text::new(vec![
             StyledString::plain_text("You drop the ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::UnequipItem(item) => Text::new(vec![
+            StyledString::plain_text("You unequip the ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::DropUnequipItem(item) => Text::new(vec![
+            StyledString::plain_text("You drop the ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text(" (inventory full).".to_string()),
+        ]),
+        Message::EquipItem(item) => Text::new(vec![
+            StyledString::plain_text("You equip the ".to_string()),
             item_styled_string_for_message(item),
             StyledString::plain_text(".".to_string()),
         ]),
@@ -1599,6 +1674,10 @@ fn organ_string_for_description(organ: &Organ) -> String {
         organ_type_name(organ.type_),
         organ_traits_string(organ.traits)
     )
+}
+
+pub fn organ_string_for_menu(organ: &Organ) -> String {
+    organ_string_for_description(organ)
 }
 
 fn item_styled_string_for_message(item: Item) -> text::StyledString {

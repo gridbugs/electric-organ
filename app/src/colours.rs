@@ -1,6 +1,7 @@
 use rgb_int::Rgb24;
 
 pub const FLOOR: Rgb24 = Rgb24::new(108, 0, 162);
+pub const FLOOR_BLOODY: Rgb24 = Rgb24::new(255, 0, 0);
 pub const VAPORWAVE_FOREGROUND: Rgb24 = Rgb24::new(255, 128, 255);
 pub const VAPORWAVE_BACKGROUND: Rgb24 = Rgb24::new(68, 0, 102);
 pub const BIO: Rgb24 = Rgb24::new(102, 102, 0);
@@ -18,6 +19,7 @@ pub const FOOD: Rgb24 = Rgb24::hex(0x997300);
 pub const POISON: Rgb24 = Rgb24::hex(0x336600);
 pub const RADIATION: Rgb24 = Rgb24::hex(0x009973);
 pub const POWER: Rgb24 = Rgb24::hex(0xff00ff);
+pub const SATIATION: Rgb24 = Rgb24::hex(0xff0000);
 pub const MONEY: Rgb24 = Rgb24::hex(0xffff66);
 pub const STIMPACK: Rgb24 = HEALTH.saturating_scalar_mul_div(2, 1);
 pub const ANTIDOTE: Rgb24 = POISON;

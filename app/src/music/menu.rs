@@ -207,7 +207,7 @@ pub fn signal() -> Sf64 {
             .build()
             .signed_to_01()
         + 0.3;
-    let room_size = 0.5
+    let room_size = 0.2
         + oscillator_s(Waveform::Sine, 100.0)
             .reset_offset_01(-0.25)
             .build()
@@ -219,12 +219,14 @@ pub fn signal() -> Sf64 {
         .into_iter()
         .map(move |voice_desc| voice1(voice_desc, cutoff.clone(), resonance.clone()))
         .sum::<Sf64>()
+        .mix(|dry| dry.filter(echo().time_s(0.2).scale(0.5).build()))
+        .mix(|dry| dry.filter(echo().time_s(0.2).scale(0.5).build()))
         .mix(|dry| dry.filter(reverb().room_size(room_size).damping(0.5).build()))
         .filter(high_pass_butterworth(1.0).build());
     let bass_desc = virtual_key_events_bass(trigger.clone()).voice_desc_monophonic();
     let bass = voice1_bass(bass_desc);
     (drums.filter(low_pass_moog_ladder(effects.drum_low_pass_filter * 20000).build())
         * effects.drum_volume)
-        + keys * 0.2
+        + keys * 0.1
         + bass * 0.2
 }

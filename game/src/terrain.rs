@@ -1,7 +1,7 @@
 use crate::world::{data::*, World};
 use coord_2d::{Coord, Size};
 use procgen::city::{Map, TentacleSpec, Tile};
-use rand::{seq::SliceRandom, Rng};
+use rand::{rngs::StdRng, seq::SliceRandom, Rng, SeedableRng};
 
 pub struct Terrain {
     pub world: World,
@@ -13,6 +13,7 @@ impl Terrain {
         let txt = include_str!("terrain.txt");
         let rows = txt.split('\n').collect::<Vec<_>>();
         let mut world = World::new(Size::new(50, 25));
+        let mut rng = StdRng::from_entropy();
         for (y, row) in rows.into_iter().enumerate() {
             for (x, ch) in row.chars().enumerate() {
                 let coord = Coord::new(x as i32, y as i32);
@@ -20,13 +21,13 @@ impl Terrain {
                 match ch {
                     '.' => (),
                     'z' => {
-                        world.spawn_zombie(coord);
+                        world.spawn_zombie(coord, &mut rng);
                     }
                     's' => {
-                        world.spawn_snatcher(coord);
+                        world.spawn_snatcher(coord, &mut rng);
                     }
                     'c' => {
-                        world.spawn_climber(coord);
+                        world.spawn_climber(coord, &mut rng);
                     }
                     '#' => {
                         world.spawn_wall(coord);
@@ -44,7 +45,7 @@ impl Terrain {
                         world.spawn_money(coord);
                     }
                     '1' => {
-                        world.spawn_item(coord, Item::BloodVialEmpty);
+                        world.spawn_item(coord, Item::Pistol);
                     }
                     '2' => {
                         world.spawn_item(coord, Item::PistolAmmo);
@@ -78,6 +79,7 @@ impl Terrain {
                                     ..OrganTraits::none()
                                 },
                                 cybernetic: false,
+                                original: false,
                             })),
                         );
                     }
@@ -169,22 +171,22 @@ impl Terrain {
         npc_spawn_candidates.shuffle(rng);
         for _ in 0..0 {
             if let Some(coord) = npc_spawn_candidates.pop() {
-                world.spawn_zombie(coord);
+                world.spawn_zombie(coord, rng);
             }
         }
         for _ in 0..0 {
             if let Some(coord) = npc_spawn_candidates.pop() {
-                world.spawn_climber(coord);
+                world.spawn_climber(coord, rng);
             }
         }
         for _ in 0..0 {
             if let Some(coord) = npc_spawn_candidates.pop() {
-                world.spawn_trespasser(coord);
+                world.spawn_trespasser(coord, rng);
             }
         }
         for _ in 0..0 {
             if let Some(coord) = npc_spawn_candidates.pop() {
-                world.spawn_boomer(coord);
+                world.spawn_boomer(coord, rng);
             }
         }
         Self { world }

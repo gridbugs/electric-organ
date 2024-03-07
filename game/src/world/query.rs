@@ -164,4 +164,9 @@ impl World {
         }
         None
     }
+
+    pub fn num_player_claws(&self) -> usize {
+        let player = self.components.player.entities().next().unwrap();
+        self.components.organs.get(player).unwrap().num_claws()
+    }
 }

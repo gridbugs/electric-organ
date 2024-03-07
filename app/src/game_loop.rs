@@ -2,7 +2,8 @@ use crate::{
     colours,
     controls::{AppInput, Controls},
     game_instance::{
-        item_string_for_menu, message_to_text, GameInstance, GameInstanceStorable, Mode,
+        item_string_for_menu, message_to_text, organ_string_for_menu, GameInstance,
+        GameInstanceStorable, Mode,
     },
     image::Images,
     music::{MusicState, Track},
@@ -12,7 +13,7 @@ use chargrid::{self, border::BorderStyle, control_flow::*, menu, prelude::*};
 use game::{
     witness::{self, FireEquipped, Running, Witness},
     Config as GameConfig, ExternalEvent, GameOverReason, Item, Menu as GameMenu,
-    MenuChoice as GameMenuChoice, Victory,
+    MenuChoice as GameMenuChoice, Victory, WhichHand,
 };
 use general_storage_static::{self as storage, format, StaticStorage as Storage};
 use line_2d;
@@ -479,6 +480,7 @@ impl GameLoopData {
                                 apply_menu_witness(instance.game.inner_ref(), running),
                                 Ok(()),
                             ),
+                            AppInput::UnequipItem => running.unequip(&mut instance.game),
                         };
                         witness
                     }
@@ -1115,7 +1117,8 @@ fn apply_item_description(item: Item) -> String {
         AntiRads => "Consume to reduce radiation".to_string(),
         OrganContainer(Some(_)) => "Dump contents".to_string(),
         OrganContainer(None) => "Harvest organ (must be standing on corpse)".to_string(),
-        Pistol | Shotgun | RocketLauncher => "Swap with current weapon".to_string(),
+        Pistol => "Equip weapon (requires non-claw hand)".to_string(),
+        Shotgun | RocketLauncher => "Equip weapon (requires two non-claw hands)".to_string(),
         PistolAmmo | ShotgunAmmo | Rocket => "Load into current weapon".to_string(),
     }
 }
@@ -1141,6 +1144,15 @@ fn menu_choice_string(game: &game::Game, choice: GameMenuChoice) -> String {
                 format!("(empty)")
             }
         }
+        GameMenuChoice::HarvestOrgan { organ, .. } => organ_string_for_menu(&organ),
+        GameMenuChoice::EquipWeaponInHand { which_hand, .. } => match which_hand {
+            WhichHand::Left => "Left Hand".to_string(),
+            WhichHand::Right => "Right Hand".to_string(),
+        },
+        GameMenuChoice::UnequipWhichHand(which_hand) => match which_hand {
+            WhichHand::Left => "Left Hand".to_string(),
+            WhichHand::Right => "Right Hand".to_string(),
+        },
     }
 }
 

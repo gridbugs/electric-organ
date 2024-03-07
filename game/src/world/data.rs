@@ -35,6 +35,7 @@ declare_entity_module! {
         poison: Meter,
         radiation: Meter,
         power: Meter,
+        satiation: Meter,
         destructible: (),
         to_remove: (),
         explodes_on_death: (),
@@ -48,6 +49,10 @@ declare_entity_module! {
         resurrects_in: Meter,
         simple_inventory: Vec<Entity>,
         get_on_touch: (),
+        organs: Organs,
+        simple_organs: Vec<Organ>,
+        gun: Gun,
+        hands: Hands,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -56,6 +61,7 @@ pub use components::{Components, EntityData, EntityUpdate};
 pub enum Tile {
     Player,
     Floor,
+    FloorBloody,
     Wall,
     Street,
     Alley,
@@ -311,6 +317,7 @@ pub struct Organ {
     pub type_: OrganType,
     pub traits: OrganTraits,
     pub cybernetic: bool,
+    pub original: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -364,4 +371,120 @@ impl Inventory {
         use std::mem;
         mem::replace(&mut self.items[i], None)
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Organs {
+    organs: Vec<Option<Organ>>,
+}
+
+impl Organs {
+    pub fn new(size: usize) -> Self {
+        Self {
+            organs: (0..size).map(|_| None).collect(),
+        }
+    }
+
+    pub fn first_free_slot(&mut self) -> Option<&mut Option<Organ>> {
+        for entry in self.organs.iter_mut() {
+            if entry.is_none() {
+                return Some(entry);
+            }
+        }
+        None
+    }
+
+    pub fn size(&self) -> usize {
+        self.organs.len()
+    }
+
+    pub fn get(&self, i: usize) -> Option<Organ> {
+        self.organs[i]
+    }
+
+    pub fn remove(&mut self, i: usize) -> Option<Organ> {
+        use std::mem;
+        mem::replace(&mut self.organs[i], None)
+    }
+
+    pub fn num_claws(&self) -> usize {
+        let mut count = 0;
+        for slot in self.organs.iter() {
+            if let Some(organ) = slot.as_ref() {
+                if organ.type_ == OrganType::Claw {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+pub enum GunType {
+    Pistol,
+    Shotgun,
+    RocketLauncher,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Gun {
+    pub type_: GunType,
+    pub ammo: Meter,
+    pub hands_required: usize,
+}
+
+impl Gun {
+    pub fn pistol() -> Self {
+        Self {
+            type_: GunType::Pistol,
+            ammo: Meter::new_full(12),
+            hands_required: 1,
+        }
+    }
+    pub fn shotgun() -> Self {
+        Self {
+            type_: GunType::Shotgun,
+            ammo: Meter::new_full(6),
+            hands_required: 2,
+        }
+    }
+    pub fn rocket_launcher() -> Self {
+        Self {
+            type_: GunType::RocketLauncher,
+            ammo: Meter::new_full(1),
+            hands_required: 2,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Hand {
+    Empty,
+    Claw,
+    Holding(Entity),
+}
+
+impl Hand {
+    pub fn is_holding(&self) -> bool {
+        if let Hand::Holding(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_claw(&self) -> bool {
+        if let Hand::Claw = self {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct Hands {
+    pub left: Hand,
+    pub right: Hand,
 }

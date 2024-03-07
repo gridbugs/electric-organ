@@ -13,6 +13,7 @@ pub enum AppInput {
     Get,
     DropItem,
     ApplyItem,
+    UnequipItem,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -33,6 +34,7 @@ impl Default for Controls {
             KeyboardInput::Char('g') => AppInput::Get,
             KeyboardInput::Char('d') => AppInput::DropItem,
             KeyboardInput::Char('a') => AppInput::ApplyItem,
+            KeyboardInput::Char('u') => AppInput::UnequipItem,
         ];
         Self { keys }
     }

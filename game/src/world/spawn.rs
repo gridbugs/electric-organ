@@ -1,19 +1,79 @@
 use crate::{
     realtime::{self, flicker, movement, particle},
-    world::{
-        data::{
-            CollidesWith, Disposition, DoorState, EntityData, Inventory, Item, Layer, Location,
-            Meter, Npc, NpcMovement, NpcType, OnCollision, ProjectileDamage, Tile,
-        },
-        explosion, World,
-    },
+    world::{data::*, explosion, World},
     Entity,
 };
 use coord_2d::Coord;
 use entity_table::entity_data;
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 use rgb_int::Rgb24;
 use visible_area_detection::{vision_distance, Light, Rational};
+
+fn player_starting_organs() -> Organs {
+    let mut ret = Organs::new(8);
+    *ret.first_free_slot().unwrap() = Some(Organ {
+        type_: OrganType::Heart,
+        traits: OrganTraits::none(),
+        original: true,
+        cybernetic: false,
+    });
+    *ret.first_free_slot().unwrap() = Some(Organ {
+        type_: OrganType::Lung,
+        traits: OrganTraits::none(),
+        original: true,
+        cybernetic: false,
+    });
+    *ret.first_free_slot().unwrap() = Some(Organ {
+        type_: OrganType::Lung,
+        traits: OrganTraits::none(),
+        original: true,
+        cybernetic: false,
+    });
+    *ret.first_free_slot().unwrap() = Some(Organ {
+        type_: OrganType::Stomach,
+        traits: OrganTraits::none(),
+        original: true,
+        cybernetic: false,
+    });
+    *ret.first_free_slot().unwrap() = Some(Organ {
+        type_: OrganType::Liver,
+        traits: OrganTraits::none(),
+        original: true,
+        cybernetic: false,
+    });
+    *ret.first_free_slot().unwrap() = Some(Organ {
+        type_: OrganType::Appendix,
+        traits: OrganTraits::none(),
+        original: true,
+        cybernetic: false,
+    });
+    ret
+}
+
+fn random_organ_traits<R: Rng>(rng: &mut R) -> OrganTraits {
+    let mut traits = OrganTraits::none();
+    if rng.gen::<f64>() < 0.66 {
+        *traits.get_mut(OrganTrait::choose(rng)) = true;
+    }
+    traits
+}
+
+fn random_basic_organ<R: Rng>(rng: &mut R) -> Organ {
+    let types = vec![
+        OrganType::Heart,
+        OrganType::Lung,
+        OrganType::Stomach,
+        OrganType::Liver,
+    ];
+    let type_ = *types.choose(rng).unwrap();
+    let traits = random_organ_traits(rng);
+    Organ {
+        type_,
+        traits,
+        cybernetic: false,
+        original: false,
+    }
+}
 
 pub fn make_player() -> EntityData {
     EntityData {
@@ -28,13 +88,18 @@ pub fn make_player() -> EntityData {
                 denominator: 100,
             },
         }),
-        health: Some(Meter::new_full(10)),
-        oxygen: Some(Meter::new_full(10)),
-        food: Some(Meter::new_full(10)),
-        poison: Some(Meter::new(0, 10)),
-        radiation: Some(Meter::new(0, 10)),
+        health: Some(Meter::new(4, 20)),
+        oxygen: Some(Meter::new(2, 20)),
+        food: Some(Meter::new(2, 30)),
+        poison: Some(Meter::new(8, 50)),
+        radiation: Some(Meter::new(8, 50)),
         inventory: Some(Inventory::new(12)),
         money: Some(0),
+        organs: Some(player_starting_organs()),
+        hands: Some(Hands {
+            left: Hand::Empty,
+            right: Hand::Empty,
+        }),
         ..Default::default()
     }
 }
@@ -554,17 +619,28 @@ impl World {
     }
 
     pub fn spawn_item(&mut self, coord: Coord, item: Item) -> Entity {
-        self.spawn_entity(
-            (coord, Layer::Item),
-            entity_data! {
-                tile: Tile::Item(item),
-                item,
-                destructible: (),
-            },
-        )
+        let mut data = entity_data! {
+            tile: Tile::Item(item),
+            item,
+            destructible: (),
+        };
+        make_gun(&mut data);
+        self.spawn_entity((coord, Layer::Item), data)
     }
 
-    pub fn spawn_zombie(&mut self, coord: Coord) -> Entity {
+    pub fn spawn_item_no_coord(&mut self, item: Item) -> Entity {
+        let mut data = entity_data! {
+            tile: Tile::Item(item),
+            item,
+            destructible: (),
+        };
+        make_gun(&mut data);
+        let entity = self.entity_allocator.alloc();
+        self.components.insert_entity_data(entity, data);
+        entity
+    }
+
+    pub fn spawn_zombie<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
         self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {
@@ -580,11 +656,20 @@ impl World {
                 npc_type: NpcType::Zombie,
                 health: Meter::new_full(4),
                 resurrects_in: Meter::new_full(10),
+                simple_organs: vec![
+                    Organ {
+                        type_: OrganType::Heart,
+                        traits: random_organ_traits(rng),
+                        original: false,
+                        cybernetic: false,
+                    },
+                    random_basic_organ(rng),
+                ],
             },
         )
     }
 
-    pub fn spawn_climber(&mut self, coord: Coord) -> Entity {
+    pub fn spawn_climber<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
         self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {
@@ -599,11 +684,15 @@ impl World {
                 character: (),
                 npc_type: NpcType::Climber,
                 health: Meter::new_full(3),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
             },
         )
     }
 
-    pub fn spawn_trespasser(&mut self, coord: Coord) -> Entity {
+    pub fn spawn_trespasser<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
         self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {
@@ -617,11 +706,15 @@ impl World {
                 character: (),
                 npc_type: NpcType::Trespasser,
                 health: Meter::new_full(3),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
             },
         )
     }
 
-    pub fn spawn_boomer(&mut self, coord: Coord) -> Entity {
+    pub fn spawn_boomer<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
         self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {
@@ -636,11 +729,15 @@ impl World {
                 npc_type: NpcType::Boomer,
                 health: Meter::new_full(2),
                 explodes_on_death: (),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
             },
         )
     }
 
-    pub fn spawn_snatcher(&mut self, coord: Coord) -> Entity {
+    pub fn spawn_snatcher<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
         self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {
@@ -648,7 +745,7 @@ impl World {
                 npc: Npc { disposition: Disposition::Thief,
                     movement: NpcMovement {
                         can_traverse_difficult: false,
-                        can_open_doors: true,
+                        can_open_doors: false,
                     },
                 },
                 character: (),
@@ -656,7 +753,20 @@ impl World {
                 health: Meter::new_full(10),
                 simple_inventory: Vec::new(),
                 get_on_touch: (),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
             },
         )
+    }
+}
+
+fn make_gun(data: &mut EntityData) {
+    match data.item {
+        Some(Item::Pistol) => data.gun = Some(Gun::pistol()),
+        Some(Item::Shotgun) => data.gun = Some(Gun::shotgun()),
+        Some(Item::RocketLauncher) => data.gun = Some(Gun::rocket_launcher()),
+        _ => (),
     }
 }

@@ -24,7 +24,7 @@ pub mod witness;
 use ai::{Agent, AiContext};
 use realtime::AnimationContext;
 use world::{
-    data::{DoorState, EntityData, EntityUpdate},
+    data::{DoorState, EntityData, EntityUpdate, GunType, Hand},
     spatial::Layers,
     World,
 };
@@ -86,16 +86,34 @@ pub enum Message {
     GetMoney,
     GetItem(Item),
     DropItem(Item),
+    UnequipItem(Item),
+    DropUnequipItem(Item),
+    EquipItem(Item),
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum MenuImage {}
 
 #[derive(Debug, Clone, Copy)]
+pub enum WhichHand {
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum MenuChoice {
     DropItem(usize),
     ApplyItem(usize),
     Dummy,
+    HarvestOrgan {
+        inventory_index: usize,
+        organ: Organ,
+    },
+    EquipWeaponInHand {
+        which_hand: WhichHand,
+        inventory_index: usize,
+    },
+    UnequipWhichHand(WhichHand),
 }
 
 #[derive(Debug, Clone)]
@@ -125,6 +143,7 @@ pub struct PlayerStats {
     pub poison: Meter,
     pub radiation: Meter,
     pub power: Option<Meter>,
+    pub satiation: Option<Meter>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -133,6 +152,7 @@ pub enum Input {
     Wait,
     FireEquipped(Coord),
     Get,
+    Unequip,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -204,6 +224,11 @@ pub enum ActionError {
     InvalidMove,
     NothingToGet,
     InventoryIsFull,
+    NoCorpseHere,
+    NoCyberCore,
+    NeedsTwoHands,
+    NeedsOneHand,
+    NothingToUnequip,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -260,6 +285,7 @@ impl Game {
             layer: Some(Layer::Character),
         };
         let player_entity = world.insert_entity_data(player_location, player_data);
+        world.add_player_initial_items();
         let mut game = Self {
             ai_context: AiContext::new(world.size()),
             current_level_index,
@@ -636,6 +662,32 @@ impl Game {
                 }
                 None
             }
+            Input::Unequip => {
+                let player_hands = self
+                    .world
+                    .components
+                    .hands
+                    .get_mut(self.player_entity)
+                    .unwrap();
+                if player_hands.left.is_holding() && player_hands.right.is_holding() {
+                    return Ok(Some(GameControlFlow::Menu(Menu {
+                        image: None,
+                        text: "Unequip from which hand? (escape to cancel)".to_string(),
+                        choices: vec![
+                            MenuChoice::UnequipWhichHand(WhichHand::Left),
+                            MenuChoice::UnequipWhichHand(WhichHand::Right),
+                        ],
+                    })));
+                } else if player_hands.left.is_holding() {
+                    self.unequip_from_hand(WhichHand::Left)
+                } else if player_hands.right.is_holding() {
+                    self.unequip_from_hand(WhichHand::Right)
+                } else {
+                    self.message_log
+                        .push(Message::ActionError(ActionError::NothingToUnequip));
+                }
+                None
+            }
         };
         if game_control_flow.is_some() {
             return Ok(game_control_flow);
@@ -689,13 +741,358 @@ impl Game {
         match choice {
             MenuChoice::Dummy => panic!(),
             MenuChoice::DropItem(i) => self.player_drop_item(i),
-            MenuChoice::ApplyItem(i) => self.player_apply_item(i),
+            MenuChoice::ApplyItem(i) => return self.player_apply_item(i),
+            MenuChoice::HarvestOrgan {
+                inventory_index,
+                organ,
+            } => self.player_harvest_organ(inventory_index, organ),
+            MenuChoice::EquipWeaponInHand {
+                which_hand,
+                inventory_index,
+            } => self.player_equip_weapon_in_hand(which_hand, inventory_index),
+            MenuChoice::UnequipWhichHand(which_hand) => self.unequip_from_hand(which_hand),
         }
         None
     }
 
-    fn player_apply_item(&mut self, i: usize) {
-        println!("todo");
+    fn player_equip_weapon_in_hand(&mut self, which_hand: WhichHand, inventory_index: usize) {
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get_mut(self.player_entity)
+            .unwrap();
+        if let Some(entity) = inventory.remove(inventory_index) {
+            let player_hands = self.world.components.hands.get(self.player_entity).unwrap();
+            if let Hand::Holding(e) = player_hands.left {
+                // assume that any 2 handed weapon is just in the left hand
+                if let Some(gun) = self.world.components.gun.get(e) {
+                    if gun.hands_required >= 2 {
+                        self.unequip_from_hand(WhichHand::Left);
+                    }
+                }
+            }
+            let player_hands = self
+                .world
+                .components
+                .hands
+                .get_mut(self.player_entity)
+                .unwrap();
+            let hand = match which_hand {
+                WhichHand::Left => &mut player_hands.left,
+                WhichHand::Right => &mut player_hands.right,
+            };
+            if let Some(&item) = self.world.components.item.get(entity) {
+                self.message_log.push(Message::EquipItem(item));
+            }
+            match hand {
+                Hand::Claw => (),
+                Hand::Empty => *hand = Hand::Holding(entity),
+                Hand::Holding(current_item) => {
+                    let current_item = *current_item;
+                    *hand = Hand::Holding(entity);
+                    let inventory = self
+                        .world
+                        .components
+                        .inventory
+                        .get_mut(self.player_entity)
+                        .unwrap();
+                    if let Some(slot) = inventory.first_free_slot() {
+                        if let Some(&item) = self.world.components.item.get(current_item) {
+                            self.message_log.push(Message::UnequipItem(item));
+                        }
+                        *slot = Some(current_item);
+                    }
+                }
+            }
+        }
+    }
+
+    fn player_harvest_organ(&mut self, inventory_index: usize, organ: Organ) {
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get_mut(self.player_entity)
+            .unwrap();
+        if let Some(entity) = inventory.get(inventory_index) {
+            self.world
+                .components
+                .item
+                .insert(entity, Item::OrganContainer(Some(organ)));
+        }
+        let player_coord = self.player_coord();
+        if let Some(Layers {
+            item: Some(entity), ..
+        }) = self.world.spatial_table.layers_at(player_coord)
+        {
+            self.world.remove_entity(*entity);
+            self.world.make_floor_bloody(player_coord);
+        }
+    }
+
+    fn player_apply_item(&mut self, i: usize) -> Option<GameControlFlow> {
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get_mut(self.player_entity)
+            .unwrap();
+        if let Some(item_entity) = inventory.get(i) {
+            if let Some(&item) = self.world.components.item.get(item_entity) {
+                match item {
+                    Item::OrganContainer(None) => {
+                        if let Some(organs) = self.organs_of_corpse_at_player() {
+                            return Some(GameControlFlow::Menu(Menu {
+                                text: format!(
+                                    "Choose an organ to harvest. Corpse will be destroyed. (escape to cancel):"
+                                ),
+                                image: None,
+                                choices: organs
+                                    .into_iter()
+                                    .map(|organ| MenuChoice::HarvestOrgan {
+                                        inventory_index: i,
+                                        organ,
+                                    })
+                                    .collect(),
+                            }));
+                        } else {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::NoCorpseHere));
+                        }
+                    }
+                    Item::BloodVialEmpty => {
+                        self.player_fill_blood_vial(item_entity);
+                    }
+                    Item::Antidote => {
+                        self.world
+                            .components
+                            .poison
+                            .get_mut(self.player_entity)
+                            .unwrap()
+                            .decrease(20);
+                        inventory.remove(i);
+                        self.world.remove_entity(item_entity);
+                    }
+                    Item::AntiRads => {
+                        self.world
+                            .components
+                            .radiation
+                            .get_mut(self.player_entity)
+                            .unwrap()
+                            .decrease(20);
+                        inventory.remove(i);
+                        self.world.remove_entity(item_entity);
+                    }
+                    Item::Stimpack => {
+                        self.world
+                            .components
+                            .health
+                            .get_mut(self.player_entity)
+                            .unwrap()
+                            .increase(10);
+                        inventory.remove(i);
+                        self.world.remove_entity(item_entity);
+                    }
+                    Item::Food => {
+                        self.world
+                            .components
+                            .food
+                            .get_mut(self.player_entity)
+                            .unwrap()
+                            .increase(10);
+                        inventory.remove(i);
+                        self.world.remove_entity(item_entity);
+                    }
+                    Item::BloodVialFull => {
+                        self.world
+                            .components
+                            .oxygen
+                            .get_mut(self.player_entity)
+                            .unwrap()
+                            .increase(10);
+                        self.world
+                            .components
+                            .item
+                            .insert(item_entity, Item::BloodVialEmpty);
+                        self.world
+                            .components
+                            .tile
+                            .insert(item_entity, Tile::Item(Item::BloodVialEmpty));
+                    }
+                    Item::Battery => {
+                        if let Some(power) = self.world.components.power.get_mut(self.player_entity)
+                        {
+                            power.increase(50);
+                        } else {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::NoCyberCore));
+                        }
+                    }
+                    Item::OrganContainer(Some(_)) => {
+                        self.world.make_floor_bloody(self.player_coord());
+                        self.world
+                            .components
+                            .item
+                            .insert(item_entity, Item::OrganContainer(None));
+                        self.world
+                            .components
+                            .tile
+                            .insert(item_entity, Tile::Item(Item::OrganContainer(None)));
+                    }
+                    Item::Pistol => {
+                        if self.world.num_player_claws() >= 2 {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::NeedsOneHand));
+                        } else {
+                            if self.world.num_player_claws() == 1 {
+                                let player_hands = self
+                                    .world
+                                    .components
+                                    .hands
+                                    .get_mut(self.player_entity)
+                                    .unwrap();
+                                if player_hands.left == Hand::Claw {
+                                    self.player_equip_weapon_in_hand(WhichHand::Right, i);
+                                } else {
+                                    self.player_equip_weapon_in_hand(WhichHand::Left, i);
+                                }
+                            } else {
+                                return Some(GameControlFlow::Menu(Menu {
+                                    text: format!("Which hand? (escape to cancel)"),
+                                    image: None,
+                                    choices: vec![
+                                        MenuChoice::EquipWeaponInHand {
+                                            which_hand: WhichHand::Left,
+                                            inventory_index: i,
+                                        },
+                                        MenuChoice::EquipWeaponInHand {
+                                            which_hand: WhichHand::Right,
+                                            inventory_index: i,
+                                        },
+                                    ],
+                                }));
+                            }
+                        }
+                    }
+                    Item::Shotgun | Item::RocketLauncher => {
+                        if self.world.num_player_claws() >= 1 {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::NeedsTwoHands));
+                        } else {
+                            self.equip_two_handed_weapon(i);
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+        None
+    }
+
+    fn equip_two_handed_weapon(&mut self, inventory_index: usize) {
+        let hands = self.world.components.hands.get(self.player_entity).unwrap();
+        if hands.left.is_claw() || hands.right.is_claw() {
+            return;
+        }
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get_mut(self.player_entity)
+            .unwrap();
+        if let Some(entity) = inventory.remove(inventory_index) {
+            self.unequip_from_hand(WhichHand::Left);
+            self.unequip_from_hand(WhichHand::Right);
+            let hands = self
+                .world
+                .components
+                .hands
+                .get_mut(self.player_entity)
+                .unwrap();
+            hands.left = Hand::Holding(entity);
+            if let Some(&item) = self.world.components.item.get(entity) {
+                self.message_log.push(Message::EquipItem(item));
+            }
+        }
+    }
+
+    fn unequip_from_hand(&mut self, which_hand: WhichHand) {
+        let hands = self
+            .world
+            .components
+            .hands
+            .get_mut(self.player_entity)
+            .unwrap();
+        let hand = match which_hand {
+            WhichHand::Left => &mut hands.left,
+            WhichHand::Right => &mut hands.right,
+        };
+        if let Hand::Holding(entity) = hand {
+            let entity = *entity;
+            let item = *self.world.components.item.get(entity).unwrap();
+            *hand = Hand::Empty;
+            let inventory = self
+                .world
+                .components
+                .inventory
+                .get_mut(self.player_entity)
+                .unwrap();
+            if let Some(slot) = inventory.first_free_slot() {
+                self.message_log.push(Message::UnequipItem(item));
+                *slot = Some(entity);
+            } else {
+                // no room in inventory
+                if let Some(coord) = self.world.nearest_itemless_coord(self.player_coord()) {
+                    self.message_log.push(Message::DropUnequipItem(item));
+                    let _ = self.world.spatial_table.update(
+                        entity,
+                        Location {
+                            coord,
+                            layer: Some(Layer::Item),
+                        },
+                    );
+                }
+            }
+        }
+    }
+
+    fn organs_of_corpse_at_player(&self) -> Option<Vec<Organ>> {
+        let player_coord = self.player_coord();
+        if let Some(Layers {
+            item: Some(entity), ..
+        }) = self.world.spatial_table.layers_at(player_coord)
+        {
+            if self.world.components.corpse.contains(*entity) {
+                self.world.components.simple_organs.get(*entity).cloned()
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn player_fill_blood_vial(&mut self, item_entity: Entity) {
+        if let Some(Layers {
+            item: Some(corpse_entity),
+            ..
+        }) = self.world.spatial_table.layers_at(self.player_coord())
+        {
+            if self.world.components.corpse.contains(*corpse_entity) {
+                self.world
+                    .components
+                    .item
+                    .insert(item_entity, Item::BloodVialFull);
+                self.world
+                    .components
+                    .tile
+                    .insert(item_entity, Tile::Item(Item::BloodVialFull));
+                return;
+            }
+        }
+        self.message_log
+            .push(Message::ActionError(ActionError::NoCorpseHere));
     }
 
     fn player_drop_item(&mut self, i: usize) {
@@ -778,6 +1175,12 @@ impl Game {
                 .get(self.player_entity)
                 .unwrap(),
             power: self.world.components.power.get(self.player_entity).cloned(),
+            satiation: self
+                .world
+                .components
+                .satiation
+                .get(self.player_entity)
+                .cloned(),
         }
     }
 
@@ -804,5 +1207,39 @@ impl Game {
         inventory
             .get(i)
             .map(|entity| *self.world.components.item.get(entity).unwrap())
+    }
+
+    fn hand_string(&self, hand: Hand) -> (String, bool) {
+        match hand {
+            Hand::Empty => ("(empty)".to_string(), false),
+            Hand::Claw => ("Claw".to_string(), false),
+            Hand::Holding(entity) => {
+                if let Some(gun) = self.world.components.gun.get(entity) {
+                    let name = match gun.type_ {
+                        GunType::Pistol => "Pistol",
+                        GunType::Shotgun => "Shotgun",
+                        GunType::RocketLauncher => "Rkt Launcher",
+                    };
+                    let both = gun.hands_required > 1;
+                    (
+                        format!("{name} ({}/{})", gun.ammo.current(), gun.ammo.max()),
+                        both,
+                    )
+                } else {
+                    ("?".to_string(), false)
+                }
+            }
+        }
+    }
+
+    pub fn player_hand_contents(&self) -> (String, String) {
+        let hands = self.world.components.hands.get(self.player_entity).unwrap();
+        let (left, both) = self.hand_string(hands.left);
+        let (right, _) = self.hand_string(hands.right);
+        if both {
+            (left, "^^^".to_string())
+        } else {
+            (left, right)
+        }
     }
 }

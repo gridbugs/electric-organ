@@ -157,8 +157,9 @@ impl AiContext {
             &WorldCanEnterIgnoreCharacters {
                 world,
                 npc_movement: NpcMovement {
-                    can_traverse_difficult: true,
-                    can_open_doors: true,
+                    // XXX note that this is based on the "snatcher" npc's movement ability
+                    can_traverse_difficult: false,
+                    can_open_doors: false,
                 },
             },
             20,
