@@ -138,6 +138,11 @@ impl Running {
         game.witness_handle_input(Input::Unequip, private)
     }
 
+    pub fn reload(self, game: &mut Game) -> (Witness, Result<(), ActionError>) {
+        let Self(private) = self;
+        game.witness_handle_input(Input::Reload, private)
+    }
+
     pub fn get(self, game: &mut Game) -> (Witness, Result<(), ActionError>) {
         let Self(private) = self;
         game.witness_handle_input(Input::Get, private)

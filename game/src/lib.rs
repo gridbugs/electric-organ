@@ -9,6 +9,7 @@ pub use rgb_int::{Rgb24, Rgba32};
 use serde::{Deserialize, Serialize};
 pub use spatial_table::UpdateError;
 use std::time::Duration;
+use vector::{Radial, Radians};
 
 pub use visible_area_detection::{
     vision_distance::Circle, CellVisibility, Light, VisibilityGrid, World as VisibleWorld,
@@ -89,6 +90,8 @@ pub enum Message {
     UnequipItem(Item),
     DropUnequipItem(Item),
     EquipItem(Item),
+    ReloadGun(Item),
+    FireGun(Item),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -153,6 +156,7 @@ pub enum Input {
     FireEquipped(Coord),
     Get,
     Unequip,
+    Reload,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -229,6 +233,10 @@ pub enum ActionError {
     NeedsTwoHands,
     NeedsOneHand,
     NothingToUnequip,
+    NothingToReload,
+    OutOfLoadedAmmo,
+    OutOfAmmo,
+    NoGun,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -628,6 +636,80 @@ impl Game {
         !self.world.components.blocks_gameplay.is_empty()
     }
 
+    fn fire_pistol(&mut self, target: Coord) {
+        let start = self.player_coord();
+        self.external_events.push(ExternalEvent::FirePistol);
+        self.world
+            .spawn_bullet(start, target, &mut self.animation_rng);
+        self.message_log.push(Message::FireGun(Item::Pistol));
+    }
+
+    fn fire_shotgun(&mut self, target: Coord) {
+        let start = self.player_coord();
+        self.external_events.push(ExternalEvent::FireShotgun);
+        for _ in 0..8 {
+            let angle = Radians::random(&mut self.rng);
+            let target = Radial { angle, length: 3.0 }
+                .to_cartesian()
+                .to_coord_round_nearest()
+                + target;
+            self.world
+                .spawn_bullet(start, target, &mut self.animation_rng);
+        }
+        self.message_log.push(Message::FireGun(Item::Shotgun));
+    }
+
+    fn fire_rocket(&mut self, target: Coord) {
+        let start = self.player_coord();
+        self.external_events.push(ExternalEvent::FireRocket);
+        self.world
+            .spawn_rocket(start, target, &mut self.animation_rng);
+        self.message_log
+            .push(Message::FireGun(Item::RocketLauncher));
+    }
+
+    fn fire_equipped(&mut self, target: Coord) -> Result<(), ActionError> {
+        let mut has_gun = false;
+        let mut has_ammo = false;
+        let player_hands = self.world.components.hands.get(self.player_entity).unwrap();
+        if let Some(e) = player_hands.left.holding() {
+            if let Some(gun) = self.world.components.gun.get_mut(e) {
+                has_gun = true;
+                if !gun.ammo.is_empty() {
+                    has_ammo = true;
+                    gun.ammo.decrease(1);
+                    match gun.type_ {
+                        GunType::Pistol => self.fire_pistol(target),
+                        GunType::Shotgun => self.fire_shotgun(target),
+                        GunType::RocketLauncher => self.fire_rocket(target),
+                    }
+                }
+            }
+        }
+        let player_hands = self.world.components.hands.get(self.player_entity).unwrap();
+        if let Some(e) = player_hands.right.holding() {
+            if let Some(gun) = self.world.components.gun.get_mut(e) {
+                has_gun = true;
+                if !gun.ammo.is_empty() {
+                    has_ammo = true;
+                    gun.ammo.decrease(1);
+                    match gun.type_ {
+                        GunType::Pistol => self.fire_pistol(target),
+                        GunType::Shotgun => self.fire_shotgun(target),
+                        GunType::RocketLauncher => self.fire_rocket(target),
+                    }
+                }
+            }
+        }
+        if !has_gun {
+            Err(ActionError::NoGun)
+        } else if !has_ammo {
+            Err(ActionError::OutOfLoadedAmmo)
+        } else {
+            Ok(())
+        }
+    }
+
     #[must_use]
     pub(crate) fn handle_input(
         &mut self,
@@ -650,15 +732,16 @@ impl Game {
                 None
             }
             Input::FireEquipped(target) => {
-                let start = self.player_coord();
-                self.external_events.push(ExternalEvent::FirePistol);
-                self.world
-                    .spawn_bullet(start, target, &mut self.animation_rng);
+                if let Err(e) = self.fire_equipped(target) {
+                    self.message_log.push(Message::ActionError(e));
+                    return Err(e);
+                }
                 None
             }
             Input::Get => {
                 if let Err(e) = self.player_get_item() {
                     self.message_log.push(Message::ActionError(e));
+                    return Err(e);
                 }
                 None
             }
@@ -683,8 +766,16 @@ impl Game {
                 } else if player_hands.right.is_holding() {
                     self.unequip_from_hand(WhichHand::Right)
                 } else {
-                    self.message_log
-                        .push(Message::ActionError(ActionError::NothingToUnequip));
+                    let e = ActionError::NothingToUnequip;
+                    self.message_log.push(Message::ActionError(e));
+                    return Err(e);
+                }
+                None
+            }
+            Input::Reload => {
+                if let Err(e) = self.player_reload() {
+                    self.message_log.push(Message::ActionError(e));
+                    return Err(e);
                 }
                 None
             }
@@ -700,6 +791,118 @@ impl Game {
         }
         self.update_visibility();
         Ok(None)
+    }
+
+    fn player_reload_pistol(&mut self) -> Result<(), ActionError> {
+        let left = self.get_appropriate_gun_ammo(WhichHand::Left, GunType::Pistol);
+        let right = self.get_appropriate_gun_ammo(WhichHand::Left, GunType::Pistol);
+        let which_hand = match (left, right) {
+            (Some(left), Some(right)) => {
+                if left <= right {
+                    WhichHand::Left
+                } else {
+                    WhichHand::Right
+                }
+            }
+            (Some(_), None) => WhichHand::Left,
+            (None, Some(_)) => WhichHand::Right,
+            (None, None) => return Err(ActionError::NothingToReload),
+        };
+        if let Some(index) = self.world.player_inventory_item_index(Item::PistolAmmo) {
+            self.message_log.push(Message::ReloadGun(Item::Pistol));
+            self.reload_gun_in_hand(which_hand);
+            if let Some(entity) = self
+                .world
+                .components
+                .inventory
+                .get_mut(self.player_entity)
+                .unwrap()
+                .remove(index)
+            {
+                self.world.remove_entity(entity);
+            }
+            Ok(())
+        } else {
+            Err(ActionError::OutOfAmmo)
+        }
+    }
+
+    fn player_reload_shotgun(&mut self) -> Result<(), ActionError> {
+        if self
+            .get_appropriate_gun_ammo(WhichHand::Left, GunType::Shotgun)
+            .is_some()
+        {
+            if let Some(index) = self.world.player_inventory_item_index(Item::ShotgunAmmo) {
+                self.message_log.push(Message::ReloadGun(Item::Shotgun));
+                self.reload_gun_in_hand(WhichHand::Left);
+                if let Some(entity) = self
+                    .world
+                    .components
+                    .inventory
+                    .get_mut(self.player_entity)
+                    .unwrap()
+                    .remove(index)
+                {
+                    self.world.remove_entity(entity);
+                }
+                Ok(())
+            } else {
+                Err(ActionError::OutOfAmmo)
+            }
+        } else {
+            Err(ActionError::NothingToReload)
+        }
+    }
+
+    fn player_reload_rocket_launcher(&mut self) -> Result<(), ActionError> {
+        if self
+            .get_appropriate_gun_ammo(WhichHand::Left, GunType::RocketLauncher)
+            .is_some()
+        {
+            if let Some(index) = self.world.player_inventory_item_index(Item::Rocket) {
+                self.message_log
+                    .push(Message::ReloadGun(Item::RocketLauncher));
+                self.reload_gun_in_hand(WhichHand::Left);
+                if let Some(entity) = self
+                    .world
+                    .components
+                    .inventory
+                    .get_mut(self.player_entity)
+                    .unwrap()
+                    .remove(index)
+                {
+                    self.world.remove_entity(entity);
+                }
+                Ok(())
+            } else {
+                Err(ActionError::OutOfAmmo)
+            }
+        } else {
+            Err(ActionError::NothingToReload)
+        }
+    }
+
+    fn player_reload(&mut self) -> Result<(), ActionError> {
+        if self
+            .get_appropriate_gun_ammo(WhichHand::Left, GunType::Pistol)
+            .is_some()
+            || self
+                .get_appropriate_gun_ammo(WhichHand::Left, GunType::Pistol)
+                .is_some()
+        {
+            return self.player_reload_pistol();
+        } else if self
+            .get_appropriate_gun_ammo(WhichHand::Left, GunType::Shotgun)
+            .is_some()
+        {
+            return self.player_reload_shotgun();
+        } else if self
+            .get_appropriate_gun_ammo(WhichHand::Left, GunType::RocketLauncher)
+            .is_some()
+        {
+            return self.player_reload_rocket_launcher();
+        }
+        Err(ActionError::NothingToReload)
     }
 
     fn player_get_item(&mut self) -> Result<(), ActionError> {
@@ -983,11 +1186,119 @@ impl Game {
                             self.equip_two_handed_weapon(i);
                         }
                     }
-                    _ => (),
+                    Item::PistolAmmo => {
+                        let left = self.get_appropriate_gun_ammo(WhichHand::Left, GunType::Pistol);
+                        let right = self.get_appropriate_gun_ammo(WhichHand::Left, GunType::Pistol);
+                        let success = match (left, right) {
+                            (Some(left), Some(right)) => {
+                                if left < right {
+                                    self.reload_gun_in_hand(WhichHand::Left)
+                                } else {
+                                    self.reload_gun_in_hand(WhichHand::Right)
+                                }
+                                true
+                            }
+                            (Some(_), None) => {
+                                self.reload_gun_in_hand(WhichHand::Left);
+                                false
+                            }
+                            (None, Some(_)) => {
+                                self.reload_gun_in_hand(WhichHand::Right);
+                                true
+                            }
+                            (None, None) => false,
+                        };
+                        if success {
+                            let inventory = self
+                                .world
+                                .components
+                                .inventory
+                                .get_mut(self.player_entity)
+                                .unwrap();
+                            inventory.remove(i);
+                            self.world.remove_entity(item_entity);
+                            self.message_log.push(Message::ReloadGun(Item::Pistol));
+                        } else {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::NothingToReload));
+                        }
+                    }
+                    Item::ShotgunAmmo => {
+                        // 2 handed weapons are always in the lreft hand
+                        if self
+                            .get_appropriate_gun_ammo(WhichHand::Left, GunType::Shotgun)
+                            .is_some()
+                        {
+                            self.reload_gun_in_hand(WhichHand::Left);
+                            let inventory = self
+                                .world
+                                .components
+                                .inventory
+                                .get_mut(self.player_entity)
+                                .unwrap();
+                            inventory.remove(i);
+                            self.world.remove_entity(item_entity);
+                            self.message_log.push(Message::ReloadGun(Item::Shotgun));
+                        } else {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::NothingToReload));
+                        }
+                    }
+                    Item::Rocket => {
+                        // 2 handed weapons are always in the lreft hand
+                        if self
+                            .get_appropriate_gun_ammo(WhichHand::Left, GunType::RocketLauncher)
+                            .is_some()
+                        {
+                            self.reload_gun_in_hand(WhichHand::Left);
+                            let inventory = self
+                                .world
+                                .components
+                                .inventory
+                                .get_mut(self.player_entity)
+                                .unwrap();
+                            inventory.remove(i);
+                            self.world.remove_entity(item_entity);
+                            self.message_log
+                                .push(Message::ReloadGun(Item::RocketLauncher));
+                        } else {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::NothingToReload));
+                        }
+                    }
                 }
             }
         }
         None
+    }
+
+    fn reload_gun_in_hand(&mut self, which_hand: WhichHand) {
+        if let Some(entity) = self.player_hand_entity(which_hand) {
+            if let Some(gun) = self.world.components.gun.get_mut(entity) {
+                gun.ammo.fill();
+            }
+        }
+    }
+
+    fn get_appropriate_gun_ammo(&self, which_hand: WhichHand, gun_type: GunType) -> Option<u32> {
+        if let Some(entity) = self.player_hand_entity(which_hand) {
+            if let Some(gun) = self.world.components.gun.get(entity) {
+                if gun.type_ == gun_type {
+                    if !gun.ammo.is_full() {
+                        return Some(gun.ammo.current());
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn player_hand_entity(&self, which_hand: WhichHand) -> Option<Entity> {
+        let hands = self.world.components.hands.get(self.player_entity).unwrap();
+        match which_hand {
+            WhichHand::Left => hands.left.holding(),
+            WhichHand::Right => hands.right.holding(),
+        }
     }
 
     fn equip_two_handed_weapon(&mut self, inventory_index: usize) {

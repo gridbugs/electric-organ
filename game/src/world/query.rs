@@ -1,8 +1,5 @@
 use crate::{
-    world::{
-        data::{Npc, NpcMovement},
-        spatial::Layers,
-    },
+    world::{data::*, spatial::Layers},
     World,
 };
 use coord_2d::Coord;
@@ -168,5 +165,20 @@ impl World {
     pub fn num_player_claws(&self) -> usize {
         let player = self.components.player.entities().next().unwrap();
         self.components.organs.get(player).unwrap().num_claws()
+    }
+
+    pub fn player_inventory_item_index(&self, item: Item) -> Option<usize> {
+        let player = self.components.player.entities().next().unwrap();
+        let inventory = self.components.inventory.get(player).unwrap();
+        for (i, entity) in inventory.items().into_iter().enumerate() {
+            if let Some(entity) = entity {
+                if let Some(current_item) = self.components.item.get(*entity) {
+                    if *current_item == item {
+                        return Some(i);
+                    }
+                }
+            }
+        }
+        None
     }
 }

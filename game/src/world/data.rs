@@ -371,6 +371,10 @@ impl Inventory {
         use std::mem;
         mem::replace(&mut self.items[i], None)
     }
+
+    pub fn items(&self) -> &[Option<Entity>] {
+        &self.items
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -420,7 +424,7 @@ impl Organs {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GunType {
     Pistol,
     Shotgun,
@@ -466,6 +470,14 @@ pub enum Hand {
 }
 
 impl Hand {
+    pub fn holding(&self) -> Option<Entity> {
+        if let Hand::Holding(e) = self {
+            Some(*e)
+        } else {
+            None
+        }
+    }
+
     pub fn is_holding(&self) -> bool {
         if let Hand::Holding(_) = self {
             true

@@ -1549,6 +1549,10 @@ pub fn message_to_text(message: Message) -> Text {
             ActionError::NeedsTwoHands => "Weapon requires two non-claw hands.".to_string(),
             ActionError::NeedsOneHand => "Weapon requires at least one non-claw hand.".to_string(),
             ActionError::NothingToUnequip => "No equipped item to unequip.".to_string(),
+            ActionError::NothingToReload => "No suitable non-full gun equipped.".to_string(),
+            ActionError::NoGun => "No gun is equippped.".to_string(),
+            ActionError::OutOfLoadedAmmo => "Your equipped gun is empty.".to_string(),
+            ActionError::OutOfAmmo => "No held ammo for equipped gun.".to_string(),
         })]),
         Message::NpcHit { npc_type, damage } => Text::new(vec![
             StyledString::plain_text("The ".to_string()),
@@ -1610,6 +1614,16 @@ pub fn message_to_text(message: Message) -> Text {
         ]),
         Message::EquipItem(item) => Text::new(vec![
             StyledString::plain_text("You equip the ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::ReloadGun(item) => Text::new(vec![
+            StyledString::plain_text("You reload the ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::FireGun(item) => Text::new(vec![
+            StyledString::plain_text("You fire the ".to_string()),
             item_styled_string_for_message(item),
             StyledString::plain_text(".".to_string()),
         ]),

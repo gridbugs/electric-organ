@@ -481,6 +481,7 @@ impl GameLoopData {
                                 Ok(()),
                             ),
                             AppInput::UnequipItem => running.unequip(&mut instance.game),
+                            AppInput::Reload => running.reload(&mut instance.game),
                         };
                         witness
                     }
