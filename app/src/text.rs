@@ -22,12 +22,19 @@ pub fn help(width: u32) -> AppCF<()> {
     text_component(
         width,
         vec![
-            b("Controls:\n\n"),
-            t("Wait: Space\n"),
-            t("Ability: 1-9\n"),
-            t("\n"),
-            b("On Foot\n"),
-            t("Walk: Arrow Keys\n"),
+            b("Controls:\n\n\n"),
+            t("Walk: ←↑→↓\n\n"),
+            t("Wait: Space\n\n"),
+            t("Fire Equipped Weapon: f\n\n"),
+            t("Fire Body Weapon: b\n\n"),
+            t("Get item: g\n\n"),
+            t("Apply item: a\n\n"),
+            t("Drop item: d\n\n"),
+            t("Unequip item: u\n\n"),
+            t("Reload equipped weapon: r\n\n"),
+            t("Display message log: m\n\n"),
+            t("Display list of organs: o\n\n"),
+            t("Display this help message: ?\n\n"),
         ],
     )
     .press_any_key()
@@ -68,7 +75,7 @@ fn game_over_text(width: u32, _reason: GameOverReason) -> CF<(), State> {
 
 pub fn game_over(width: u32, reason: GameOverReason) -> AppCF<()> {
     game_over_text(width, reason)
-        .delay(Duration::from_secs(2))
+        .delay(Duration::from_secs(1))
         .then(move || game_over_text(width, reason).press_any_key())
 }
 
@@ -82,6 +89,6 @@ fn win_text(width: u32) -> CF<(), State> {
 pub fn win(width: u32) -> AppCF<()> {
     // TODO: this is not ergonomic
     win_text(width)
-        .delay(Duration::from_secs(2))
+        .delay(Duration::from_secs(1))
         .then(move || win_text(width).press_any_key())
 }

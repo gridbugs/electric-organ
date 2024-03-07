@@ -886,7 +886,17 @@ impl Component for MainMenuBackground {
 }
 
 fn help() -> AppCF<()> {
-    menu_style(text::help(MAIN_MENU_TEXT_WIDTH).overlay(background(), 1))
+    use chargrid::pad_by::Padding;
+    menu_style(
+        text::help(MAIN_MENU_TEXT_WIDTH)
+            .pad_by(Padding {
+                left: 1,
+                right: 4,
+                top: 1,
+                bottom: 1,
+            })
+            .overlay(background(), 1),
+    )
 }
 
 struct MessageLog {
