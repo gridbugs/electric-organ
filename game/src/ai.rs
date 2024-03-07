@@ -304,6 +304,7 @@ enum Behaviour {
     },
     Flee,
     Steal,
+    Nothing,
 }
 
 impl Agent {
@@ -341,6 +342,7 @@ impl Agent {
             );
             if let Some(CanSeePlayer) = can_see_player {
                 match npc.disposition {
+                    Disposition::Neutral => Behaviour::Nothing,
                     Disposition::Thief => Behaviour::Steal,
                     Disposition::Hostile => Behaviour::Chase {
                         last_seen_player_coord: player_coord,
@@ -362,6 +364,7 @@ impl Agent {
                 }
             } else {
                 match self.behaviour {
+                    Behaviour::Nothing => Behaviour::Nothing,
                     Behaviour::Steal => Behaviour::Steal,
                     Behaviour::Chase {
                         last_seen_player_coord,
@@ -390,6 +393,7 @@ impl Agent {
             Behaviour::Wander { avoid: false }
         };
         match self.behaviour {
+            Behaviour::Nothing => None,
             Behaviour::Steal => {
                 let maybe_cardinal_direction = ai_context.distance_map_search_context.search_first(
                     &WorldCanEnterAvoidNpcs {

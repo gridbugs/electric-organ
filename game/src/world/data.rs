@@ -81,6 +81,13 @@ pub enum Tile {
     Trespasser,
     Boomer,
     Snatcher,
+    Poisoner,
+    Divider,
+    Corruptor,
+    GunStore,
+    ItemStore,
+    OrganTrader,
+    OrganClinic,
     Money,
     Item(Item),
     Corpse(NpcType),
@@ -161,6 +168,7 @@ pub enum Disposition {
     Hostile,
     Afraid,
     Thief,
+    Neutral,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -203,6 +211,13 @@ pub enum NpcType {
     Trespasser,
     Boomer,
     Snatcher,
+    Poisoner,
+    Divider,
+    Corruptor,
+    GunStore,
+    ItemStore,
+    OrganTrader,
+    OrganClinic,
 }
 
 impl NpcType {
@@ -213,6 +228,13 @@ impl NpcType {
             Self::Trespasser => Tile::Trespasser,
             Self::Boomer => Tile::Boomer,
             Self::Snatcher => Tile::Snatcher,
+            Self::Poisoner => Tile::Poisoner,
+            Self::Divider => Tile::Divider,
+            Self::Corruptor => Tile::Corruptor,
+            Self::GunStore => Tile::Corruptor,
+            Self::ItemStore => Tile::ItemStore,
+            Self::OrganTrader => Tile::OrganTrader,
+            Self::OrganClinic => Tile::OrganClinic,
         }
     }
 }

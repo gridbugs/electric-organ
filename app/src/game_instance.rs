@@ -428,6 +428,62 @@ impl GameInstance {
                         .with_foreground(colours::SNATCHER.to_rgba32(255)),
                 };
             }
+            Tile::Poisoner => {
+                return RenderCell {
+                    character: Some('p'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::POISONER.to_rgba32(255)),
+                };
+            }
+            Tile::Divider => {
+                return RenderCell {
+                    character: Some('d'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::DIVIDER.to_rgba32(255)),
+                };
+            }
+            Tile::Corruptor => {
+                return RenderCell {
+                    character: Some('X'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::CORRUPTOR.to_rgba32(255)),
+                };
+            }
+            Tile::GunStore => {
+                return RenderCell {
+                    character: Some('G'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                };
+            }
+            Tile::ItemStore => {
+                return RenderCell {
+                    character: Some('I'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                };
+            }
+            Tile::OrganTrader => {
+                return RenderCell {
+                    character: Some('T'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                };
+            }
+            Tile::OrganClinic => {
+                return RenderCell {
+                    character: Some('C'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                };
+            }
             Tile::Corpse(npc_type) => {
                 let colour = match npc_type {
                     NpcType::Zombie => colours::ZOMBIE,
@@ -435,6 +491,13 @@ impl GameInstance {
                     NpcType::Boomer => colours::BOOMER,
                     NpcType::Trespasser => colours::TRESPASSER,
                     NpcType::Snatcher => colours::SNATCHER,
+                    NpcType::Poisoner => colours::POISONER,
+                    NpcType::Divider => colours::DIVIDER,
+                    NpcType::Corruptor => colours::CORRUPTOR,
+                    NpcType::GunStore => colours::SHOP,
+                    NpcType::ItemStore => colours::SHOP,
+                    NpcType::OrganClinic => colours::SHOP,
+                    NpcType::OrganTrader => colours::SHOP,
                 };
                 return RenderCell {
                     character: Some('?'),
@@ -1413,6 +1476,104 @@ fn describe_tile(tile: Tile) -> Description {
                 "Ignores you but steals items. Drops them on death.".to_string(),
             )])),
         },
+        Tile::Poisoner => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "poisoner".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::POISONER.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Spreads poison.".to_string(),
+            )])),
+        },
+        Tile::Divider => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "divider".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ZOMBIE.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Splits when damaged".to_string(),
+            )])),
+        },
+        Tile::Corruptor => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("the ".to_string()),
+                StyledString {
+                    string: "CORRUPTOR".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::ZOMBIE.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "The source of the corruption aflicting the city. Destroy it!".to_string(),
+            )])),
+        },
+        Tile::GunStore => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "gun vendor".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Sells guns".to_string(),
+            )])),
+        },
+        Tile::ItemStore => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("an ".to_string()),
+                StyledString {
+                    string: "item vendor".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Sells items".to_string(),
+            )])),
+        },
+        Tile::OrganTrader => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("an ".to_string()),
+                StyledString {
+                    string: "organ trader".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Buys and sells organs".to_string(),
+            )])),
+        },
+        Tile::OrganClinic => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("an ".to_string()),
+                StyledString {
+                    string: "organ clinic".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![StyledString::plain_text(
+                "Visit to replace your organs".to_string(),
+            )])),
+        },
         Tile::Corpse(npc_type) => match npc_type {
             NpcType::Zombie => Description {
                 name: Text::new(vec![
@@ -1476,6 +1637,90 @@ fn describe_tile(tile: Tile) -> Description {
                 ]),
                 description: None,
             },
+            NpcType::Poisoner => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "poisoner".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::POISONER.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
+            NpcType::Divider => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "divider".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::DIVIDER.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
+            NpcType::Corruptor => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of the ".to_string()),
+                    StyledString {
+                        string: "CORRUPTOR".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::CORRUPTOR.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
+            NpcType::GunStore => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "gun vendor".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::SHOP.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
+            NpcType::ItemStore => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of an ".to_string()),
+                    StyledString {
+                        string: "item vendor".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::SHOP.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
+            NpcType::OrganClinic => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of an ".to_string()),
+                    StyledString {
+                        string: "organ clinician".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::SHOP.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
+            NpcType::OrganTrader => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of an ".to_string()),
+                    StyledString {
+                        string: "organ trader".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::SHOP.to_rgba32(255)),
+                    },
+                ]),
+                description: None,
+            },
         },
     }
 }
@@ -1512,6 +1757,48 @@ fn npc_type_to_styled_string(npc_type: NpcType) -> text::StyledString {
             style: Style::new()
                 .with_bold(true)
                 .with_foreground(colours::SNATCHER.to_rgba32(255)),
+        },
+        NpcType::Poisoner => StyledString {
+            string: "poisoner".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::POISONER.to_rgba32(255)),
+        },
+        NpcType::Divider => StyledString {
+            string: "divider".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::DIVIDER.to_rgba32(255)),
+        },
+        NpcType::Corruptor => StyledString {
+            string: "CORRUPTOR".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::CORRUPTOR.to_rgba32(255)),
+        },
+        NpcType::GunStore => StyledString {
+            string: "gun vendor".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::SHOP.to_rgba32(255)),
+        },
+        NpcType::ItemStore => StyledString {
+            string: "item vendor".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::SHOP.to_rgba32(255)),
+        },
+        NpcType::OrganClinic => StyledString {
+            string: "organ clinic".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::SHOP.to_rgba32(255)),
+        },
+        NpcType::OrganTrader => StyledString {
+            string: "organ trader".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::SHOP.to_rgba32(255)),
         },
     }
 }

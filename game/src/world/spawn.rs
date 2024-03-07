@@ -760,6 +760,160 @@ impl World {
             },
         )
     }
+
+    pub fn spawn_poisoner<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Poisoner,
+                npc: Npc { disposition: Disposition::Hostile,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::Poisoner,
+                health: Meter::new_full(3),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
+            },
+        )
+    }
+
+    pub fn spawn_divider<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Divider,
+                npc: Npc { disposition: Disposition::Hostile,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::Divider,
+                health: Meter::new_full(6),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
+            },
+        )
+    }
+
+    pub fn spawn_corruptor<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Corruptor,
+                npc: Npc { disposition: Disposition::Hostile,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::Corruptor,
+                health: Meter::new_full(20),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
+            },
+        )
+    }
+
+    pub fn spawn_gun_store<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::GunStore,
+                npc: Npc { disposition: Disposition::Neutral,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::GunStore,
+                health: Meter::new_full(50),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
+            },
+        )
+    }
+
+    pub fn spawn_item_store<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::ItemStore,
+                npc: Npc { disposition: Disposition::Neutral,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::ItemStore,
+                health: Meter::new_full(50),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
+            },
+        )
+    }
+
+    pub fn spawn_organ_clinic<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::OrganClinic,
+                npc: Npc { disposition: Disposition::Neutral,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::OrganClinic,
+                health: Meter::new_full(50),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
+            },
+        )
+    }
+
+    pub fn spawn_organ_trader<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::OrganClinic,
+                npc: Npc { disposition: Disposition::Neutral,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::OrganClinic,
+                health: Meter::new_full(50),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
+            },
+        )
+    }
 }
 
 fn make_gun(data: &mut EntityData) {
