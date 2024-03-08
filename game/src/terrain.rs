@@ -129,7 +129,7 @@ impl Terrain {
     }
 
     pub fn generate<R: Rng>(level_index: usize, rng: &mut R) -> Self {
-        //return Self::generate_text();
+        return Self::generate_text();
         let tentacle_spec = TentacleSpec {
             num_tentacles: 2,
             segment_length: 2.,
@@ -299,7 +299,7 @@ impl Terrain {
             }
         }
 
-        for _ in 0..2 {
+        for _ in 0..4 {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_item(coord, Item::Food);
             }

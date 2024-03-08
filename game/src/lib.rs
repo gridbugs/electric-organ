@@ -1749,7 +1749,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::PoisonIsEmpty));
                         } else {
-                            poison.clear();
+                            poison.decrease(10);
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::ApplyAntidote);
@@ -1766,7 +1766,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::RadiationIsEmpty));
                         } else {
-                            radiation.clear();
+                            radiation.decrease(25);
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::ApplyAntiRads);
@@ -1800,7 +1800,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::FoodIsFull));
                         } else {
-                            food.fill();
+                            food.increase(5);
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::EatFood);
@@ -1818,7 +1818,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::OxygenIsFull));
                         } else {
-                            oxygen.fill();
+                            oxygen.increase(10);
                             self.world
                                 .components
                                 .item
@@ -1848,7 +1848,7 @@ impl Game {
                                 self.message_log
                                     .push(Message::ActionError(ActionError::PowerIsFull));
                             } else {
-                                power.fill();
+                                power.increase(50);
                                 self.message_log.push(Message::ApplyBattery);
                             }
                         } else {

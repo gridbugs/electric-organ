@@ -39,4 +39,4 @@ pub const ANTIRADS: Rgb24 = RADIATION;
 pub const ORGAN_CONTAINER: Rgb24 = Rgb24::hex(0x00e6e6);
 pub const PISTOL: Rgb24 = Rgb24::hex(0xbfbfbf);
 pub const SHOTGUN: Rgb24 = Rgb24::hex(0xb35900);
-pub const ROCKET_LAUNCHER: Rgb24 = Rgb24::hex(0xff471a);
+pub const ROCKET_LAUNCHER: Rgb24 = Rgb24::hex(0x00e600);
