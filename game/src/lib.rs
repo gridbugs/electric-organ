@@ -1805,7 +1805,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::HealthIsFull));
                         } else {
-                            health.increase(10);
+                            health.increase(5);
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::ApplyStimpack);
