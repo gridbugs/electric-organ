@@ -20,6 +20,12 @@ impl Terrain {
                 let floor_entity = world.spawn_floor(coord);
                 match ch {
                     '.' => (),
+                    'I' => {
+                        world.spawn_item_store(coord, &mut rng);
+                    }
+                    'G' => {
+                        world.spawn_gun_store(coord, &mut rng);
+                    }
                     'z' => {
                         world.spawn_zombie(coord, &mut rng);
                     }

@@ -159,6 +159,15 @@ impl World {
                 damage: hit_points_to_lose,
             });
         }
+        if self.components.shop.contains(character) {
+            if let Some(npc) = self.components.npc.get_mut(character) {
+                npc.disposition = Disposition::Hostile;
+                if let Some(npc_type) = self.components.npc_type.get_mut(character) {
+                    message_log.push(Message::BecomesHostile(*npc_type));
+                }
+            }
+            self.components.shop.remove(character);
+        }
         let hit_points = self
             .components
             .health

@@ -62,6 +62,7 @@ declare_entity_module! {
         bump_damage: RangeInclusive<u32>,
         radioactive: (),
         smoke: (),
+        shop: Shop,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -375,6 +376,28 @@ pub enum Item {
     Rocket,
 }
 
+impl Item {
+    pub fn price(&self) -> u32 {
+        match self {
+            Self::Stimpack => 10,
+            Self::Antidote => 5,
+            Self::BloodVialEmpty => 10,
+            Self::BloodVialFull => 15,
+            Self::Battery => 30,
+            Self::Food => 5,
+            Self::AntiRads => 10,
+            Self::OrganContainer(None) => 20,
+            Self::OrganContainer(Some(_)) => 200,
+            Self::Pistol => 30,
+            Self::PistolAmmo => 10,
+            Self::Shotgun => 40,
+            Self::ShotgunAmmo => 10,
+            Self::RocketLauncher => 80,
+            Self::Rocket => 20,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Inventory {
     items: Vec<Option<Entity>>,
@@ -501,7 +524,7 @@ impl Gun {
     pub fn shotgun() -> Self {
         Self {
             type_: GunType::Shotgun,
-            ammo: Meter::new_full(6),
+            ammo: Meter::new_full(3),
             hands_required: 2,
         }
     }
@@ -551,4 +574,9 @@ impl Hand {
 pub struct Hands {
     pub left: Hand,
     pub right: Hand,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Shop {
+    pub message: String,
 }

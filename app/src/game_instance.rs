@@ -330,7 +330,7 @@ impl GameInstance {
             }
             Tile::Item(Item::Battery) => {
                 return RenderCell {
-                    character: Some('ϟ'),
+                    character: Some('&'),
                     style: Style::new()
                         .with_bold(true)
                         .with_foreground(colours::BATTERY.to_rgba32(255)),
@@ -478,15 +478,21 @@ impl GameInstance {
                     character: Some('G'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                        .with_foreground(colours::SHOP.to_rgba32(255))
+                        .with_background(
+                            colours::SHOP.to_rgba32(255).saturating_scalar_mul_div(1, 4),
+                        ),
                 };
             }
             Tile::ItemStore => {
                 return RenderCell {
-                    character: Some('I'),
+                    character: Some('S'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                        .with_foreground(colours::SHOP.to_rgba32(255))
+                        .with_background(
+                            colours::SHOP.to_rgba32(255).saturating_scalar_mul_div(1, 4),
+                        ),
                 };
             }
             Tile::OrganTrader => {
@@ -502,7 +508,10 @@ impl GameInstance {
                     character: Some('C'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                        .with_foreground(colours::SHOP.to_rgba32(255))
+                        .with_background(
+                            colours::SHOP.to_rgba32(255).saturating_scalar_mul_div(1, 4),
+                        ),
                 };
             }
             Tile::Corpse(npc_type) => {
@@ -930,6 +939,10 @@ impl GameInstance {
                 StyledString {
                     string: "Message Log".to_string(),
                     style: border_text_style,
+                },
+                StyledString {
+                    string: " (press m to display full log)".to_string(),
+                    style: Style::plain_text().with_foreground(Rgb24::new_grey(127).to_rgba32(255)),
                 },
                 StyledString {
                     string: "╞".to_string(),
@@ -1576,7 +1589,7 @@ fn describe_tile(tile: Tile) -> Description {
                 },
             ]),
             description: Some(Text::new(vec![StyledString::plain_text(
-                "Sells guns".to_string(),
+                "Walk into them to buy guns.".to_string(),
             )])),
         },
         Tile::ItemStore => Description {
@@ -1590,7 +1603,7 @@ fn describe_tile(tile: Tile) -> Description {
                 },
             ]),
             description: Some(Text::new(vec![StyledString::plain_text(
-                "Sells items".to_string(),
+                "Walk into them to buy items.".to_string(),
             )])),
         },
         Tile::OrganTrader => Description {
@@ -1618,7 +1631,7 @@ fn describe_tile(tile: Tile) -> Description {
                 },
             ]),
             description: Some(Text::new(vec![StyledString::plain_text(
-                "Visit to replace your organs".to_string(),
+                "Walk into them to add or remove organs.".to_string(),
             )])),
         },
         Tile::Corpse(npc_type) => match npc_type {
@@ -1887,6 +1900,67 @@ pub fn message_to_text(message: Message) -> Text {
             ActionError::NoGun => "No gun is equippped.".to_string(),
             ActionError::OutOfLoadedAmmo => "Your equipped gun is empty.".to_string(),
             ActionError::OutOfAmmo => "No held ammo for equipped gun.".to_string(),
+            ActionError::HealthIsFull => {
+                return Text::new(vec![
+                    StyledString::plain_text("But your ".to_string()),
+                    StyledString {
+                        string: format!("health"),
+                        style: Style::new().with_foreground(colours::HEALTH.to_rgba32(255)),
+                    },
+                    StyledString::plain_text(" is already full.".to_string()),
+                ]);
+            }
+            ActionError::OxygenIsFull => {
+                return Text::new(vec![
+                    StyledString::plain_text("But your ".to_string()),
+                    StyledString {
+                        string: format!("oxygen"),
+                        style: Style::new().with_foreground(colours::OXYGEN.to_rgba32(255)),
+                    },
+                    StyledString::plain_text(" is already full.".to_string()),
+                ]);
+            }
+            ActionError::PoisonIsEmpty => {
+                return Text::new(vec![
+                    StyledString::plain_text("But your ".to_string()),
+                    StyledString {
+                        string: format!("poison"),
+                        style: Style::new().with_foreground(colours::POISON.to_rgba32(255)),
+                    },
+                    StyledString::plain_text(" is already empty.".to_string()),
+                ]);
+            }
+            ActionError::RadiationIsEmpty => {
+                return Text::new(vec![
+                    StyledString::plain_text("But your ".to_string()),
+                    StyledString {
+                        string: format!("radiation"),
+                        style: Style::new().with_foreground(colours::RADIATION.to_rgba32(255)),
+                    },
+                    StyledString::plain_text(" is already empty.".to_string()),
+                ]);
+            }
+            ActionError::PowerIsFull => {
+                return Text::new(vec![
+                    StyledString::plain_text("But your ".to_string()),
+                    StyledString {
+                        string: format!("power"),
+                        style: Style::new().with_foreground(colours::POWER.to_rgba32(255)),
+                    },
+                    StyledString::plain_text(" is already full.".to_string()),
+                ]);
+            }
+            ActionError::FoodIsFull => {
+                return Text::new(vec![
+                    StyledString::plain_text("But your ".to_string()),
+                    StyledString {
+                        string: format!("food"),
+                        style: Style::new().with_foreground(colours::FOOD.to_rgba32(255)),
+                    },
+                    StyledString::plain_text(" is already full.".to_string()),
+                ]);
+            }
+            ActionError::RefusingToTargetSelf => "Refusing to target self.".to_string(),
         })]),
         Message::NpcHit { npc_type, damage } => Text::new(vec![
             StyledString::plain_text("The ".to_string()),
@@ -2101,6 +2175,61 @@ pub fn message_to_text(message: Message) -> Text {
                 style: Style::plain_text().with_foreground(colours::POISON.to_rgba32(255)),
             },
             StyledString::plain_text(".".to_string()),
+        ]),
+        Message::BecomesHostile(npc_type) => Text::new(vec![
+            StyledString::plain_text("The ".to_string()),
+            npc_type_to_styled_string(npc_type),
+            StyledString::plain_text(" becomes hostile.".to_string()),
+        ]),
+        Message::CantAfford(item) => Text::new(vec![
+            StyledString::plain_text("You can't afford that ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text("!".to_string()),
+        ]),
+        Message::Buy(item) => Text::new(vec![
+            StyledString::plain_text("You buy the ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::FillBloodVial => Text::new(vec![
+            StyledString::plain_text("You fill the ".to_string()),
+            item_styled_string_for_message(Item::BloodVialEmpty),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::EatFood => Text::new(vec![
+            StyledString::plain_text("You eat the ".to_string()),
+            item_styled_string_for_message(Item::Food),
+            StyledString::plain_text(" (food increased).".to_string()),
+        ]),
+        Message::ApplyAntidote => Text::new(vec![
+            StyledString::plain_text("You apply the ".to_string()),
+            item_styled_string_for_message(Item::Antidote),
+            StyledString::plain_text(" (poison decreased).".to_string()),
+        ]),
+        Message::ApplyAntiRads => Text::new(vec![
+            StyledString::plain_text("You apply the ".to_string()),
+            item_styled_string_for_message(Item::AntiRads),
+            StyledString::plain_text(" (radiation decreased).".to_string()),
+        ]),
+        Message::ApplyStimpack => Text::new(vec![
+            StyledString::plain_text("You apply the ".to_string()),
+            item_styled_string_for_message(Item::Stimpack),
+            StyledString::plain_text(" (health increased).".to_string()),
+        ]),
+        Message::ApplyFullBlodVial => Text::new(vec![
+            StyledString::plain_text("You inject the ".to_string()),
+            item_styled_string_for_message(Item::Stimpack),
+            StyledString::plain_text(" (oxygen increased).".to_string()),
+        ]),
+        Message::ApplyBattery => Text::new(vec![
+            StyledString::plain_text("You insert the ".to_string()),
+            item_styled_string_for_message(Item::Battery),
+            StyledString::plain_text(" (power increased).".to_string()),
+        ]),
+        Message::DumpOrgan(organ) => Text::new(vec![
+            StyledString::plain_text("You dump the ".to_string()),
+            StyledString::plain_text(organ_string_for_description(&organ)),
+            StyledString::plain_text(" on the floor.".to_string()),
         ]),
     }
 }

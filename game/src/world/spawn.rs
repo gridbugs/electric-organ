@@ -4,6 +4,7 @@ use crate::{
     Entity,
 };
 use coord_2d::Coord;
+use direction::Direction;
 use entity_table::entity_data;
 use rand::{seq::SliceRandom, Rng};
 use rgb_int::Rgb24;
@@ -113,7 +114,7 @@ pub fn make_player() -> EntityData {
         inventory: Some(Inventory::new(12)),
         satiation: Some(Meter::new(0, 20)),
         power: Some(Meter::new(0, 0)),
-        money: Some(0),
+        money: Some(100),
         organs: Some(player_starting_organs()),
         hands: Some(Hands {
             left: Hand::Empty,
@@ -371,7 +372,18 @@ impl World {
         )
     }
 
-    pub fn spawn_bullet<R: Rng>(&mut self, start: Coord, target: Coord, rng: &mut R) -> Entity {
+    pub fn spawn_bullet<R: Rng>(
+        &mut self,
+        start: Coord,
+        target: Coord,
+        projectile_damage: ProjectileDamage,
+        rng: &mut R,
+    ) -> Entity {
+        let target = if target == start {
+            start + rng.gen::<Direction>().coord()
+        } else {
+            target
+        };
         let entity = self.entity_allocator.alloc();
         self.spatial_table
             .update(
@@ -439,7 +451,7 @@ impl World {
         self.components.particle.insert(entity, ());
         self.components
             .projectile_damage
-            .insert(entity, ProjectileDamage { hit_points: 1..=2 });
+            .insert(entity, projectile_damage);
         entity
     }
 
@@ -511,7 +523,7 @@ impl World {
         self.components.particle.insert(entity, ());
         self.components
             .projectile_damage
-            .insert(entity, ProjectileDamage { hit_points: 3..=4 });
+            .insert(entity, ProjectileDamage { hit_points: 5..=10 });
         self.components.on_collision.insert(
             entity,
             OnCollision::Explode({
@@ -896,6 +908,20 @@ impl World {
     }
 
     pub fn spawn_gun_store<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        let item_pool = vec![
+            Item::Pistol,
+            Item::PistolAmmo,
+            Item::Shotgun,
+            Item::ShotgunAmmo,
+            Item::RocketLauncher,
+            Item::Rocket,
+        ];
+        let mut simple_inventory = Vec::new();
+        for _ in 0..8 {
+            let item = *item_pool.choose(rng).unwrap();
+            let entity = self.spawn_item_no_coord(item);
+            simple_inventory.push(entity);
+        }
         self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {
@@ -914,11 +940,30 @@ impl World {
                     random_basic_organ(rng),
                     random_basic_organ(rng),
                 ],
+                simple_inventory,
+                shop: Shop {
+                    message: "Welcome to my Gun Shop!".to_string(),
+                }
             },
         )
     }
 
     pub fn spawn_item_store<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        let item_pool = vec![
+            Item::Stimpack,
+            Item::Antidote,
+            Item::BloodVialEmpty,
+            Item::Battery,
+            Item::Food,
+            Item::AntiRads,
+            Item::OrganContainer(None),
+        ];
+        let mut simple_inventory = Vec::new();
+        for _ in 0..8 {
+            let item = *item_pool.choose(rng).unwrap();
+            let entity = self.spawn_item_no_coord(item);
+            simple_inventory.push(entity);
+        }
         self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {
@@ -937,6 +982,10 @@ impl World {
                     random_basic_organ(rng),
                     random_basic_organ(rng),
                 ],
+                simple_inventory,
+                shop: Shop {
+                    message: "Welcome to my Item Shop!".to_string(),
+                }
             },
         )
     }

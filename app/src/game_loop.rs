@@ -75,7 +75,9 @@ const MENU_FADE_SPEC: menu::identifier::fade_spec::FadeSpec = {
         on_deselect: Fade {
             to: To {
                 rgba32: Layers {
-                    foreground: colours::VAPORWAVE_FOREGROUND.to_rgba32(255),
+                    foreground: colours::VAPORWAVE_FOREGROUND
+                        .to_rgba32(255)
+                        .saturating_scalar_mul_div(2, 3),
                     background: MENU_BACKGROUND,
                 },
                 bold: false,
@@ -1326,6 +1328,9 @@ fn menu_choice_string(game: &game::Game, choice: GameMenuChoice) -> String {
             WhichHand::Left => "Left Hand".to_string(),
             WhichHand::Right => "Right Hand".to_string(),
         },
+        GameMenuChoice::BuyItem { item, .. } => {
+            format!("{} - {} CCz", item_string_for_menu(item), item.price())
+        }
     }
 }
 

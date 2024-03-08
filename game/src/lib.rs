@@ -25,7 +25,7 @@ pub mod witness;
 use ai::{Agent, AiContext};
 use realtime::AnimationContext;
 use world::{
-    data::{DoorState, EntityData, EntityUpdate, GunType, Hand},
+    data::{DoorState, EntityData, EntityUpdate, GunType, Hand, ProjectileDamage},
     spatial::Layers,
     World,
 };
@@ -124,6 +124,17 @@ pub enum Message {
     RadiationClose,
     RadiationVeryClose,
     Poison,
+    BecomesHostile(NpcType),
+    CantAfford(Item),
+    Buy(Item),
+    FillBloodVial,
+    EatFood,
+    ApplyAntidote,
+    ApplyAntiRads,
+    ApplyStimpack,
+    ApplyFullBlodVial,
+    ApplyBattery,
+    DumpOrgan(Organ),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -149,6 +160,12 @@ pub enum MenuChoice {
         inventory_index: usize,
     },
     UnequipWhichHand(WhichHand),
+    BuyItem {
+        item: Item,
+        shop_entity: Entity,
+        item_entity: Entity,
+        shop_inventory_index: usize,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -272,6 +289,13 @@ pub enum ActionError {
     OutOfLoadedAmmo,
     OutOfAmmo,
     NoGun,
+    HealthIsFull,
+    OxygenIsFull,
+    PoisonIsEmpty,
+    RadiationIsEmpty,
+    PowerIsFull,
+    FoodIsFull,
+    RefusingToTargetSelf,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -501,6 +525,11 @@ impl Game {
                 }
             }
             if let Some(character_entity) = layers.character {
+                if self.world.components.shop.contains(character_entity) {
+                    return Ok(Some(GameControlFlow::Menu(
+                        self.shop_menu(character_entity),
+                    )));
+                }
                 self.world.player_bump_combat(
                     character_entity,
                     &mut self.rng,
@@ -516,6 +545,34 @@ impl Game {
             self.change_level_if_player_is_on_stairs();
         }
         Ok(None)
+    }
+
+    fn shop_menu(&self, shop_entity: Entity) -> Menu {
+        let shop = self.world.components.shop.get(shop_entity).unwrap();
+        let inventory = self
+            .world
+            .components
+            .simple_inventory
+            .get(shop_entity)
+            .unwrap();
+        let choices = inventory
+            .into_iter()
+            .enumerate()
+            .map(|(i, &item_entity)| {
+                let item = *self.world.components.item.get(item_entity).unwrap();
+                MenuChoice::BuyItem {
+                    item,
+                    shop_entity,
+                    item_entity,
+                    shop_inventory_index: i,
+                }
+            })
+            .collect::<Vec<_>>();
+        Menu {
+            image: None,
+            text: shop.message.clone(),
+            choices,
+        }
     }
 
     fn change_level_if_player_is_on_stairs(&mut self) {
@@ -724,13 +781,21 @@ impl Game {
     fn fire_pistol(&mut self, target: Coord) {
         let start = self.player_coord();
         self.external_events.push(ExternalEvent::FirePistol);
-        self.world
-            .spawn_bullet(start, target, &mut self.animation_rng);
+        self.world.spawn_bullet(
+            start,
+            target,
+            ProjectileDamage { hit_points: 1..=2 },
+            &mut self.animation_rng,
+        );
         self.message_log.push(Message::FireGun(Item::Pistol));
     }
 
     fn fire_shotgun(&mut self, target: Coord) {
         let start = self.player_coord();
+        let target = line_2d::LineSegment::new(start, target)
+            .infinite_iter()
+            .nth(20)
+            .unwrap();
         self.external_events.push(ExternalEvent::FireShotgun);
         for _ in 0..8 {
             let angle = Radians::random(&mut self.rng);
@@ -738,8 +803,12 @@ impl Game {
                 .to_cartesian()
                 .to_coord_round_nearest()
                 + target;
-            self.world
-                .spawn_bullet(start, target, &mut self.animation_rng);
+            self.world.spawn_bullet(
+                start,
+                target,
+                ProjectileDamage { hit_points: 2..=4 },
+                &mut self.animation_rng,
+            );
         }
         self.message_log.push(Message::FireGun(Item::Shotgun));
     }
@@ -798,8 +867,12 @@ impl Game {
     fn fire_body_pistol(&mut self, target: Coord) {
         let start = self.player_coord();
         self.external_events.push(ExternalEvent::FirePistol);
-        self.world
-            .spawn_bullet(start, target, &mut self.animation_rng);
+        self.world.spawn_bullet(
+            start,
+            target,
+            ProjectileDamage { hit_points: 1..=2 },
+            &mut self.animation_rng,
+        );
     }
 
     fn fire_body_shotgun(&mut self, target: Coord) {
@@ -811,8 +884,12 @@ impl Game {
                 .to_cartesian()
                 .to_coord_round_nearest()
                 + target;
-            self.world
-                .spawn_bullet(start, target, &mut self.animation_rng);
+            self.world.spawn_bullet(
+                start,
+                target,
+                ProjectileDamage { hit_points: 2..=4 },
+                &mut self.animation_rng,
+            );
         }
     }
 
@@ -879,6 +956,11 @@ impl Game {
                 None
             }
             Input::FireEquipped(target) => {
+                if target == self.player_coord() {
+                    self.message_log
+                        .push(Message::ActionError(ActionError::RefusingToTargetSelf));
+                    return Err(ActionError::RefusingToTargetSelf);
+                }
                 if let Err(e) = self.fire_equipped(target) {
                     self.message_log.push(Message::ActionError(e));
                     return Err(e);
@@ -886,6 +968,11 @@ impl Game {
                 None
             }
             Input::FireBody(target) => {
+                if target == self.player_coord() {
+                    self.message_log
+                        .push(Message::ActionError(ActionError::RefusingToTargetSelf));
+                    return Err(ActionError::RefusingToTargetSelf);
+                }
                 if let Err(e) = self.fire_body(target) {
                     self.message_log.push(Message::ActionError(e));
                     return Err(e);
@@ -1108,8 +1195,55 @@ impl Game {
                 inventory_index,
             } => self.player_equip_weapon_in_hand(which_hand, inventory_index),
             MenuChoice::UnequipWhichHand(which_hand) => self.unequip_from_hand(which_hand),
+            MenuChoice::BuyItem {
+                item,
+                shop_entity,
+                item_entity,
+                shop_inventory_index,
+                ..
+            } => self.player_buy_item(item, item_entity, shop_entity, shop_inventory_index),
         }
         None
+    }
+
+    fn player_buy_item(
+        &mut self,
+        item: Item,
+        item_entity: Entity,
+        shop_entity: Entity,
+        shop_inventory_index: usize,
+    ) {
+        let money = self
+            .world
+            .components
+            .money
+            .get_mut(self.player_entity)
+            .unwrap();
+        if item.price() > *money {
+            self.message_log.push(Message::CantAfford(item));
+            return;
+        }
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get_mut(self.player_entity)
+            .unwrap();
+        if let Some(first_free_slot) = inventory.first_free_slot() {
+            *money -= item.price();
+            *first_free_slot = Some(item_entity);
+            let shop_inventory = self
+                .world
+                .components
+                .simple_inventory
+                .get_mut(shop_entity)
+                .unwrap();
+            shop_inventory.remove(shop_inventory_index);
+            self.message_log.push(Message::Buy(item));
+        } else {
+            self.message_log
+                .push(Message::ActionError(ActionError::InventoryIsFull));
+        }
     }
 
     fn player_equip_weapon_in_hand(&mut self, which_hand: WhichHand, inventory_index: usize) {
@@ -1220,83 +1354,126 @@ impl Game {
                     }
                     Item::BloodVialEmpty => {
                         self.player_fill_blood_vial(item_entity);
+                        self.message_log.push(Message::FillBloodVial);
                     }
                     Item::Antidote => {
-                        self.world
+                        let poison = self
+                            .world
                             .components
                             .poison
                             .get_mut(self.player_entity)
-                            .unwrap()
-                            .decrease(20);
-                        inventory.remove(i);
-                        self.world.remove_entity(item_entity);
+                            .unwrap();
+                        if poison.is_empty() {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::PoisonIsEmpty));
+                        } else {
+                            poison.decrease(20);
+                            inventory.remove(i);
+                            self.world.remove_entity(item_entity);
+                            self.message_log.push(Message::ApplyAntidote);
+                        }
                     }
                     Item::AntiRads => {
-                        self.world
+                        let radiation = self
+                            .world
                             .components
                             .radiation
                             .get_mut(self.player_entity)
-                            .unwrap()
-                            .decrease(20);
-                        inventory.remove(i);
-                        self.world.remove_entity(item_entity);
+                            .unwrap();
+                        if radiation.is_empty() {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::RadiationIsEmpty));
+                        } else {
+                            radiation.decrease(20);
+                            inventory.remove(i);
+                            self.world.remove_entity(item_entity);
+                            self.message_log.push(Message::ApplyAntiRads);
+                        }
                     }
                     Item::Stimpack => {
-                        self.world
+                        let health = self
+                            .world
                             .components
                             .health
                             .get_mut(self.player_entity)
-                            .unwrap()
-                            .increase(10);
-                        inventory.remove(i);
-                        self.world.remove_entity(item_entity);
+                            .unwrap();
+                        if health.is_full() {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::HealthIsFull));
+                        } else {
+                            health.increase(10);
+                            inventory.remove(i);
+                            self.world.remove_entity(item_entity);
+                            self.message_log.push(Message::ApplyStimpack);
+                        }
                     }
                     Item::Food => {
-                        self.world
+                        let food = self
+                            .world
                             .components
                             .food
                             .get_mut(self.player_entity)
-                            .unwrap()
-                            .increase(10);
-                        inventory.remove(i);
-                        self.world.remove_entity(item_entity);
+                            .unwrap();
+                        if food.is_full() {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::FoodIsFull));
+                        } else {
+                            food.increase(10);
+                            inventory.remove(i);
+                            self.world.remove_entity(item_entity);
+                            self.message_log.push(Message::EatFood);
+                        }
                     }
                     Item::BloodVialFull => {
-                        self.world
+                        let oxygen = self
+                            .world
                             .components
                             .oxygen
                             .get_mut(self.player_entity)
-                            .unwrap()
-                            .increase(10);
-                        self.world
-                            .components
-                            .item
-                            .insert(item_entity, Item::BloodVialEmpty);
-                        self.world
-                            .components
-                            .tile
-                            .insert(item_entity, Tile::Item(Item::BloodVialEmpty));
-                        self.world
-                            .components
-                            .satiation
-                            .get_mut(self.player_entity)
-                            .unwrap()
-                            .fill();
-                    }
-                    Item::Battery => {
-                        if self.world.player_has_cyber_core() {
+                            .unwrap();
+                        if oxygen.is_full() {
+                            self.message_log
+                                .push(Message::ActionError(ActionError::OxygenIsFull));
+                        } else {
+                            oxygen.increase(10);
                             self.world
                                 .components
-                                .power
+                                .item
+                                .insert(item_entity, Item::BloodVialEmpty);
+                            self.world
+                                .components
+                                .tile
+                                .insert(item_entity, Tile::Item(Item::BloodVialEmpty));
+                            self.world
+                                .components
+                                .satiation
                                 .get_mut(self.player_entity)
                                 .unwrap()
                                 .fill();
+                            self.message_log.push(Message::ApplyFullBlodVial);
+                        }
+                    }
+                    Item::Battery => {
+                        if self.world.player_has_cyber_core() {
+                            let power = self
+                                .world
+                                .components
+                                .power
+                                .get_mut(self.player_entity)
+                                .unwrap();
+                            if power.is_full() {
+                                self.message_log
+                                    .push(Message::ActionError(ActionError::PowerIsFull));
+                            } else {
+                                power.fill();
+                                self.message_log.push(Message::ApplyBattery);
+                            }
                         } else {
                             self.message_log
                                 .push(Message::ActionError(ActionError::NoCyberCore));
                         }
                     }
-                    Item::OrganContainer(Some(_)) => {
+                    Item::OrganContainer(Some(organ)) => {
                         self.world.make_floor_bloody(self.player_coord());
                         self.world
                             .components
@@ -1306,6 +1483,7 @@ impl Game {
                             .components
                             .tile
                             .insert(item_entity, Tile::Item(Item::OrganContainer(None)));
+                        self.message_log.push(Message::DumpOrgan(organ));
                     }
                     Item::Pistol => {
                         if self.world.num_player_claws() >= 2 {
