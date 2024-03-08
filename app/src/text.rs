@@ -60,6 +60,7 @@ pub fn help_1_5(width: u32) -> AppCF<()> {
             t("- Walk into enemies to perform a melee attack.\n\n"),
             t("- You can dual-wield pistols.\n\n"),
             t("- Enemies cannot follow you up or down the elevator shafts.\n\n"),
+            t("- View your inventory by pressing \"a\" (apply), then press escape when you're done.\n\n"),
         ],
     )
     .press_any_key()
