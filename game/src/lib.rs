@@ -563,6 +563,7 @@ impl Game {
             if delta.x.abs() <= 1 && delta.y.abs() <= 1 {
                 if let Some(&Layers {
                     feature: Some(feature_entity),
+                    character: None,
                     ..
                 }) = self.world.spatial_table.layers_at(potential_door_coord)
                 {
