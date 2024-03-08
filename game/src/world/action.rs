@@ -406,17 +406,150 @@ impl World {
         message_log: &mut Vec<Message>,
     ) {
         let player = self.components.player.entities().next().unwrap();
-        let organs = self.components.organs.get(player).unwrap();
         let mut damage = rng.gen_range(1..=2);
-        for _ in 0..organs.num_claws() {
-            damage += rng.gen_range(2..=4);
+        for organ in self.active_player_organs() {
+            if organ.type_ == OrganType::Claw {
+                let mut mult = 1;
+                if organ.cybernetic {
+                    mult *= 2;
+                }
+                if organ.traits.damaged {
+                    mult /= 2;
+                }
+                damage += rng.gen_range((2 * mult)..=(4 * mult));
+            }
         }
         external_events.push(ExternalEvent::Melee);
         self.damage_character(character, damage, rng, external_events, message_log);
     }
 
-    pub fn handle_player_organs(&mut self) {
-        let player = self.components.player.entities().next().unwrap();
-        let _organs = self.components.organs.get(player).unwrap();
+    pub fn handle_player_organs<R: Rng>(&mut self, rng: &mut R) {
+        let player_entity = self.components.player.entities().next().unwrap();
+        self.components
+            .satiation
+            .get_mut(player_entity)
+            .unwrap()
+            .decrease(1);
+        self.components
+            .power
+            .get_mut(player_entity)
+            .unwrap()
+            .decrease(1);
+        let organs = self.active_player_organs();
+        let mut max_health = 0;
+        let mut max_power = 0;
+        let mut oxygen_increase = -1;
+        for organ in &organs {
+            match organ.type_ {
+                OrganType::Heart => {
+                    let mut amount = 10;
+                    if organ.cybernetic {
+                        amount *= 2;
+                    }
+                    if organ.traits.damaged {
+                        amount /= 2;
+                    }
+                    max_health += amount;
+                }
+                OrganType::CyberCore => {
+                    let mut amount = 100;
+                    if organ.cybernetic {
+                        amount *= 2;
+                    }
+                    if organ.traits.damaged {
+                        amount /= 2;
+                    }
+                    max_power += amount;
+                }
+                OrganType::Liver => {
+                    let mut chance = 0.5;
+                    if organ.cybernetic {
+                        chance *= 2.0;
+                    }
+                    if organ.traits.damaged {
+                        chance *= 0.5;
+                    }
+                    if rng.gen::<f64>() < chance {
+                        self.components
+                            .poison
+                            .get_mut(player_entity)
+                            .unwrap()
+                            .decrease(1);
+                    }
+                }
+                OrganType::CorruptedHeart => {
+                    let mut amount = 50;
+                    if organ.cybernetic {
+                        amount *= 2;
+                    }
+                    if organ.traits.damaged {
+                        amount /= 2;
+                    }
+                    max_health += amount;
+                }
+                OrganType::Lung => {
+                    let mut amount = if organ.cybernetic { 2 } else { 1 };
+                    if organ.traits.damaged {
+                        if rng.gen::<f64>() < 0.5 {
+                            amount = 0;
+                        }
+                    }
+                    oxygen_increase += amount;
+                }
+                _ => (),
+            }
+        }
+        self.components
+            .health
+            .get_mut(player_entity)
+            .unwrap()
+            .set_max(max_health);
+        self.components
+            .power
+            .get_mut(player_entity)
+            .unwrap()
+            .set_max(max_power);
+        if oxygen_increase > 0 {
+            self.components
+                .oxygen
+                .get_mut(player_entity)
+                .unwrap()
+                .increase(oxygen_increase as u32);
+        } else {
+            self.components
+                .oxygen
+                .get_mut(player_entity)
+                .unwrap()
+                .decrease((-oxygen_increase) as u32);
+        }
+        // separate loop so stomach is applied after heart
+        for organ in &organs {
+            match organ.type_ {
+                OrganType::Stomach => {
+                    if self.components.health.get(player_entity).unwrap().is_full() {
+                        continue;
+                    }
+                    if rng.gen::<f64>() < 0.1 {
+                        let food = self.components.food.get_mut(player_entity).unwrap();
+                        if food.current() > 0 {
+                            food.decrease(1);
+                            let mut health_increase = 2;
+                            if organ.cybernetic {
+                                health_increase *= 2;
+                            }
+                            if organ.traits.damaged {
+                                health_increase /= 2;
+                            }
+                            self.components
+                                .health
+                                .get_mut(player_entity)
+                                .unwrap()
+                                .increase(health_increase);
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
     }
 }

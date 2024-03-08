@@ -15,7 +15,7 @@ use data::{Components, EntityData};
 pub mod spawn;
 
 mod action;
-mod query;
+pub mod query;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct World {

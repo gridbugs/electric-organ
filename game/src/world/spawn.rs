@@ -10,7 +10,7 @@ use rgb_int::Rgb24;
 use visible_area_detection::{vision_distance, Light, Rational};
 
 fn player_starting_organs() -> Organs {
-    let mut ret = Organs::new(8);
+    let mut ret = Organs::new(crate::MAX_ORGANS);
     *ret.first_free_slot().unwrap() = Some(Organ {
         type_: OrganType::Heart,
         traits: OrganTraits::none(),
@@ -108,6 +108,8 @@ pub fn make_player() -> EntityData {
         poison: Some(Meter::new(0, 50)),
         radiation: Some(Meter::new(0, 50)),
         inventory: Some(Inventory::new(12)),
+        satiation: Some(Meter::new(0, 20)),
+        power: Some(Meter::new(0, 0)),
         money: Some(0),
         organs: Some(player_starting_organs()),
         hands: Some(Hands {
@@ -846,6 +848,14 @@ impl World {
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
+                    Organ {
+                        type_: OrganType::CorruptedHeart,
+                        cybernetic: false,
+                        original: false,
+                        traits: OrganTraits {
+                            ..OrganTraits::none()
+                        }
+                    }
                 ],
             },
         )

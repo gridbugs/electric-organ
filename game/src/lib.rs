@@ -33,6 +33,7 @@ pub use world::{
     data::{
         Item, Layer, Location, Meter, NpcType, Organ, OrganTrait, OrganTraits, OrganType, Tile,
     },
+    query::PlayerOrgan,
     spatial::LayerTable,
 };
 
@@ -57,6 +58,8 @@ impl Default for Config {
         }
     }
 }
+
+pub const MAX_ORGANS: usize = 8;
 
 /// Events which the game can report back to the io layer so it can
 /// respond with a sound/visual effect.
@@ -317,6 +320,7 @@ impl Game {
             omniscient: config.omniscient.is_some(),
             external_events: Default::default(),
         };
+        game.systems();
         game.update_visibility();
         game
     }
@@ -613,11 +617,15 @@ impl Game {
                 }
             }
         }
+        self.systems();
+        self.check_game_over()
+    }
+
+    fn systems(&mut self) {
         self.world.handle_resurrection();
         self.world.handle_get_on_touch();
         self.world.handle_spread_poison();
-        self.world.handle_player_organs();
-        self.check_game_over()
+        self.world.handle_player_organs(&mut self.rng);
     }
 
     fn check_game_over(&mut self) -> Option<GameControlFlow> {
@@ -774,41 +782,33 @@ impl Game {
     }
 
     fn fire_body(&mut self, target: Coord) -> Result<(), ActionError> {
-        let organs = self
-            .world
-            .components
-            .organs
-            .get(self.player_entity)
-            .unwrap()
-            .clone();
+        let organs = self.world.active_player_organs();
         let mut health_cost = 0;
-        for organ in organs.organs() {
-            if let Some(organ) = organ {
-                match organ.type_ {
-                    OrganType::CronenbergPistol => {
-                        self.message_log.push(Message::FireOrgan(*organ));
+        for organ in organs {
+            match organ.type_ {
+                OrganType::CronenbergPistol => {
+                    self.message_log.push(Message::FireOrgan(organ));
+                    self.fire_body_pistol(target);
+                    if organ.cybernetic {
                         self.fire_body_pistol(target);
-                        if organ.cybernetic {
-                            self.fire_body_pistol(target);
-                        }
-                        health_cost += 2;
-                        if organ.traits.damaged {
-                            health_cost += 2;
-                        }
                     }
-                    OrganType::CronenbergShotgun => {
-                        self.message_log.push(Message::FireOrgan(*organ));
-                        self.fire_body_shotgun(target);
-                        if organ.cybernetic {
-                            self.fire_body_shotgun(target);
-                        }
+                    health_cost += 2;
+                    if organ.traits.damaged {
                         health_cost += 2;
-                        if organ.traits.damaged {
-                            health_cost += 2;
-                        }
                     }
-                    _ => (),
                 }
+                OrganType::CronenbergShotgun => {
+                    self.message_log.push(Message::FireOrgan(organ));
+                    self.fire_body_shotgun(target);
+                    if organ.cybernetic {
+                        self.fire_body_shotgun(target);
+                    }
+                    health_cost += 2;
+                    if organ.traits.damaged {
+                        health_cost += 2;
+                    }
+                }
+                _ => (),
             }
         }
         self.message_log.push(Message::FireOrganDamage(health_cost));
@@ -1241,11 +1241,21 @@ impl Game {
                             .components
                             .tile
                             .insert(item_entity, Tile::Item(Item::BloodVialEmpty));
+                        self.world
+                            .components
+                            .satiation
+                            .get_mut(self.player_entity)
+                            .unwrap()
+                            .fill();
                     }
                     Item::Battery => {
-                        if let Some(power) = self.world.components.power.get_mut(self.player_entity)
-                        {
-                            power.increase(50);
+                        if self.world.player_has_cyber_core() {
+                            self.world
+                                .components
+                                .power
+                                .get_mut(self.player_entity)
+                                .unwrap()
+                                .fill();
                         } else {
                             self.message_log
                                 .push(Message::ActionError(ActionError::NoCyberCore));
@@ -1631,13 +1641,20 @@ impl Game {
                 .radiation
                 .get(self.player_entity)
                 .unwrap(),
-            power: self.world.components.power.get(self.player_entity).cloned(),
-            satiation: self
-                .world
-                .components
-                .satiation
-                .get(self.player_entity)
-                .cloned(),
+            power: if self.world.player_has_cyber_core() {
+                self.world.components.power.get(self.player_entity).cloned()
+            } else {
+                None
+            },
+            satiation: if self.world.player_has_vampiric_organ() {
+                self.world
+                    .components
+                    .satiation
+                    .get(self.player_entity)
+                    .cloned()
+            } else {
+                None
+            },
         }
     }
 
@@ -1700,12 +1717,7 @@ impl Game {
         }
     }
 
-    pub fn player_organs(&self) -> &[Option<Organ>] {
-        self.world
-            .components
-            .organs
-            .get(self.player_entity)
-            .unwrap()
-            .organs()
+    pub fn player_organs(&self) -> Vec<PlayerOrgan> {
+        self.world.player_organs()
     }
 }

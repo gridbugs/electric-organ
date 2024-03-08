@@ -1058,15 +1058,15 @@ impl Component for ViewOrgans {
         .render(&(), ctx, fb);
         let instance = state.instance.as_ref().unwrap();
         let ctx = ctx.add_y(4);
-        for (i, slot) in instance
-            .game
-            .inner_ref()
-            .player_organs()
-            .into_iter()
-            .enumerate()
-        {
-            let s = if let Some(organ) = slot {
-                let string = organ_string_for_menu(&organ);
+        let organs = instance.game.inner_ref().player_organs();
+        for i in 0..game::MAX_ORGANS {
+            let s = if let Some(organ) = organs.get(i) {
+                let string = organ_string_for_menu(&organ.organ);
+                let string = if organ.active {
+                    string
+                } else {
+                    format!("INACTIVE {string}")
+                };
                 StyledString {
                     string,
                     style: Style::plain_text(),

@@ -338,6 +338,7 @@ pub enum OrganType {
     CronenbergShotgun,
     CyberCore,
     Claw,
+    CorruptedHeart,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]

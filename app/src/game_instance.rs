@@ -76,7 +76,7 @@ fn render_meter(meter: Meter, colour: Rgb24, ctx: Ctx, fb: &mut FrameBuffer) {
         .with_bold(true)
         .with_foreground(Rgb24::new_grey(255).to_rgba32(187));
     let centre_offset = (width / 2) - ((string.len() + 1) / 2);
-    let filled_width = (meter.current() * width as u32) / meter.max();
+    let filled_width = (meter.current() * width as u32) / meter.max().max(1);
     let filled_width = if filled_width == 0 && meter.current() > 0 {
         1
     } else {
@@ -1974,7 +1974,8 @@ pub fn organ_type_name(organ_type: OrganType) -> &'static str {
         CronenbergPistol => "Cronenberg Pistol",
         CronenbergShotgun => "Cronenberg Shotgun",
         CyberCore => "CyberCore™",
-        Claw => "claw™",
+        Claw => "claw",
+        CorruptedHeart => "CORRUPTED HEART",
     }
 }
 
@@ -1990,7 +1991,8 @@ pub fn organ_type_name_cap(organ_type: OrganType) -> &'static str {
         CronenbergPistol => "Cronenberg Pistol",
         CronenbergShotgun => "Cronenberg Shotgun",
         CyberCore => "CyberCore™",
-        Claw => "Claw™",
+        Claw => "Claw",
+        CorruptedHeart => "CORRUPTED HEART",
     }
 }
 

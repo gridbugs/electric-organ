@@ -235,4 +235,73 @@ impl World {
             true
         }
     }
+
+    pub fn player_has_vampiric_organ(&self) -> bool {
+        let player_entity = self.components.player.entities().next().unwrap();
+        let organs = self.components.organs.get(player_entity).unwrap();
+        for organ in organs.organs() {
+            if let Some(organ) = organ {
+                if organ.traits.vampiric {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn player_has_cyber_core(&self) -> bool {
+        let player_entity = self.components.player.entities().next().unwrap();
+        let organs = self.components.organs.get(player_entity).unwrap();
+        for organ in organs.organs() {
+            if let Some(organ) = organ {
+                if organ.type_ == OrganType::CyberCore {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn player_organs(&self) -> Vec<PlayerOrgan> {
+        let mut ret = Vec::new();
+        let player_entity = self.components.player.entities().next().unwrap();
+        let organs = self.components.organs.get(player_entity).unwrap();
+        let satiation = self.components.satiation.get(player_entity).unwrap();
+        let power = if self.player_has_cyber_core() {
+            self.components.power.get(player_entity).unwrap().current()
+        } else {
+            0
+        };
+        for organ in organs.organs() {
+            if let Some(organ) = organ {
+                let mut active = true;
+                if organ.traits.vampiric && satiation.current() == 0 {
+                    active = false;
+                }
+                if organ.cybernetic && power == 0 {
+                    active = false;
+                }
+                ret.push(PlayerOrgan {
+                    organ: *organ,
+                    active,
+                });
+            }
+        }
+        ret
+    }
+
+    pub fn active_player_organs(&self) -> Vec<Organ> {
+        let mut ret = Vec::new();
+        for po in self.player_organs() {
+            if po.active {
+                ret.push(po.organ);
+            }
+        }
+        ret
+    }
+}
+
+pub struct PlayerOrgan {
+    pub organ: Organ,
+    pub active: bool,
 }
