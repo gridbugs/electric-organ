@@ -2061,6 +2061,7 @@ pub fn message_to_text(message: Message) -> Text {
                 ]);
             }
             ActionError::RefusingToTargetSelf => "Refusing to target self.".to_string(),
+            ActionError::NoBodyGuns => "No active Cronenberg guns installed.".to_string(),
         })]),
         Message::NpcHit { npc_type, damage } => Text::new(vec![
             StyledString::plain_text("The ".to_string()),
@@ -2232,8 +2233,16 @@ pub fn message_to_text(message: Message) -> Text {
             },
             StyledString::plain_text(format!(" gaining {health_gain} health.")),
         ]),
+        Message::DigestFoodNoHealthIncrease => Text::new(vec![
+            StyledString::plain_text("You digest some ".to_string()),
+            StyledString {
+                string: "food".to_string(),
+                style: Style::plain_text().with_foreground(colours::FOOD.to_rgba32(255)),
+            },
+            StyledString::plain_text(format!(".")),
+        ]),
         Message::ClawDrop(item) => Text::new(vec![
-            StyledString::plain_text("You drom your ".to_string()),
+            StyledString::plain_text("You drop your ".to_string()),
             item_styled_string_for_message(item),
             StyledString::plain_text(" (can't hold in claw).".to_string()),
         ]),
@@ -2318,7 +2327,7 @@ pub fn message_to_text(message: Message) -> Text {
         ]),
         Message::ApplyFullBlodVial => Text::new(vec![
             StyledString::plain_text("You inject the ".to_string()),
-            item_styled_string_for_message(Item::Stimpack),
+            item_styled_string_for_message(Item::BloodVialFull),
             StyledString::plain_text(" (oxygen increased).".to_string()),
         ]),
         Message::ApplyBattery => Text::new(vec![
@@ -2330,6 +2339,24 @@ pub fn message_to_text(message: Message) -> Text {
             StyledString::plain_text("You dump the ".to_string()),
             StyledString::plain_text(organ_string_for_description(&organ)),
             StyledString::plain_text(" on the floor.".to_string()),
+        ]),
+        Message::CantAffordGeneral => Text::new(vec![StyledString::plain_text(
+            "You can't afford that!".to_string(),
+        )]),
+        Message::NoSpaceForOrgan(organ) => Text::new(vec![
+            StyledString::plain_text("There is no space in your body for the ".to_string()),
+            StyledString::plain_text(organ_string_for_description(&organ)),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::InstallOrgan(organ) => Text::new(vec![
+            StyledString::plain_text("The ".to_string()),
+            StyledString::plain_text(organ_string_for_description(&organ)),
+            StyledString::plain_text(" is installed in your body.".to_string()),
+        ]),
+        Message::RemoveOrgan(organ) => Text::new(vec![
+            StyledString::plain_text("The ".to_string()),
+            StyledString::plain_text(organ_string_for_description(&organ)),
+            StyledString::plain_text(" is removed from your body.".to_string()),
         ]),
     }
 }

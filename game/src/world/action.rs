@@ -383,6 +383,7 @@ impl World {
     pub fn add_player_initial_items(&mut self) {
         let entities = vec![
             self.spawn_item_no_coord(Item::PistolAmmo),
+            self.spawn_item_no_coord(Item::BloodVialFull),
             self.spawn_item_no_coord(Item::OrganContainer(None)),
         ];
         let player = self.components.player.entities().next().unwrap();
@@ -662,9 +663,6 @@ impl World {
         for organ in &organs {
             match organ.type_ {
                 OrganType::Stomach => {
-                    if self.components.health.get(player_entity).unwrap().is_full() {
-                        continue;
-                    }
                     if rng.gen::<f64>() < 0.1 {
                         let food = self.components.food.get_mut(player_entity).unwrap();
                         if food.current() > 0 {
@@ -676,14 +674,15 @@ impl World {
                             if organ.traits.damaged {
                                 health_increase /= 2;
                             }
-                            message_log.push(Message::DigestFood {
-                                health_gain: health_increase,
-                            });
-                            self.components
-                                .health
-                                .get_mut(player_entity)
-                                .unwrap()
-                                .increase(health_increase);
+                            let health = self.components.health.get_mut(player_entity).unwrap();
+                            if health.is_full() {
+                                message_log.push(Message::DigestFoodNoHealthIncrease);
+                            } else {
+                                health.increase(health_increase);
+                                message_log.push(Message::DigestFood {
+                                    health_gain: health_increase,
+                                });
+                            }
                         }
                     }
                 }

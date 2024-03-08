@@ -62,6 +62,7 @@ declare_entity_module! {
         bump_damage: RangeInclusive<u32>,
         radioactive: (),
         smoke: (),
+        organ_clinic: (),
         shop: Shop,
         slow: u64,
     }
@@ -365,6 +366,53 @@ pub struct Organ {
     pub original: bool,
 }
 
+impl Organ {
+    pub fn player_buy_price(&self) -> u32 {
+        let mut price = match self.type_ {
+            OrganType::Heart => 40,
+            OrganType::Liver => 20,
+            OrganType::Lung => 20,
+            OrganType::Stomach => 20,
+            OrganType::Appendix => 0,
+            OrganType::Tumour => 0,
+            OrganType::CronenbergPistol => 30,
+            OrganType::CronenbergShotgun => 60,
+            OrganType::CyberCore => 50,
+            OrganType::Claw => 30,
+            OrganType::CorruptedHeart => 3000,
+        };
+        if self.cybernetic {
+            price *= 2;
+        }
+        let traits = self.traits.traits();
+        if traits.len() == 1 {
+            price = price * 2 / 3;
+        } else if traits.len() > 1 {
+            price = price / 3;
+        }
+        price
+    }
+    pub fn remove_price(&self) -> i32 {
+        let traits = self.traits.traits();
+        if self.original && traits.is_empty() {
+            match self.type_ {
+                OrganType::Heart | OrganType::Liver | OrganType::Lung | OrganType::Stomach => {
+                    return -100
+                }
+                _ => (),
+            }
+        }
+        if self.traits.embedded {
+            80
+        } else {
+            20
+        }
+    }
+    pub fn container_install_cost(&self) -> u32 {
+        20
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Item {
     Stimpack,
@@ -463,6 +511,10 @@ impl Organs {
             }
         }
         None
+    }
+
+    pub fn get_slot_mut(&mut self, i: usize) -> &mut Option<Organ> {
+        &mut self.organs[i]
     }
 
     pub fn get_mut(&mut self, i: usize) -> Option<&mut Organ> {

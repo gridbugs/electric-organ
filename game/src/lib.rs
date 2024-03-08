@@ -118,6 +118,7 @@ pub enum Message {
     DigestFood {
         health_gain: u32,
     },
+    DigestFoodNoHealthIncrease,
     ClawDrop(Item),
     LackOfOxygen,
     Smoke,
@@ -135,6 +136,10 @@ pub enum Message {
     ApplyFullBlodVial,
     ApplyBattery,
     DumpOrgan(Organ),
+    CantAffordGeneral,
+    NoSpaceForOrgan(Organ),
+    InstallOrgan(Organ),
+    RemoveOrgan(Organ),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -148,6 +153,7 @@ pub enum WhichHand {
 
 #[derive(Debug, Clone, Copy)]
 pub enum MenuChoice {
+    Empty,
     DropItem(usize),
     ApplyItem(usize),
     Dummy,
@@ -165,6 +171,24 @@ pub enum MenuChoice {
         shop_entity: Entity,
         item_entity: Entity,
         shop_inventory_index: usize,
+    },
+    ClinicBuy {
+        clinic_entity: Entity,
+    },
+    ClinicRemove,
+    ClinicInstallFromContainer,
+    ClinicRemoveOrgan {
+        organ: Organ,
+        index: usize,
+    },
+    ClinicBuyOrgan {
+        clinic_entity: Entity,
+        index: usize,
+        organ: Organ,
+    },
+    ClinicInstallFromContainerOrgan {
+        inventory_index: usize,
+        organ: Organ,
     },
 }
 
@@ -296,6 +320,7 @@ pub enum ActionError {
     PowerIsFull,
     FoodIsFull,
     RefusingToTargetSelf,
+    NoBodyGuns,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -321,6 +346,7 @@ pub struct Game {
     omniscient: bool,
     external_events: Vec<ExternalEvent>,
     turn_count: u64,
+    game_over: bool,
 }
 
 pub const NUM_LEVELS: usize = 4;
@@ -369,6 +395,7 @@ impl Game {
             omniscient: config.omniscient.is_some(),
             external_events: Default::default(),
             turn_count: 0,
+            game_over: false,
         };
         game.systems();
         game.update_visibility();
@@ -549,7 +576,25 @@ impl Game {
         Ok(None)
     }
 
+    fn clinic_menu(&self, shop_entity: Entity) -> Menu {
+        let shop = self.world.components.shop.get(shop_entity).unwrap();
+        Menu {
+            image: None,
+            text: shop.message.clone(),
+            choices: vec![
+                MenuChoice::ClinicRemove,
+                MenuChoice::ClinicBuy {
+                    clinic_entity: shop_entity,
+                },
+                MenuChoice::ClinicInstallFromContainer,
+            ],
+        }
+    }
+
     fn shop_menu(&self, shop_entity: Entity) -> Menu {
+        if self.world.components.organ_clinic.contains(shop_entity) {
+            return self.clinic_menu(shop_entity);
+        }
         let shop = self.world.components.shop.get(shop_entity).unwrap();
         let inventory = self
             .world
@@ -729,7 +774,11 @@ impl Game {
     }
 
     fn check_game_over(&mut self) -> Option<GameControlFlow> {
+        if self.game_over {
+            return Some(GameControlFlow::GameOver(GameOverReason::YouDied));
+        }
         if self.world.is_game_over() {
+            self.game_over = true;
             self.world
                 .components
                 .tile
@@ -904,9 +953,11 @@ impl Game {
     fn fire_body(&mut self, target: Coord) -> Result<(), ActionError> {
         let organs = self.world.active_player_organs();
         let mut health_cost = 0;
+        let mut count = 0;
         for organ in organs {
             match organ.type_ {
                 OrganType::CronenbergPistol => {
+                    count += 1;
                     self.message_log.push(Message::FireOrgan(organ));
                     self.fire_body_pistol(target);
                     if organ.cybernetic {
@@ -918,6 +969,7 @@ impl Game {
                     }
                 }
                 OrganType::CronenbergShotgun => {
+                    count += 1;
                     self.message_log.push(Message::FireOrgan(organ));
                     self.fire_body_shotgun(target);
                     if organ.cybernetic {
@@ -930,6 +982,9 @@ impl Game {
                 }
                 _ => (),
             }
+        }
+        if count == 0 {
+            return Err(ActionError::NoBodyGuns);
         }
         self.message_log.push(Message::FireOrganDamage(health_cost));
         self.world.damage_character(
@@ -1191,6 +1246,7 @@ impl Game {
 
     pub(crate) fn handle_choice(&mut self, choice: MenuChoice) -> Option<GameControlFlow> {
         match choice {
+            MenuChoice::Empty => (),
             MenuChoice::Dummy => panic!(),
             MenuChoice::DropItem(i) => self.player_drop_item(i),
             MenuChoice::ApplyItem(i) => return self.player_apply_item(i),
@@ -1210,8 +1266,213 @@ impl Game {
                 shop_inventory_index,
                 ..
             } => self.player_buy_item(item, item_entity, shop_entity, shop_inventory_index),
+            MenuChoice::ClinicBuy { clinic_entity } => {
+                return Some(GameControlFlow::Menu(self.clinic_buy_menu(clinic_entity)))
+            }
+            MenuChoice::ClinicRemove => {
+                return Some(GameControlFlow::Menu(self.clinic_remove_menu()))
+            }
+            MenuChoice::ClinicInstallFromContainer => {
+                return Some(GameControlFlow::Menu(
+                    self.clinic_install_from_container_menu(),
+                ))
+            }
+            MenuChoice::ClinicBuyOrgan {
+                clinic_entity,
+                index,
+                organ,
+            } => self.clinic_buy_organ(clinic_entity, index, organ),
+            MenuChoice::ClinicRemoveOrgan { organ, index } => {
+                self.clinic_remove_organ(organ, index)
+            }
+            MenuChoice::ClinicInstallFromContainerOrgan {
+                inventory_index,
+                organ,
+            } => self.clinic_install_from_container(inventory_index, organ),
         }
+        self.npc_turn();
         None
+    }
+
+    fn clinic_install_from_container(&mut self, inventory_index: usize, organ: Organ) {
+        let price = organ.container_install_cost();
+        let money = self
+            .world
+            .components
+            .money
+            .get_mut(self.player_entity)
+            .unwrap();
+        if *money < price {
+            self.message_log.push(Message::CantAffordGeneral);
+            return;
+        }
+        *money -= price;
+        let organs = self
+            .world
+            .components
+            .organs
+            .get_mut(self.player_entity)
+            .unwrap();
+        if organs.num_free_slots() == 0 {
+            self.message_log.push(Message::NoSpaceForOrgan(organ));
+            return;
+        }
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get_mut(self.player_entity)
+            .unwrap();
+        let container = inventory.get(inventory_index).unwrap();
+        let item = self.world.components.item.get_mut(container).unwrap();
+        if let Item::OrganContainer(Some(organ)) = item {
+            *organs.first_free_slot().unwrap() = Some(*organ);
+        }
+        *item = Item::OrganContainer(None);
+        self.world
+            .components
+            .tile
+            .insert(container, Tile::Item(Item::OrganContainer(None)));
+        self.message_log.push(Message::InstallOrgan(organ));
+    }
+
+    fn clinic_remove_organ(&mut self, organ: Organ, index: usize) {
+        let price = organ.remove_price();
+        let money = self
+            .world
+            .components
+            .money
+            .get_mut(self.player_entity)
+            .unwrap();
+        if price < 0 {
+            *money += (-price) as u32;
+        } else {
+            let price = price as u32;
+            if *money < price {
+                self.message_log.push(Message::CantAffordGeneral);
+                return;
+            }
+            *money -= price;
+        }
+        self.message_log.push(Message::RemoveOrgan(organ));
+        let organs = self
+            .world
+            .components
+            .organs
+            .get_mut(self.player_entity)
+            .unwrap();
+        *organs.get_slot_mut(index) = None;
+    }
+
+    fn clinic_buy_organ(&mut self, clinic_entity: Entity, index: usize, organ: Organ) {
+        let price = organ.player_buy_price();
+        let money = self
+            .world
+            .components
+            .money
+            .get_mut(self.player_entity)
+            .unwrap();
+        if *money < price {
+            self.message_log.push(Message::CantAffordGeneral);
+            return;
+        }
+        let organs = self
+            .world
+            .components
+            .organs
+            .get_mut(self.player_entity)
+            .unwrap();
+        if organs.num_free_slots() == 0 {
+            self.message_log.push(Message::NoSpaceForOrgan(organ));
+            return;
+        }
+        *money -= price;
+        *organs.first_free_slot().unwrap() = Some(organ);
+        self.message_log.push(Message::InstallOrgan(organ));
+        let clinic_organs = self
+            .world
+            .components
+            .simple_organs
+            .get_mut(clinic_entity)
+            .unwrap();
+        clinic_organs.remove(index);
+    }
+
+    fn clinic_install_from_container_menu(&self) -> Menu {
+        let mut choices = Vec::new();
+        let inventory = self
+            .world
+            .components
+            .inventory
+            .get(self.player_entity)
+            .unwrap();
+        for (i, slot) in inventory.items().into_iter().enumerate() {
+            if let Some(item_entity) = slot {
+                if let Some(Item::OrganContainer(Some(organ))) =
+                    self.world.components.item.get(*item_entity)
+                {
+                    choices.push(MenuChoice::ClinicInstallFromContainerOrgan {
+                        inventory_index: i,
+                        organ: *organ,
+                    })
+                }
+            }
+        }
+        if choices.is_empty() {
+            choices.push(MenuChoice::Empty);
+        }
+        Menu {
+            text: "Choose an organ to install from your organ containers: (escape to cancel)"
+                .to_string(),
+            choices,
+            image: None,
+        }
+    }
+
+    fn clinic_remove_menu(&self) -> Menu {
+        let mut choices = Vec::new();
+        let organs = self
+            .world
+            .components
+            .organs
+            .get(self.player_entity)
+            .unwrap();
+        for (i, organ) in organs.organs().into_iter().enumerate() {
+            if let Some(organ) = organ {
+                choices.push(MenuChoice::ClinicRemoveOrgan {
+                    organ: *organ,
+                    index: i,
+                });
+            }
+        }
+        Menu {
+            text: "Choose an organ to remove. I'll pay for any original organs in good condition (other than appendices). (escape to cancel)".to_string(),
+            choices,
+            image: None,
+        }
+    }
+
+    fn clinic_buy_menu(&self, clinic_entity: Entity) -> Menu {
+        let organs = self
+            .world
+            .components
+            .simple_organs
+            .get(clinic_entity)
+            .unwrap();
+        let choices = organs
+            .into_iter()
+            .enumerate()
+            .map(|(i, organ)| MenuChoice::ClinicBuyOrgan {
+                clinic_entity,
+                index: i,
+                organ: *organ,
+            })
+            .collect::<Vec<_>>();
+        Menu {
+            text: "Choose an organ to buy: (escape to cancel)".to_string(),
+            choices,
+            image: None,
+        }
     }
 
     fn player_buy_item(
@@ -1433,13 +1694,14 @@ impl Game {
                         }
                     }
                     Item::BloodVialFull => {
+                        let vampiric = self.world.player_has_vampiric_organ();
                         let oxygen = self
                             .world
                             .components
                             .oxygen
                             .get_mut(self.player_entity)
                             .unwrap();
-                        if oxygen.is_full() {
+                        if oxygen.is_full() && !vampiric {
                             self.message_log
                                 .push(Message::ActionError(ActionError::OxygenIsFull));
                         } else {

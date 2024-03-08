@@ -1300,6 +1300,7 @@ fn apply_item_description(item: Item) -> String {
 
 fn menu_choice_string(game: &game::Game, choice: GameMenuChoice) -> String {
     match choice {
+        GameMenuChoice::Empty => format!("(empty)"),
         GameMenuChoice::Dummy => panic!(),
         GameMenuChoice::DropItem(i) => {
             if let Some(item) = game.inventory_item(i) {
@@ -1330,6 +1331,33 @@ fn menu_choice_string(game: &game::Game, choice: GameMenuChoice) -> String {
         },
         GameMenuChoice::BuyItem { item, .. } => {
             format!("{} - {} CCz", item_string_for_menu(item), item.price())
+        }
+        GameMenuChoice::ClinicBuy { .. } => "Buy Organ".to_string(),
+        GameMenuChoice::ClinicRemove => "Remove Organ".to_string(),
+        GameMenuChoice::ClinicInstallFromContainer => "Install Organ from Container".to_string(),
+        GameMenuChoice::ClinicBuyOrgan { organ, .. } => format!(
+            "{} - {} CCz",
+            organ_string_for_menu(&organ),
+            organ.player_buy_price()
+        ),
+        GameMenuChoice::ClinicInstallFromContainerOrgan { organ, .. } => {
+            format!(
+                "{} - {} CCz",
+                organ_string_for_menu(&organ),
+                organ.container_install_cost()
+            )
+        }
+        GameMenuChoice::ClinicRemoveOrgan { organ, .. } => {
+            let price = organ.remove_price();
+            if price < 0 {
+                format!(
+                    "{} - I'll pay you {} CCz",
+                    organ_string_for_menu(&organ),
+                    -price
+                )
+            } else {
+                format!("{} - {} CCz", organ_string_for_menu(&organ), price)
+            }
         }
     }
 }

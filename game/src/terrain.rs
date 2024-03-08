@@ -21,7 +21,7 @@ impl Terrain {
                 match ch {
                     '.' => (),
                     'C' => {
-                        world.spawn_organ_clinic(coord, &mut rng);
+                        world.spawn_organ_clinic(coord, 0, &mut rng);
                     }
                     'I' => {
                         world.spawn_item_store(coord, &mut rng);

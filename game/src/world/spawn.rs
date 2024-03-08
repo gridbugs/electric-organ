@@ -54,7 +54,10 @@ fn player_starting_organs() -> Organs {
     /*
     *ret.first_free_slot().unwrap() = Some(Organ {
         type_: OrganType::CronenbergPistol,
-        traits: OrganTraits::none(),
+        traits: OrganTraits {
+            vampiric: true,
+            ..OrganTraits::none()
+        },
         original: true,
         cybernetic: false,
     });
@@ -63,8 +66,7 @@ fn player_starting_organs() -> Organs {
         traits: OrganTraits::none(),
         original: true,
         cybernetic: false,
-    });
-    */
+    }); */
     ret
 }
 
@@ -108,7 +110,7 @@ pub fn make_player() -> EntityData {
         }),
         health: Some(Meter::new(20, 20)),
         oxygen: Some(Meter::new(20, 20)),
-        food: Some(Meter::new(30, 30)),
+        food: Some(Meter::new(10, 10)),
         poison: Some(Meter::new(0, 10)),
         radiation: Some(Meter::new(0, 50)),
         inventory: Some(Inventory::new(12)),
@@ -1084,7 +1086,102 @@ impl World {
         )
     }
 
-    pub fn spawn_organ_clinic<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+    pub fn spawn_organ_clinic<R: Rng>(
+        &mut self,
+        coord: Coord,
+        level: usize,
+        rng: &mut R,
+    ) -> Entity {
+        let pool = match level {
+            0 => vec![
+                OrganType::Heart,
+                OrganType::Liver,
+                OrganType::Lung,
+                OrganType::Stomach,
+            ],
+            1 => vec![
+                OrganType::Heart,
+                OrganType::Liver,
+                OrganType::Lung,
+                OrganType::Stomach,
+                OrganType::CronenbergPistol,
+                OrganType::CronenbergShotgun,
+                OrganType::Claw,
+            ],
+            2 => vec![
+                OrganType::Heart,
+                OrganType::Liver,
+                OrganType::Lung,
+                OrganType::Stomach,
+                OrganType::CronenbergPistol,
+                OrganType::CronenbergShotgun,
+                OrganType::Claw,
+            ],
+            3 => vec![
+                OrganType::Heart,
+                OrganType::Liver,
+                OrganType::Lung,
+                OrganType::Stomach,
+                OrganType::CronenbergPistol,
+                OrganType::CronenbergShotgun,
+                OrganType::Claw,
+            ],
+            _ => panic!(),
+        };
+        let cybernetic_chance = match level {
+            0 => 0.0,
+            1 => 0.2,
+            2 => 0.4,
+            3 => 0.8,
+            _ => panic!(),
+        };
+        let mut simple_organs = Vec::new();
+        if level > 0 {
+            simple_organs.push(Organ {
+                type_: OrganType::CyberCore,
+                cybernetic: false,
+                traits: OrganTraits::none(),
+                original: false,
+            });
+        }
+        for _ in 0..6 {
+            let type_ = *pool.choose(rng).unwrap();
+            let cybernetic = rng.gen::<f64>() < cybernetic_chance;
+            simple_organs.push(Organ {
+                type_,
+                cybernetic,
+                traits: OrganTraits::none(),
+                original: false,
+            });
+        }
+        for _ in 0..3 {
+            let type_ = *pool.choose(rng).unwrap();
+            let cybernetic = rng.gen::<f64>() < cybernetic_chance;
+            let mut traits = OrganTraits::none();
+            let random_trait = traits.get_mut(OrganTrait::choose(rng));
+            *random_trait = true;
+            simple_organs.push(Organ {
+                type_,
+                cybernetic,
+                traits,
+                original: false,
+            });
+        }
+        for _ in 0..3 {
+            let type_ = *pool.choose(rng).unwrap();
+            let cybernetic = rng.gen::<f64>() < cybernetic_chance;
+            let mut traits = OrganTraits::none();
+            let random_trait = traits.get_mut(OrganTrait::choose(rng));
+            *random_trait = true;
+            let random_trait = traits.get_mut(OrganTrait::choose(rng));
+            *random_trait = true;
+            simple_organs.push(Organ {
+                type_,
+                cybernetic,
+                traits,
+                original: false,
+            });
+        }
         self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {
@@ -1099,10 +1196,11 @@ impl World {
                 npc_type: NpcType::OrganClinic,
                 health: Meter::new_full(50),
                 bump_damage: 10..=20,
-                simple_organs: vec![
-                    random_basic_organ(rng),
-                    random_basic_organ(rng),
-                ],
+                simple_organs,
+                organ_clinic: (),
+                shop: Shop {
+                    message: "Welcome to the Organ Clinic. I'll pay good money for your original organs, assuming they are in good condition. I'll also remove any other organs you want to get rid of...for a fee. I'll also install organs from organ containers or my own personal collection. Why not see what I have in stock?.".to_string(),
+                }
             },
         )
     }
