@@ -950,6 +950,10 @@ impl Game {
 
     fn fire_pistol(&mut self, target: Coord) {
         let start = self.player_coord();
+        let target = line_2d::LineSegment::new(start, target)
+            .infinite_iter()
+            .nth(20)
+            .unwrap();
         self.external_events.push(ExternalEvent::FirePistol);
         self.world.spawn_bullet(
             start,
@@ -1036,6 +1040,10 @@ impl Game {
 
     fn fire_body_pistol(&mut self, target: Coord) {
         let start = self.player_coord();
+        let target = line_2d::LineSegment::new(start, target)
+            .infinite_iter()
+            .nth(20)
+            .unwrap();
         self.external_events.push(ExternalEvent::FirePistol);
         self.world.spawn_bullet(
             start,

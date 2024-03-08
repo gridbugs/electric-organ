@@ -38,6 +38,28 @@ pub fn help(width: u32) -> AppCF<()> {
         ],
     )
     .press_any_key()
+    .then(move || help_1_5(width))
+}
+
+pub fn help_1_5(width: u32) -> AppCF<()> {
+    let t = |s: &str| StyledString {
+        string: s.to_string(),
+        style: Style::plain_text(),
+    };
+    let b = |s: &str| StyledString {
+        string: s.to_string(),
+        style: Style::plain_text().with_bold(true),
+    };
+    text_component(
+        width,
+        vec![
+            b("Tips\n\n\n"),
+            t("- Walk into doors to open them.\n\n"),
+            t("- Walk into the wall adjacent to a door to close it.\n\n"),
+            t("- Walk into enemies to perform a melee attack.\n\n"),
+        ],
+    )
+    .press_any_key()
     .then(move || help2(width))
 }
 
