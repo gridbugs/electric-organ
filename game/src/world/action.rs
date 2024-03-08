@@ -411,6 +411,7 @@ impl World {
         for _ in 0..organs.num_claws() {
             damage += rng.gen_range(2..=4);
         }
+        external_events.push(ExternalEvent::Melee);
         self.damage_character(character, damage, rng, external_events, message_log);
     }
 

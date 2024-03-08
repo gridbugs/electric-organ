@@ -1,5 +1,32 @@
 use currawong::prelude::*;
 
+pub fn melee(trigger: Trigger) -> Sf64 {
+    kick(trigger)
+        .build()
+        .filter(low_pass_moog_ladder(4000.0).build())
+        * 2.0
+}
+
+pub fn death(trigger: Trigger) -> Sf64 {
+    let make_noise = || noise().filter(sample_and_hold(trigger.clone()).build());
+    let duration = 1.0;
+    let env = adsr_linear_01(trigger.to_gate())
+        .key_press(&trigger)
+        .release_s(duration)
+        .build()
+        .exp_01(1.0);
+    let osc = oscillator_hz(
+        Waveform::Pulse,
+        (&env * (200.0 + make_noise() * 100)) + 50.0,
+    )
+    .pulse_width_01(0.5)
+    .build();
+    let filtered_osc = osc
+        .filter(down_sample(((1.0 - &env) * 100.0) + 1.0).build())
+        .filter(quantize(10.0 * &env).build());
+    filtered_osc.lazy_zero(&trigger.to_gate_with_duration_s(duration).to_01()) * 0.4
+}
+
 pub fn pistol(trigger: Trigger) -> Sf64 {
     let make_noise = || noise().filter(sample_and_hold(trigger.clone()).build());
     let duration = 0.2;

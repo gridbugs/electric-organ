@@ -67,6 +67,8 @@ pub enum ExternalEvent {
     FireRocket,
     Explosion(Coord),
     ChangeLevel,
+    Melee,
+    Death,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -627,6 +629,7 @@ impl Game {
             self.player_drop_all_items();
             self.update_visibility();
             self.message_log.push(Message::YouDie);
+            self.external_events.push(ExternalEvent::Death);
             Some(GameControlFlow::GameOver(GameOverReason::YouDied))
         } else {
             None

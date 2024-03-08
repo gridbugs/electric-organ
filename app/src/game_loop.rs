@@ -451,6 +451,7 @@ impl GameLoopData {
                                 let witness = running.walk(&mut instance.game, direction);
                                 for external_event in instance.game.take_external_events() {
                                     match external_event {
+                                        ExternalEvent::Melee => self.music_state.sfx_melee(),
                                         ExternalEvent::ChangeLevel => {
                                             self.level_track_index += 1;
                                             self.music_state.set_track(Some(
@@ -1253,7 +1254,8 @@ fn win() -> AppCF<()> {
 }
 
 fn game_over(reason: GameOverReason) -> AppCF<()> {
-    menu_style(on_state_then(move |_state: &mut State| {
+    menu_style(on_state_then(move |state: &mut State| {
+        state.music_state.sfx_death();
         text::game_over(MAIN_MENU_TEXT_WIDTH, reason)
     }))
     .map_side_effect(|_, state: &mut State| {

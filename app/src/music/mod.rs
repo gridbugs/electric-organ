@@ -119,6 +119,12 @@ impl MusicState {
     pub fn sfx_explosion(&self) {
         self.sfx.explosion.fire()
     }
+    pub fn sfx_melee(&self) {
+        self.sfx.melee.fire()
+    }
+    pub fn sfx_death(&self) {
+        self.sfx.death.fire()
+    }
 }
 
 struct SfxTrigger {
@@ -151,6 +157,8 @@ struct Sfx {
     shotgun: SfxTrigger,
     rocket: SfxTrigger,
     explosion: SfxTrigger,
+    melee: SfxTrigger,
+    death: SfxTrigger,
 }
 
 fn make_sfx() -> (Sfx, Sf64) {
@@ -159,12 +167,16 @@ fn make_sfx() -> (Sfx, Sf64) {
         shotgun: SfxTrigger::new(),
         rocket: SfxTrigger::new(),
         explosion: SfxTrigger::new(),
+        melee: SfxTrigger::new(),
+        death: SfxTrigger::new(),
     };
     let signal = sum([
         sound_effects::pistol(sfx.pistol.trigger()),
         sound_effects::shotgun(sfx.shotgun.trigger()),
         sound_effects::rocket(sfx.rocket.trigger()),
         sound_effects::explosion(sfx.explosion.trigger()),
+        sound_effects::melee(sfx.melee.trigger()),
+        sound_effects::death(sfx.death.trigger()),
     ])
     .mix(|dry| dry.filter(reverb().room_size(0.8).build()));
     (sfx, signal)
