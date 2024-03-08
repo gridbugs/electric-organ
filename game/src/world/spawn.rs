@@ -696,7 +696,7 @@ impl World {
                 npc_type: NpcType::Zombie,
                 health: Meter::new_full(4),
                 resurrects_in: Meter::new_full(10),
-                bump_damage: 1..=2,
+                bump_damage: 1..=3,
                 simple_organs: vec![
                     Organ {
                         type_: OrganType::Heart,
@@ -725,7 +725,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Climber,
                 health: Meter::new_full(3),
-                bump_damage: 1..=2,
+                bump_damage: 1..=3,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -748,7 +748,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Trespasser,
                 health: Meter::new_full(3),
-                bump_damage: 1..=2,
+                bump_damage: 1..=3,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -771,7 +771,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Boomer,
                 health: Meter::new_full(2),
-                bump_damage: 1..=2,
+                bump_damage: 1..=3,
                 explodes_on_death: (),
                 slow: 2,
                 simple_organs: vec![
@@ -870,7 +870,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Glower,
                 health: Meter::new_full(8),
-                bump_damage: 1..=2,
+                bump_damage: 2..=4,
                 radioactive: (),
                 simple_organs: vec![
                     random_basic_organ(rng),
@@ -903,7 +903,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::Venter,
                 health: Meter::new_full(8),
-                bump_damage: 1..=2,
+                bump_damage: 2..=4,
                 smoke: (),
                 simple_organs: vec![
                     random_basic_organ(rng),
