@@ -405,9 +405,10 @@ impl Organ {
         let traits = self.traits.traits();
         if self.original && traits.is_empty() {
             match self.type_ {
-                OrganType::Heart | OrganType::Liver | OrganType::Lung | OrganType::Stomach => {
-                    return -100
-                }
+                OrganType::Heart => return -40,
+                OrganType::Liver => return -20,
+                OrganType::Lung => return -20,
+                OrganType::Stomach => return -20,
                 _ => (),
             }
         }
