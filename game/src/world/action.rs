@@ -704,6 +704,10 @@ impl World {
                                     health_gain: health_increase,
                                 });
                             }
+                        } else {
+                            let health = self.components.health.get_mut(player_entity).unwrap();
+                            health.decrease(1);
+                            message_log.push(Message::HungerDamage);
                         }
                     }
                 }

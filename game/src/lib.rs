@@ -145,6 +145,7 @@ pub enum Message {
     BossKill,
     GetToTheEvacZone,
     Escape,
+    HungerDamage,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1808,7 +1809,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::FoodIsFull));
                         } else {
-                            food.increase(5);
+                            food.increase(25);
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::EatFood);
