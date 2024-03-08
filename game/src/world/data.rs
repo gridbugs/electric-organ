@@ -464,7 +464,7 @@ impl Item {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Inventory {
-    items: Vec<Option<Entity>>,
+    pub items: Vec<Option<Entity>>,
 }
 
 impl Inventory {

@@ -422,8 +422,63 @@ impl Game {
                 || level_index == self.current_level_index - 1
         );
         let down = level_index == self.current_level_index + 1;
-        let player_data = self.world.remove_entity(self.player_entity);
         let mut level = self.other_levels[level_index].take().unwrap();
+        {
+            let mut inventory = self
+                .world
+                .components
+                .inventory
+                .get(self.player_entity)
+                .unwrap()
+                .clone();
+            for slot in inventory.items.iter_mut() {
+                if let Some(item_entity) = slot.as_mut() {
+                    let data = self.world.components.remove_entity_data(*item_entity);
+                    let new_item_entity = level.world.entity_allocator.alloc();
+                    level
+                        .world
+                        .components
+                        .insert_entity_data(new_item_entity, data);
+                    *item_entity = new_item_entity;
+                }
+            }
+            self.world
+                .components
+                .inventory
+                .insert(self.player_entity, inventory);
+        }
+        {
+            let mut hands = self
+                .world
+                .components
+                .hands
+                .get(self.player_entity)
+                .unwrap()
+                .clone();
+            if let Hand::Holding(ref mut held_entity) = &mut hands.left {
+                let data = self.world.components.remove_entity_data(*held_entity);
+                let new_item_entity = level.world.entity_allocator.alloc();
+                level
+                    .world
+                    .components
+                    .insert_entity_data(new_item_entity, data);
+                *held_entity = new_item_entity;
+            }
+            if let Hand::Holding(ref mut held_entity) = &mut hands.right {
+                let data = self.world.components.remove_entity_data(*held_entity);
+                let new_item_entity = level.world.entity_allocator.alloc();
+                level
+                    .world
+                    .components
+                    .insert_entity_data(new_item_entity, data);
+                *held_entity = new_item_entity;
+            }
+            self.world
+                .components
+                .hands
+                .insert(self.player_entity, hands);
+        }
+        let player_data = self.world.remove_entity(self.player_entity);
         mem::swap(&mut self.world, &mut level.world);
         mem::swap(&mut self.visibility_grid, &mut level.visibility_grid);
         mem::swap(&mut self.agents, &mut level.agents);
@@ -1858,7 +1913,8 @@ impl Game {
                     }
                     Item::PistolAmmo => {
                         let left = self.get_appropriate_gun_ammo(WhichHand::Left, GunType::Pistol);
-                        let right = self.get_appropriate_gun_ammo(WhichHand::Left, GunType::Pistol);
+                        let right =
+                            self.get_appropriate_gun_ammo(WhichHand::Right, GunType::Pistol);
                         let success = match (left, right) {
                             (Some(left), Some(right)) => {
                                 if left < right {
@@ -1870,7 +1926,7 @@ impl Game {
                             }
                             (Some(_), None) => {
                                 self.reload_gun_in_hand(WhichHand::Left);
-                                false
+                                true
                             }
                             (None, Some(_)) => {
                                 self.reload_gun_in_hand(WhichHand::Right);
