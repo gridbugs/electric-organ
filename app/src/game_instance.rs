@@ -2391,7 +2391,7 @@ pub fn message_to_text(message: Message) -> Text {
             StyledString::plain_text("!".to_string()),
         ]),
         Message::GetToTheEvacZone => Text::new(vec![StyledString::plain_text(
-            "Now get to the Evac Zone on Level 1!".to_string(),
+            "Now get back to the Evac Zone on Level 1!".to_string(),
         )]),
         Message::HungerDamage => Text::new(vec![StyledString::plain_text(
             "You take damage from starvation.".to_string(),
