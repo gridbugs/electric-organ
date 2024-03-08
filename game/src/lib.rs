@@ -1788,7 +1788,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::RadiationIsEmpty));
                         } else {
-                            radiation.decrease(50);
+                            radiation.decrease(40);
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::ApplyAntiRads);
