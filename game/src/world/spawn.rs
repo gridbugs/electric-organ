@@ -952,7 +952,7 @@ impl World {
                 },
                 character: (),
                 npc_type: NpcType::Corruptor,
-                health: Meter::new_full(3),
+                health: Meter::new_full(30),
                 bump_damage: 5..=10,
                 radioactive: (),
                 smoke: (),
