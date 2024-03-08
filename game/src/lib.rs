@@ -1363,7 +1363,6 @@ impl Game {
             self.message_log.push(Message::CantAffordGeneral);
             return;
         }
-        *money -= price;
         let organs = self
             .world
             .components
@@ -1374,6 +1373,7 @@ impl Game {
             self.message_log.push(Message::NoSpaceForOrgan(organ));
             return;
         }
+        *money -= price;
         let inventory = self
             .world
             .components
