@@ -363,34 +363,48 @@ impl Agent {
                     }
                 }
             } else {
-                match self.behaviour {
-                    Behaviour::Nothing => Behaviour::Nothing,
-                    Behaviour::Steal => Behaviour::Steal,
-                    Behaviour::Chase {
-                        last_seen_player_coord,
-                        ..
-                    } => {
-                        if last_seen_player_coord == coord {
-                            // walk up to where the player was last seen, then go back to wandering
-                            Behaviour::Wander { avoid: true }
-                        } else {
-                            Behaviour::Chase {
-                                last_seen_player_coord,
-                                accurate: last_seen_player_coord == player_coord,
+                match npc.disposition {
+                    Disposition::Neutral => Behaviour::Nothing,
+                    _ => match self.behaviour {
+                        Behaviour::Nothing => Behaviour::Nothing,
+                        Behaviour::Steal => Behaviour::Steal,
+                        Behaviour::Chase {
+                            last_seen_player_coord,
+                            ..
+                        } => {
+                            if last_seen_player_coord == coord {
+                                // walk up to where the player was last seen, then go back to wandering
+                                Behaviour::Wander { avoid: true }
+                            } else {
+                                Behaviour::Chase {
+                                    last_seen_player_coord,
+                                    accurate: last_seen_player_coord == player_coord,
+                                }
                             }
                         }
-                    }
-                    Behaviour::Wander { avoid } => Behaviour::Wander { avoid },
-                    Behaviour::Flee => {
-                        // stop fleeing the player if you can't see them
-                        Behaviour::Wander { avoid: true }
-                    }
+                        Behaviour::Wander { avoid } => Behaviour::Wander { avoid },
+                        Behaviour::Flee => {
+                            // stop fleeing the player if you can't see them
+                            Behaviour::Wander { avoid: true }
+                        }
+                    },
                 }
             }
         } else {
-            self.last_seen_grid
-                .update(npc, coord, self.vision_distance, world, None, ai_context);
-            Behaviour::Wander { avoid: false }
+            match npc.disposition {
+                Disposition::Neutral => Behaviour::Nothing,
+                _ => {
+                    self.last_seen_grid.update(
+                        npc,
+                        coord,
+                        self.vision_distance,
+                        world,
+                        None,
+                        ai_context,
+                    );
+                    Behaviour::Wander { avoid: false }
+                }
+            }
         };
         match self.behaviour {
             Behaviour::Nothing => None,

@@ -41,7 +41,10 @@ struct Private;
 pub struct Running(Private);
 
 #[derive(Debug)]
-pub struct Win(Private);
+pub struct Win {
+    private: Private,
+    pub win: crate::Win,
+}
 
 #[derive(Debug)]
 pub struct Menu {
@@ -100,7 +103,7 @@ pub fn new_game<R: Rng>(
 
 impl Win {
     pub fn into_running(self) -> Running {
-        Running(self.0)
+        Running(self.private)
     }
 }
 
@@ -181,7 +184,13 @@ impl Game {
             Ok(Some(GameControlFlow::Menu(menu))) => {
                 (Witness::Menu(Menu { private, menu }), Ok(()))
             }
-            Ok(Some(GameControlFlow::Win)) => (Witness::Win(Win(Private)), Ok(())),
+            Ok(Some(GameControlFlow::Win(win))) => (
+                Witness::Win(Win {
+                    private: Private,
+                    win,
+                }),
+                Ok(()),
+            ),
         }
     }
 
@@ -193,7 +202,7 @@ impl Game {
         match control_flow {
             None => Witness::running(private),
             Some(GameControlFlow::GameOver(reason)) => Witness::GameOver(reason),
-            Some(GameControlFlow::Win) => Witness::Win(Win(private)),
+            Some(GameControlFlow::Win(win)) => Witness::Win(Win { private, win }),
             Some(GameControlFlow::Menu(menu)) => Witness::Menu(Menu { private, menu }),
         }
     }

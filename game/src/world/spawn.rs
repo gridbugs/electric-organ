@@ -244,6 +244,7 @@ impl World {
                 tile: Tile::Tentacle,
                 solid: (),
                 difficult: (),
+                tentacle: (),
             },
         )
     }
@@ -256,6 +257,7 @@ impl World {
                 solid: (),
                 radioactive: (),
                 difficult: (),
+                tentacle: (),
                 light: Light {
                     colour: Rgb24::new(0, 255, 0),
                     vision_distance: vision_distance::Circle::new_squared(200),
@@ -879,7 +881,7 @@ impl World {
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
-                        denominator: 400,
+                        denominator: 100,
                     },
                 },
                 slow: 2,
@@ -944,16 +946,17 @@ impl World {
                 tile: Tile::Corruptor,
                 npc: Npc { disposition: Disposition::Hostile,
                     movement: NpcMovement {
-                        can_traverse_difficult: false,
-                        can_open_doors: false,
+                        can_traverse_difficult: true,
+                        can_open_doors: true,
                     },
                 },
                 character: (),
                 npc_type: NpcType::Corruptor,
-                health: Meter::new_full(20),
-                bump_damage: 3..=6,
+                health: Meter::new_full(3),
+                bump_damage: 5..=10,
                 radioactive: (),
                 smoke: (),
+                spread_poison: (),
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -967,13 +970,15 @@ impl World {
                     }
                 ],
               light: Light {
-                    colour: Rgb24::hex(0xffffff),
+                    colour: Rgb24::hex(0xf00ff),
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
-                        denominator: 400,
+                        denominator: 100,
                     },
                 },
+                realtime: (),
+                boss: (),
             },
         );
         self.realtime_components.particle_emitter.insert(entity, {

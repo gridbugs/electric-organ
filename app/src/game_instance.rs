@@ -500,7 +500,7 @@ impl GameInstance {
             }
             Tile::ItemStore => {
                 return RenderCell {
-                    character: Some('S'),
+                    character: Some('I'),
                     style: Style::new()
                         .with_bold(true)
                         .with_foreground(colours::SHOP_ITEM.to_rgba32(255))
@@ -515,7 +515,7 @@ impl GameInstance {
             }
             Tile::OrganClinic => {
                 return RenderCell {
-                    character: Some('C'),
+                    character: Some('O'),
                     style: Style::new()
                         .with_bold(true)
                         .with_foreground(colours::SHOP_ORGAN_CLINIC.to_rgba32(255))
@@ -1969,6 +1969,12 @@ pub fn message_to_text(message: Message) -> Text {
         Message::Wait => Text::new(vec![StyledString::plain_text(
             "You wait for a turn.".to_string(),
         )]),
+        Message::Escape => Text::new(vec![StyledString {
+            string: "You escape!".to_string(),
+            style: Style::plain_text()
+                .with_bold(true)
+                .with_foreground(Rgb24::new(0, 255, 255).to_rgba32(255)),
+        }]),
         Message::OpenDoor => Text::new(vec![StyledString::plain_text(
             "You open the door.".to_string(),
         )]),
@@ -2358,6 +2364,30 @@ pub fn message_to_text(message: Message) -> Text {
             StyledString::plain_text(organ_string_for_description(&organ)),
             StyledString::plain_text(" is removed from your body.".to_string()),
         ]),
+        Message::CorruptorTeleport => Text::new(vec![
+            StyledString::plain_text("The ".to_string()),
+            StyledString {
+                string: "CORRUPTOR".to_string(),
+                style: Style::plain_text().with_foreground(colours::CORRUPTOR.to_rgba32(255)),
+            },
+            StyledString::plain_text(" teleports!".to_string()),
+        ]),
+        Message::HarvestOrgan(organ) => Text::new(vec![
+            StyledString::plain_text("You harvest the ".to_string()),
+            StyledString::plain_text(organ_string_for_description(&organ)),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::BossKill => Text::new(vec![
+            StyledString::plain_text("You killed the ".to_string()),
+            StyledString {
+                string: "CORRUPTOR".to_string(),
+                style: Style::plain_text().with_foreground(colours::CORRUPTOR.to_rgba32(255)),
+            },
+            StyledString::plain_text("!".to_string()),
+        ]),
+        Message::GetToTheEvacZone => Text::new(vec![StyledString::plain_text(
+            "Now get to the Evac Zone on Floor 1!".to_string(),
+        )]),
     }
 }
 

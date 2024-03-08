@@ -65,6 +65,8 @@ declare_entity_module! {
         organ_clinic: (),
         shop: Shop,
         slow: u64,
+        boss: (),
+        tentacle: (),
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};

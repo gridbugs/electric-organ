@@ -140,6 +140,11 @@ pub enum Message {
     NoSpaceForOrgan(Organ),
     InstallOrgan(Organ),
     RemoveOrgan(Organ),
+    CorruptorTeleport,
+    HarvestOrgan(Organ),
+    BossKill,
+    GetToTheEvacZone,
+    Escape,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -207,10 +212,16 @@ pub enum GameOverReason {
     YouDied,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum Win {
+    Good,
+    Bad,
+}
+
 #[derive(Debug)]
 pub enum GameControlFlow {
     GameOver(GameOverReason),
-    Win,
+    Win(Win),
     Menu(Menu),
 }
 
@@ -347,6 +358,7 @@ pub struct Game {
     external_events: Vec<ExternalEvent>,
     turn_count: u64,
     game_over: bool,
+    boss_dead: bool,
 }
 
 pub const NUM_LEVELS: usize = 4;
@@ -396,6 +408,7 @@ impl Game {
             external_events: Default::default(),
             turn_count: 0,
             game_over: false,
+            boss_dead: false,
         };
         game.systems();
         game.update_visibility();
@@ -752,6 +765,11 @@ impl Game {
         }
         self.systems();
         self.turn_count += 1;
+        if let Some(win) = self.win() {
+            self.message_log.push(Message::Escape);
+            self.update_visibility();
+            return Some(GameControlFlow::Win(win));
+        }
         self.check_game_over()
     }
 
@@ -771,6 +789,23 @@ impl Game {
             .handle_player_organ_traits(&mut self.rng, &mut self.message_log);
         self.world
             .handle_player_organs(&mut self.rng, &mut self.message_log);
+        if self.world.is_boss_dead() {
+            if !self.boss_dead {
+                self.message_log.push(Message::BossKill);
+                self.message_log.push(Message::GetToTheEvacZone);
+                self.remove_corruption();
+            }
+            self.boss_dead = true;
+        }
+    }
+
+    fn remove_corruption(&mut self) {
+        self.world.remove_corrpution();
+        for level in self.other_levels.iter_mut() {
+            if let Some(level) = level.as_mut() {
+                level.world.remove_corrpution();
+            }
+        }
     }
 
     fn check_game_over(&mut self) -> Option<GameControlFlow> {
@@ -791,6 +826,28 @@ impl Game {
         } else {
             None
         }
+    }
+
+    fn win(&self) -> Option<Win> {
+        if self.current_level_index == 0 {
+            if let Some(Layers {
+                feature: Some(feature),
+                ..
+            }) = self.world.spatial_table.layers_at(self.player_coord())
+            {
+                if self.world.components.exit.contains(*feature) {
+                    if self.boss_dead {
+                        for po in self.world.player_organs() {
+                            if po.organ.type_ == OrganType::CorruptedHeart {
+                                return Some(Win::Bad);
+                            }
+                        }
+                        return Some(Win::Good);
+                    }
+                }
+            }
+        }
+        None
     }
 
     fn cleanup(&mut self) {
@@ -1580,6 +1637,7 @@ impl Game {
                 .components
                 .item
                 .insert(entity, Item::OrganContainer(Some(organ)));
+            self.message_log.push(Message::HarvestOrgan(organ));
         }
         let player_coord = self.player_coord();
         if let Some(Layers {

@@ -967,7 +967,7 @@ fn help() -> AppCF<()> {
 
 struct MessageLog {
     scroll_from_bottom: usize,
-    dead: bool,
+    reason: MessageLogReason,
 }
 
 impl Component for MessageLog {
@@ -977,8 +977,9 @@ impl Component for MessageLog {
     fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
         use chargrid::text::*;
         let ctx = ctx.set_size(self.size(state, ctx));
-        if self.dead {
-            Text::new(vec![StyledString {
+        match self.reason {
+            MessageLogReason::Die => {
+                Text::new(vec![StyledString {
                 string: format!(
                     "Your final moments. Scroll with ↑↓. Press any other key to return to main menu."
                 ),
@@ -986,13 +987,25 @@ impl Component for MessageLog {
             }])
             .wrap_word()
             .render(&(), ctx, fb);
-        } else {
-            Text::new(vec![StyledString {
-                string: format!("Scroll with ↑↓. Press any other key to return to the game."),
-                style: Style::plain_text().with_foreground(Rgba32::new_grey(127)),
-            }])
-            .wrap_word()
-            .render(&(), ctx, fb);
+            }
+            MessageLogReason::Gameplay => {
+                Text::new(vec![StyledString {
+                    string: format!("Scroll with ↑↓. Press any other key to return to the game."),
+                    style: Style::plain_text().with_foreground(Rgba32::new_grey(127)),
+                }])
+                .wrap_word()
+                .render(&(), ctx, fb);
+            }
+            MessageLogReason::Win => {
+                Text::new(vec![StyledString {
+                    string: format!(
+                        "You won. Scroll with ↑↓. Press any other key to return to main menu."
+                    ),
+                    style: Style::plain_text().with_foreground(Rgba32::new_grey(187)),
+                }])
+                .wrap_word()
+                .render(&(), ctx, fb);
+            }
         }
         let ctx = ctx.add_xy(0, 3);
         let instance = state.instance.as_ref().unwrap();
@@ -1047,10 +1060,17 @@ impl Component for MessageLog {
     }
 }
 
-fn message_log(dead: bool) -> AppCF<()> {
+#[derive(Debug, Clone, Copy)]
+enum MessageLogReason {
+    Gameplay,
+    Die,
+    Win,
+}
+
+fn message_log(reason: MessageLogReason) -> AppCF<()> {
     menu_style(cf(MessageLog {
         scroll_from_bottom: 0,
-        dead,
+        reason,
     }))
 }
 
@@ -1264,8 +1284,17 @@ fn fire_body(fire_body: FireBody) -> AppCF<Witness> {
         })
 }
 
-fn win() -> AppCF<()> {
-    text::win(MAIN_MENU_TEXT_WIDTH)
+fn win(win: game::Win) -> AppCF<()> {
+    let text = match win {
+        game::Win::Good => text::win(MAIN_MENU_TEXT_WIDTH),
+        game::Win::Bad => text::bad_win(MAIN_MENU_TEXT_WIDTH),
+    };
+    menu_style(text)
+        .then(|| message_log(MessageLogReason::Win))
+        .map_side_effect(|_, state: &mut State| {
+            state.clear_saved_game();
+            state.save_config();
+        })
 }
 
 fn game_over(reason: GameOverReason) -> AppCF<()> {
@@ -1273,7 +1302,7 @@ fn game_over(reason: GameOverReason) -> AppCF<()> {
         state.music_state.sfx_death();
         text::game_over(MAIN_MENU_TEXT_WIDTH, reason)
     }))
-    .then(|| message_log(true))
+    .then(|| message_log(MessageLogReason::Die))
     .map_side_effect(|_, state: &mut State| {
         state.clear_saved_game();
         state.save_config();
@@ -1448,7 +1477,7 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
             Playing(witness) => match witness {
                 Witness::Running(running) => game_instance_component(running).continue_(),
                 Witness::GameOver(reason) => game_over(reason).map_val(|| MainMenu).continue_(),
-                Witness::Win(_) => win().map_val(|| MainMenu).continue_(),
+                Witness::Win(win_) => win(win_.win).map_val(|| MainMenu).continue_(),
                 Witness::Menu(menu_) => game_menu(menu_).map(Playing).continue_(),
                 Witness::FireEquipped(fire_equipped_) => {
                     fire_equipped(fire_equipped_).map(Playing).continue_()
@@ -1471,7 +1500,7 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
             Help(running) => help()
                 .map(|()| GameLoopState::Playing(running.into_witness()))
                 .continue_(),
-            MessageLog(running) => message_log(false)
+            MessageLog(running) => message_log(MessageLogReason::Gameplay)
                 .map(|()| GameLoopState::Playing(running.into_witness()))
                 .continue_(),
             ViewOrgans(running) => view_organs()

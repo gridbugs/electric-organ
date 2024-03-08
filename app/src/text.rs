@@ -158,11 +158,35 @@ fn win_text(width: u32) -> CF<(), State> {
         string: s.to_string(),
         style: Style::plain_text(),
     };
-    text_component(width, vec![t("You win!")])
+    text_component(
+        width,
+        vec![t(
+            "You defeated the CORRUPTOR and saved the city. Congratulations hero!",
+        )],
+    )
 }
 pub fn win(width: u32) -> AppCF<()> {
     // TODO: this is not ergonomic
     win_text(width)
         .delay(Duration::from_secs(1))
         .then(move || win_text(width).press_any_key())
+}
+
+fn bad_win_text(width: u32) -> CF<(), State> {
+    let t = |s: &str| StyledString {
+        string: s.to_string(),
+        style: Style::plain_text(),
+    };
+    text_component(
+        width,
+        vec![t(
+            "With the CORRUPTED HEART beating in your chest you finally take your rightful place as the god of this world.",
+        )],
+    )
+}
+pub fn bad_win(width: u32) -> AppCF<()> {
+    // TODO: this is not ergonomic
+    bad_win_text(width)
+        .delay(Duration::from_secs(1))
+        .then(move || bad_win_text(width).press_any_key())
 }

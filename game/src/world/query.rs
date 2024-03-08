@@ -5,7 +5,7 @@ use crate::{
 use coord_2d::Coord;
 use direction::CardinalDirection;
 use entity_table::Entity;
-use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
+use rand::{rngs::StdRng, seq::SliceRandom, Rng, SeedableRng};
 
 impl World {
     pub fn stairs_up_or_exit_coord(&self) -> Option<Coord> {
@@ -317,6 +317,28 @@ impl World {
             count += 1;
         }
         Some(count)
+    }
+
+    pub fn random_characterless_coord<R: Rng>(&self, rng: &mut R) -> Option<Coord> {
+        let candidates = self
+            .spatial_table
+            .grid_size()
+            .coord_iter_row_major()
+            .filter(|coord| {
+                let layers = self.spatial_table.layers_at_checked(*coord);
+                layers.character.is_none() && layers.feature.is_none()
+            })
+            .collect::<Vec<_>>();
+        candidates.choose(rng).copied()
+    }
+
+    pub fn is_boss_dead(&self) -> bool {
+        for entity in self.components.boss.entities() {
+            if self.components.corpse.contains(entity) {
+                return true;
+            }
+        }
+        false
     }
 }
 

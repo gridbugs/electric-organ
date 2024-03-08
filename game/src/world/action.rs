@@ -177,6 +177,7 @@ impl World {
             hit_points.set_current(0);
             self.character_die(character, rng, external_events, message_log);
         } else {
+            let hp_copy = hit_points.clone();
             hit_points.decrease(hit_points_to_lose);
             if self.components.split_on_damage.contains(character) {
                 if hit_points.current() > 1 {
@@ -196,6 +197,27 @@ impl World {
                                     layer: Some(Layer::Character),
                                 },
                             );
+                        }
+                    }
+                }
+            }
+            if self.components.boss.contains(character) {
+                let hit_points = self.components.health.get(character).unwrap();
+                let thresh1 = 2 * hp_copy.max() / 3;
+                let thresh2 = 1 * hp_copy.max() / 3;
+                if (hp_copy.current() > thresh1 && hit_points.current() <= thresh1)
+                    || (hp_copy.current() > thresh2 && hit_points.current() <= thresh2)
+                {
+                    if let Some(coord) = self.random_characterless_coord(rng) {
+                        let result = self.spatial_table.update(
+                            character,
+                            Location {
+                                coord,
+                                layer: Some(Layer::Character),
+                            },
+                        );
+                        if result.is_ok() {
+                            message_log.push(Message::CorruptorTeleport);
                         }
                     }
                 }
@@ -383,7 +405,6 @@ impl World {
     pub fn add_player_initial_items(&mut self) {
         let entities = vec![
             self.spawn_item_no_coord(Item::PistolAmmo),
-            self.spawn_item_no_coord(Item::BloodVialFull),
             self.spawn_item_no_coord(Item::OrganContainer(None)),
         ];
         let player = self.components.player.entities().next().unwrap();
@@ -737,7 +758,7 @@ impl World {
                 }) = self.spatial_table.layers_at(coord)
                 {
                     if self.components.floor_poison.contains(*floor) {
-                        poison.increase(1);
+                        poison.increase(2);
                         message_log.push(Message::Poison);
                     }
                 }
@@ -796,6 +817,19 @@ impl World {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    pub fn remove_corrpution(&mut self) {
+        let to_remove = self.components.tentacle.entities().collect::<Vec<_>>();
+        for entity in to_remove {
+            self.remove_entity(entity);
+        }
+        for edge in self.spatial_table.grid_size().edge_iter() {
+            let layers = self.spatial_table.layers_at_checked(edge);
+            if layers.feature.is_none() {
+                self.spawn_debris(edge);
             }
         }
     }

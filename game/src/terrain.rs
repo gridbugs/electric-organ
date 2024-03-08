@@ -1,5 +1,6 @@
 use crate::world::{data::*, World};
 use coord_2d::{Coord, Size};
+use direction::Direction;
 use procgen::city::{Map, TentacleSpec, Tile};
 use rand::{rngs::StdRng, seq::SliceRandom, Rng, SeedableRng};
 
@@ -28,6 +29,9 @@ impl Terrain {
                     }
                     'G' => {
                         world.spawn_gun_store(coord, &mut rng);
+                    }
+                    'x' => {
+                        world.spawn_corruptor(coord, &mut rng);
                     }
                     'z' => {
                         world.spawn_zombie(coord, &mut rng);
@@ -125,7 +129,6 @@ impl Terrain {
     }
 
     pub fn generate<R: Rng>(level_index: usize, rng: &mut R) -> Self {
-        return Self::generate_text();
         let tentacle_spec = TentacleSpec {
             num_tentacles: 3,
             segment_length: 1.5,
@@ -174,6 +177,7 @@ impl Terrain {
                     world.spawn_door(coord);
                 }
                 Tile::Tentacle => {
+                    world.spawn_floor(coord);
                     if tentacle_count % 10 == 0 {
                         world.spawn_tentacle_glow(coord);
                     } else {
@@ -203,6 +207,58 @@ impl Terrain {
             .filter(|coord| coord.manhattan_distance(player_spawn) > 8)
             .collect::<Vec<_>>();
         npc_spawn_candidates.shuffle(rng);
+
+        for (i, coord) in npc_spawn_candidates.iter().enumerate() {
+            let mut good = true;
+            for d in Direction::all() {
+                if let Some(layers) = world.spatial_table.layers_at(*coord + d.coord()) {
+                    if layers.feature.is_some() || layers.character.is_some() {
+                        good = false;
+                    }
+                }
+            }
+            if good {
+                let coord = *coord;
+                npc_spawn_candidates.swap_remove(i);
+                world.spawn_organ_clinic(coord, level_index, rng);
+                break;
+            }
+        }
+
+        for (i, coord) in npc_spawn_candidates.iter().enumerate() {
+            let mut good = true;
+            for d in Direction::all() {
+                if let Some(layers) = world.spatial_table.layers_at(*coord + d.coord()) {
+                    if layers.feature.is_some() || layers.character.is_some() {
+                        good = false;
+                    }
+                }
+            }
+            if good {
+                let coord = *coord;
+                npc_spawn_candidates.swap_remove(i);
+                world.spawn_item_store(coord, rng);
+                break;
+            }
+        }
+
+        for (i, coord) in npc_spawn_candidates.iter().enumerate() {
+            let mut good = true;
+            for d in Direction::all() {
+                if let Some(layers) = world.spatial_table.layers_at(*coord + d.coord()) {
+                    if layers.feature.is_some() || layers.character.is_some() {
+                        good = false;
+                    }
+                }
+            }
+            if good {
+                let coord = *coord;
+                npc_spawn_candidates.swap_remove(i);
+                world.spawn_gun_store(coord, rng);
+                break;
+            }
+        }
+
         for _ in 0..0 {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_zombie(coord, rng);
@@ -222,6 +278,9 @@ impl Terrain {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_boomer(coord, rng);
             }
+        }
+        if let Some(coord) = npc_spawn_candidates.pop() {
+            world.spawn_corruptor(coord, rng);
         }
         Self { world }
     }
