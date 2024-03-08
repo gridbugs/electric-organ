@@ -689,7 +689,7 @@ impl World {
                         let food = self.components.food.get_mut(player_entity).unwrap();
                         if food.current() > 0 {
                             food.decrease(1);
-                            let mut health_increase = 2;
+                            let mut health_increase = 1;
                             if organ.cybernetic {
                                 health_increase *= 2;
                             }
@@ -701,9 +701,9 @@ impl World {
                                 //                                message_log.push(Message::DigestFoodNoHealthIncrease);
                             } else {
                                 health.increase(health_increase);
-                                //                                message_log.push(Message::DigestFood {
-                                //                                    health_gain: health_increase,
-                                //                                });
+                                message_log.push(Message::DigestFood {
+                                    health_gain: health_increase,
+                                });
                             }
                         } else {
                             let health = self.components.health.get_mut(player_entity).unwrap();
