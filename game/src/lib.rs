@@ -1771,7 +1771,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::PoisonIsEmpty));
                         } else {
-                            poison.decrease(10);
+                            poison.decrease(5);
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::ApplyAntidote);
