@@ -1,7 +1,10 @@
 use crate::world::explosion;
 pub use crate::world::spatial::{Layer, Location};
 use entity_table::{declare_entity_module, Entity};
-use rand::{seq::SliceRandom, Rng};
+use rand::{
+    seq::{IteratorRandom, SliceRandom},
+    Rng,
+};
 use rgb_int::Rgba32;
 use serde::{Deserialize, Serialize};
 use std::ops::RangeInclusive;
@@ -57,6 +60,8 @@ declare_entity_module! {
         split_on_damage: (),
         floor_poison: (),
         bump_damage: RangeInclusive<u32>,
+        radioactive: (),
+        smoke: (),
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -148,6 +153,9 @@ impl Meter {
     }
     pub fn fill(&mut self) {
         self.current = self.max;
+    }
+    pub fn clear(&mut self) {
+        self.current = 0;
     }
 }
 
@@ -427,12 +435,12 @@ impl Organs {
         None
     }
 
-    pub fn size(&self) -> usize {
-        self.organs.len()
+    pub fn get_mut(&mut self, i: usize) -> Option<&mut Organ> {
+        self.organs[i].as_mut()
     }
 
-    pub fn get(&self, i: usize) -> Option<Organ> {
-        self.organs[i]
+    pub fn get_slot_mut(&mut self, i: usize) -> &mut Option<Organ> {
+        &mut self.organs[i]
     }
 
     pub fn remove(&mut self, i: usize) -> Option<Organ> {
@@ -454,6 +462,17 @@ impl Organs {
 
     pub fn organs(&self) -> &[Option<Organ>] {
         &self.organs
+    }
+
+    pub fn num_free_slots(&self) -> usize {
+        self.organs.iter().filter(|s| s.is_none()).count()
+    }
+
+    pub fn choose_mut<R: Rng>(&mut self, rng: &mut R) -> Option<&mut Organ> {
+        let index = (0..self.organs.len())
+            .filter(|&i| self.organs[i].is_some())
+            .choose(rng);
+        index.map(|i| self.organs[i].as_mut().unwrap())
     }
 }
 

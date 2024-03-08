@@ -17,7 +17,7 @@ impl Terrain {
         for (y, row) in rows.into_iter().enumerate() {
             for (x, ch) in row.chars().enumerate() {
                 let coord = Coord::new(x as i32, y as i32);
-                world.spawn_floor(coord);
+                let floor_entity = world.spawn_floor(coord);
                 match ch {
                     '.' => (),
                     'z' => {
@@ -41,6 +41,12 @@ impl Terrain {
                     '+' => {
                         world.spawn_door(coord);
                     }
+                    '%' => {
+                        world.spawn_debris_burning(coord, &mut rng);
+                    }
+                    'r' => {
+                        world.spawn_tentacle_glow(coord);
+                    }
                     '>' => {
                         world.spawn_stairs_down(coord);
                     }
@@ -49,6 +55,13 @@ impl Terrain {
                     }
                     '$' => {
                         world.spawn_money(coord);
+                    }
+                    '~' => {
+                        world
+                            .components
+                            .tile
+                            .insert(floor_entity, crate::Tile::FloorPoison);
+                        world.components.floor_poison.insert(floor_entity, ());
                     }
                     '1' => {
                         world.spawn_item(coord, Item::Pistol);

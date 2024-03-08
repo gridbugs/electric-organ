@@ -13,7 +13,10 @@ fn player_starting_organs() -> Organs {
     let mut ret = Organs::new(crate::MAX_ORGANS);
     *ret.first_free_slot().unwrap() = Some(Organ {
         type_: OrganType::Heart,
-        traits: OrganTraits::none(),
+        traits: OrganTraits {
+            transient: false,
+            ..OrganTraits::none()
+        },
         original: true,
         cybernetic: false,
     });
@@ -105,7 +108,7 @@ pub fn make_player() -> EntityData {
         health: Some(Meter::new(20, 20)),
         oxygen: Some(Meter::new(20, 20)),
         food: Some(Meter::new(30, 30)),
-        poison: Some(Meter::new(0, 50)),
+        poison: Some(Meter::new(0, 10)),
         radiation: Some(Meter::new(0, 50)),
         inventory: Some(Inventory::new(12)),
         satiation: Some(Meter::new(0, 20)),
@@ -172,6 +175,7 @@ impl World {
                 solid: (),
                 difficult: (),
                 destructible: (),
+                smoke: (),
                 light: Light {
                     colour: Rgb24::new(255, 87, 0),
                     vision_distance: vision_distance::Circle::new_squared(200),
@@ -236,6 +240,7 @@ impl World {
             entity_data! {
                 tile: Tile::Tentacle,
                 solid: (),
+                difficult: (),
             },
         )
     }
@@ -246,6 +251,8 @@ impl World {
             entity_data! {
                 tile: Tile::TentacleGlow,
                 solid: (),
+                radioactive: (),
+                difficult: (),
                 light: Light {
                     colour: Rgb24::new(0, 255, 0),
                     vision_distance: vision_distance::Circle::new_squared(200),
@@ -831,7 +838,7 @@ impl World {
     }
 
     pub fn spawn_corruptor<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
-        self.spawn_entity(
+        let entity = self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {
                 tile: Tile::Corruptor,
@@ -844,7 +851,9 @@ impl World {
                 character: (),
                 npc_type: NpcType::Corruptor,
                 health: Meter::new_full(20),
-                bump_damage: 1..=2,
+                bump_damage: 3..=6,
+                radioactive: (),
+                smoke: (),
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -858,7 +867,32 @@ impl World {
                     }
                 ],
             },
-        )
+        );
+        self.realtime_components.particle_emitter.insert(entity, {
+            use particle::spec::*;
+            let colour_range = UniformInclusiveRange {
+                low: Rgb24::new(0, 0, 0).to_rgba32(31),
+                high: Rgb24::new(255, 255, 255).to_rgba32(31),
+            };
+            ParticleEmitter {
+                emit_particle_every_period: Duration::from_millis(16),
+                fade_out_duration: None,
+                particle: Particle {
+                    colour_hint: Some(colour_range),
+                    movement: Some(Movement {
+                        angle_range: Radians::uniform_range_all(),
+                        cardinal_period_range: UniformInclusiveRange {
+                            low: Duration::from_millis(500),
+                            high: Duration::from_millis(1000),
+                        },
+                    }),
+                    fade_duration: Some(Duration::from_millis(5000)),
+                    ..Default::default()
+                },
+            }
+            .build(rng)
+        });
+        entity
     }
 
     pub fn spawn_gun_store<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {

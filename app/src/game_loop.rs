@@ -965,6 +965,7 @@ fn help() -> AppCF<()> {
 
 struct MessageLog {
     scroll_from_bottom: usize,
+    dead: bool,
 }
 
 impl Component for MessageLog {
@@ -974,12 +975,23 @@ impl Component for MessageLog {
     fn render(&self, state: &Self::State, ctx: Ctx, fb: &mut FrameBuffer) {
         use chargrid::text::*;
         let ctx = ctx.set_size(self.size(state, ctx));
-        Text::new(vec![StyledString {
-            string: format!("Scroll with ↑↓. Press any other key to return to the game."),
-            style: Style::plain_text().with_foreground(Rgba32::new_grey(127)),
-        }])
-        .wrap_word()
-        .render(&(), ctx, fb);
+        if self.dead {
+            Text::new(vec![StyledString {
+                string: format!(
+                    "Your final moments. Scroll with ↑↓. Press any other key to return to main menu."
+                ),
+                style: Style::plain_text().with_foreground(Rgba32::new_grey(187)),
+            }])
+            .wrap_word()
+            .render(&(), ctx, fb);
+        } else {
+            Text::new(vec![StyledString {
+                string: format!("Scroll with ↑↓. Press any other key to return to the game."),
+                style: Style::plain_text().with_foreground(Rgba32::new_grey(127)),
+            }])
+            .wrap_word()
+            .render(&(), ctx, fb);
+        }
         let ctx = ctx.add_xy(0, 3);
         let instance = state.instance.as_ref().unwrap();
         let message_log = instance.game.inner_ref().message_log();
@@ -1033,15 +1045,16 @@ impl Component for MessageLog {
     }
 }
 
-fn message_log() -> AppCF<()> {
+fn message_log(dead: bool) -> AppCF<()> {
     menu_style(cf(MessageLog {
         scroll_from_bottom: 0,
+        dead,
     }))
 }
 
 struct ViewOrgans;
 impl ViewOrgans {
-    const SIZE: Size = Size::new_u16(40, 14);
+    const SIZE: Size = Size::new_u16(70, 14);
 }
 impl Component for ViewOrgans {
     type Output = Option<()>;
@@ -1057,7 +1070,7 @@ impl Component for ViewOrgans {
         .wrap_word()
         .render(&(), ctx, fb);
         let instance = state.instance.as_ref().unwrap();
-        let ctx = ctx.add_y(4);
+        let ctx = ctx.add_y(2);
         let organs = instance.game.inner_ref().player_organs();
         for i in 0..game::MAX_ORGANS {
             let s = if let Some(organ) = organs.get(i) {
@@ -1258,6 +1271,7 @@ fn game_over(reason: GameOverReason) -> AppCF<()> {
         state.music_state.sfx_death();
         text::game_over(MAIN_MENU_TEXT_WIDTH, reason)
     }))
+    .then(|| message_log(true))
     .map_side_effect(|_, state: &mut State| {
         state.clear_saved_game();
         state.save_config();
@@ -1424,7 +1438,7 @@ pub fn game_loop_component(initial_state: GameLoopState) -> AppCF<()> {
             Help(running) => help()
                 .map(|()| GameLoopState::Playing(running.into_witness()))
                 .continue_(),
-            MessageLog(running) => message_log()
+            MessageLog(running) => message_log(false)
                 .map(|()| GameLoopState::Playing(running.into_witness()))
                 .continue_(),
             ViewOrgans(running) => view_organs()

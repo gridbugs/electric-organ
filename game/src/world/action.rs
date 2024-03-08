@@ -9,7 +9,7 @@ use crate::{
 use coord_2d::Coord;
 use direction::Direction;
 use entity_table::Entity;
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 
 impl World {
     pub fn projectile_move<R: Rng>(
@@ -405,7 +405,6 @@ impl World {
         external_events: &mut Vec<ExternalEvent>,
         message_log: &mut Vec<Message>,
     ) {
-        let player = self.components.player.entities().next().unwrap();
         let mut damage = rng.gen_range(1..=2);
         for organ in self.active_player_organs() {
             if organ.type_ == OrganType::Claw {
@@ -423,7 +422,125 @@ impl World {
         self.damage_character(character, damage, rng, external_events, message_log);
     }
 
-    pub fn handle_player_organs<R: Rng>(&mut self, rng: &mut R) {
+    pub fn handle_player_organ_traits<R: Rng>(
+        &mut self,
+        rng: &mut R,
+        message_log: &mut Vec<Message>,
+    ) {
+        let player_entity = self.components.player.entities().next().unwrap();
+        let organs = self.components.organs.get(player_entity).unwrap().clone();
+        for (i, organ) in organs.organs().into_iter().enumerate() {
+            if let Some(organ) = organ {
+                if organ.traits.radioactitve {
+                    if rng.gen::<f64>() < 0.5 {
+                        message_log.push(Message::IrradiatedByOrgan(*organ));
+                        self.components
+                            .radiation
+                            .get_mut(player_entity)
+                            .unwrap()
+                            .increase(1);
+                    }
+                }
+                if organ.traits.prolific {
+                    if rng.gen::<f64>() < 0.02 {
+                        if let Some(slot) = self
+                            .components
+                            .organs
+                            .get_mut(player_entity)
+                            .unwrap()
+                            .first_free_slot()
+                        {
+                            message_log.push(Message::OrganDuplication(*organ));
+                            *slot = Some(*organ);
+                        }
+                    }
+                }
+                if organ.traits.transient {
+                    if rng.gen::<f64>() < 0.01 {
+                        message_log.push(Message::OrganDisappear(*organ));
+                        self.components
+                            .organs
+                            .get_mut(player_entity)
+                            .unwrap()
+                            .remove(i);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn handle_full_poison<R: Rng>(&mut self, rng: &mut R, message_log: &mut Vec<Message>) {
+        let player_entity = self.components.player.entities().next().unwrap();
+        let poison = self.components.poison.get_mut(player_entity).unwrap();
+        if poison.is_full() {
+            poison.clear();
+            let organs = self.components.organs.get_mut(player_entity).unwrap();
+            let mut non_damaged_indices = Vec::new();
+            let mut damaged_indices = Vec::new();
+            for (i, slot) in organs.organs().into_iter().enumerate() {
+                if let Some(organ) = slot {
+                    if organ.traits.damaged {
+                        damaged_indices.push(i);
+                    } else {
+                        non_damaged_indices.push(i);
+                    }
+                }
+            }
+            non_damaged_indices.shuffle(rng);
+            damaged_indices.shuffle(rng);
+            if let Some(i) = non_damaged_indices.first() {
+                if let Some(organ) = organs.get_mut(*i) {
+                    message_log.push(Message::OrganDamagedByPoison(*organ));
+                    organ.traits.damaged = true;
+                }
+            } else if let Some(i) = damaged_indices.first() {
+                let organ = organs.remove(*i).unwrap();
+                message_log.push(Message::OrganDestroyedByPoison(organ));
+            }
+        }
+    }
+
+    pub fn handle_full_radiation<R: Rng>(&mut self, rng: &mut R, message_log: &mut Vec<Message>) {
+        let player_entity = self.components.player.entities().next().unwrap();
+        let radiation = self.components.radiation.get_mut(player_entity).unwrap();
+        if radiation.is_full() {
+            radiation.clear();
+            let organs = self.components.organs.get_mut(player_entity).unwrap();
+            if organs.num_free_slots() > 0 {
+                if rng.gen::<f64>() < 0.1 {
+                    message_log.push(Message::GrowTumor);
+                    *organs.first_free_slot().unwrap() = Some(Organ {
+                        type_: OrganType::Tumour,
+                        original: false,
+                        cybernetic: false,
+                        traits: OrganTraits {
+                            prolific: true,
+                            ..OrganTraits::none()
+                        },
+                    });
+                    return;
+                }
+            }
+            if let Some(organ_to_mutate) = organs.choose_mut(rng) {
+                let trait_ = OrganTrait::choose(rng);
+                let trait_value = organ_to_mutate.traits.get_mut(trait_);
+                *trait_value = !*trait_value;
+                if *trait_value {
+                    message_log.push(Message::OrganGainsTrait {
+                        organ: *organ_to_mutate,
+                        trait_,
+                    });
+                } else {
+                    message_log.push(Message::OrganLosesTrait {
+                        organ: *organ_to_mutate,
+                        trait_,
+                    });
+                }
+            }
+        }
+    }
+
+    pub fn handle_player_organs<R: Rng>(&mut self, rng: &mut R, message_log: &mut Vec<Message>) {
         let player_entity = self.components.player.entities().next().unwrap();
         self.components
             .satiation
@@ -435,12 +552,22 @@ impl World {
             .get_mut(player_entity)
             .unwrap()
             .decrease(1);
+        if rng.gen::<f64>() < 0.1 {
+            self.components
+                .radiation
+                .get_mut(player_entity)
+                .unwrap()
+                .increase(1);
+            message_log.push(Message::AmbientRadiation);
+        }
         let organs = self.active_player_organs();
         let mut max_health = 0;
         let mut max_power = 0;
         let mut oxygen_increase = -1;
+        let mut num_claws = 0;
         for organ in &organs {
             match organ.type_ {
+                OrganType::Claw => num_claws += 1,
                 OrganType::Heart => {
                     let mut amount = 10;
                     if organ.cybernetic {
@@ -540,6 +667,9 @@ impl World {
                             if organ.traits.damaged {
                                 health_increase /= 2;
                             }
+                            message_log.push(Message::DigestFood {
+                                health_gain: health_increase,
+                            });
                             self.components
                                 .health
                                 .get_mut(player_entity)
@@ -549,6 +679,115 @@ impl World {
                     }
                 }
                 _ => (),
+            }
+        }
+        if let Some(player_coord) = self.spatial_table.coord_of(player_entity) {
+            if num_claws > 0 {
+                // TODO avoid needing to bind `hands` twice here
+                let hands = self.components.hands.get(player_entity).unwrap();
+                if let Some(item_entity) = hands.left.holding() {
+                    self.drop_item(item_entity, player_coord);
+                    if let Some(item) = self.components.item.get(item_entity) {
+                        message_log.push(Message::ClawDrop(*item));
+                    }
+                }
+                let hands = self.components.hands.get_mut(player_entity).unwrap();
+                hands.left = Hand::Claw;
+            }
+            if num_claws > 1 {
+                // TODO avoid needing to bind `hands` twice here
+                let hands = self.components.hands.get(player_entity).unwrap();
+                if let Some(item_entity) = hands.right.holding() {
+                    self.drop_item(item_entity, player_coord);
+                    if let Some(item) = self.components.item.get(item_entity) {
+                        message_log.push(Message::ClawDrop(*item));
+                    }
+                }
+                let hands = self.components.hands.get_mut(player_entity).unwrap();
+                hands.right = Hand::Claw;
+            }
+        }
+    }
+
+    fn drop_item(&mut self, item_entity: Entity, coord: Coord) {
+        if let Some(coord) = self.nearest_itemless_coord(coord) {
+            let _ = self.spatial_table.update(
+                item_entity,
+                Location {
+                    coord,
+                    layer: Some(Layer::Item),
+                },
+            );
+        }
+    }
+
+    pub fn handle_poison(&mut self, message_log: &mut Vec<Message>) {
+        for (entity, poison) in self.components.poison.iter_mut() {
+            if let Some(coord) = self.spatial_table.coord_of(entity) {
+                if let Some(Layers {
+                    floor: Some(floor), ..
+                }) = self.spatial_table.layers_at(coord)
+                {
+                    if self.components.floor_poison.contains(*floor) {
+                        poison.increase(1);
+                        message_log.push(Message::Poison);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn handle_asphyxiation(&mut self, message_log: &mut Vec<Message>) {
+        for (entity, oxygen) in self.components.oxygen.iter() {
+            if oxygen.current() == 0 {
+                if let Some(health) = self.components.health.get_mut(entity) {
+                    health.decrease(1);
+                }
+                message_log.push(Message::LackOfOxygen);
+            }
+        }
+    }
+
+    pub fn handle_smoke(&mut self, message_log: &mut Vec<Message>) {
+        let oxygen_entities = self.components.oxygen.entities().collect::<Vec<_>>();
+        for entity in oxygen_entities {
+            if let Some(coord) = self.spatial_table.coord_of(entity) {
+                for smoke_entity in self.components.smoke.entities() {
+                    if let Some(smoke_coord) = self.spatial_table.coord_of(smoke_entity) {
+                        if let Some(distance) =
+                            self.line_distance_stopping_at_solid(coord, smoke_coord)
+                        {
+                            if distance < 4 {
+                                let oxygen = self.components.oxygen.get_mut(entity).unwrap();
+                                oxygen.decrease(2);
+                                message_log.push(Message::Smoke);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn handle_radiation(&mut self, message_log: &mut Vec<Message>) {
+        let radiation_entities = self.components.radiation.entities().collect::<Vec<_>>();
+        for entity in radiation_entities {
+            if let Some(coord) = self.spatial_table.coord_of(entity) {
+                for r_entity in self.components.radioactive.entities() {
+                    if let Some(r_coord) = self.spatial_table.coord_of(r_entity) {
+                        if let Some(distance) = self.line_distance_stopping_at_solid(coord, r_coord)
+                        {
+                            let radiation = self.components.radiation.get_mut(entity).unwrap();
+                            if distance < 5 {
+                                radiation.increase(4);
+                                message_log.push(Message::RadiationVeryClose);
+                            } else if distance < 10 {
+                                message_log.push(Message::RadiationClose);
+                                radiation.increase(2);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

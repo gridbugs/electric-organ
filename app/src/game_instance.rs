@@ -830,6 +830,20 @@ impl GameInstance {
 
     fn render_info(&self, ctx: Ctx, fb: &mut FrameBuffer) {
         use text::*;
+        let current_floor = self.game.inner_ref().current_level_index();
+        let num_floors = game::NUM_LEVELS;
+        Text::new(vec![
+            StyledString {
+                string: "Floor: ".to_string(),
+                style: Style::plain_text(),
+            },
+            StyledString {
+                string: format!("{}/{}", (current_floor + 1), num_floors),
+                style: Style::plain_text().with_bold(true),
+            },
+        ])
+        .render(&(), ctx, fb);
+        let ctx = ctx.add_y(1);
         let (left_hand, right_hand) = self.game.inner_ref().player_hand_contents();
         Text::new(vec![
             StyledString {
@@ -854,7 +868,7 @@ impl GameInstance {
             },
         ])
         .render(&(), ctx, fb);
-        let ctx = ctx.add_y(2);
+        let ctx = ctx.add_y(1);
         Text::new(vec![
             StyledString {
                 string: "CyberCoinz™: ".to_string(),
@@ -1959,6 +1973,135 @@ pub fn message_to_text(message: Message) -> Text {
             string: "You die!".to_string(),
             style: Style::plain_text().with_foreground(Rgb24::new(255, 0, 0).to_rgba32(255)),
         }]),
+        Message::IrradiatedByOrgan(organ) => Text::new(vec![
+            StyledString::plain_text("You absorb ".to_string()),
+            StyledString {
+                string: "radiation".to_string(),
+                style: Style::plain_text().with_foreground(colours::RADIATION.to_rgba32(255)),
+            },
+            StyledString::plain_text(" from your ".to_string()),
+            StyledString::plain_text(organ_type_name(organ.type_).to_string()),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::OrganDuplication(organ) => Text::new(vec![
+            StyledString::plain_text("Your ".to_string()),
+            StyledString::plain_text(organ_type_name(organ.type_).to_string()),
+            StyledString::plain_text(" duplicates itself.".to_string()),
+        ]),
+        Message::OrganDisappear(organ) => Text::new(vec![
+            StyledString::plain_text("Your transient ".to_string()),
+            StyledString::plain_text(organ_type_name(organ.type_).to_string()),
+            StyledString::plain_text(" disappears.".to_string()),
+        ]),
+        Message::OrganDamagedByPoison(organ) => Text::new(vec![
+            StyledString::plain_text("Your ".to_string()),
+            StyledString::plain_text(organ_type_name(organ.type_).to_string()),
+            StyledString::plain_text(" is damaged by ".to_string()),
+            StyledString {
+                string: "poison".to_string(),
+                style: Style::plain_text().with_foreground(colours::POISON.to_rgba32(255)),
+            },
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::OrganDestroyedByPoison(organ) => Text::new(vec![
+            StyledString::plain_text("Your ".to_string()),
+            StyledString::plain_text(organ_type_name(organ.type_).to_string()),
+            StyledString::plain_text(" is destroyed by ".to_string()),
+            StyledString {
+                string: "poison".to_string(),
+                style: Style::plain_text().with_foreground(colours::POISON.to_rgba32(255)),
+            },
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::GrowTumor => Text::new(vec![
+            StyledString {
+                string: "Radiation".to_string(),
+                style: Style::plain_text().with_foreground(colours::RADIATION.to_rgba32(255)),
+            },
+            StyledString::plain_text(" causes you to grow a tumour".to_string()),
+        ]),
+        Message::OrganGainsTrait { organ, trait_ } => Text::new(vec![
+            StyledString {
+                string: "Radiation".to_string(),
+                style: Style::plain_text().with_foreground(colours::RADIATION.to_rgba32(255)),
+            },
+            StyledString::plain_text(" causes your ".to_string()),
+            StyledString::plain_text(organ_type_name(organ.type_).to_string()),
+            StyledString::plain_text(" to become ".to_string()),
+            StyledString::plain_text(organ_trait_name(trait_).to_string()),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::OrganLosesTrait { organ, trait_ } => Text::new(vec![
+            StyledString {
+                string: "Radiation".to_string(),
+                style: Style::plain_text().with_foreground(colours::RADIATION.to_rgba32(255)),
+            },
+            StyledString::plain_text(" causes your ".to_string()),
+            StyledString::plain_text(organ_type_name(organ.type_).to_string()),
+            StyledString::plain_text(" to no longer be ".to_string()),
+            StyledString::plain_text(organ_trait_name(trait_).to_string()),
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::AmbientRadiation => Text::new(vec![
+            StyledString::plain_text("You absorb some ambient ".to_string()),
+            StyledString {
+                string: "radiation".to_string(),
+                style: Style::plain_text().with_foreground(colours::RADIATION.to_rgba32(255)),
+            },
+            StyledString::plain_text(".".to_string()),
+        ]),
+        Message::DigestFood { health_gain } => Text::new(vec![
+            StyledString::plain_text("You digest some ".to_string()),
+            StyledString {
+                string: "food".to_string(),
+                style: Style::plain_text().with_foreground(colours::FOOD.to_rgba32(255)),
+            },
+            StyledString::plain_text(format!(" gaining {health_gain} health.")),
+        ]),
+        Message::ClawDrop(item) => Text::new(vec![
+            StyledString::plain_text("You drom your ".to_string()),
+            item_styled_string_for_message(item),
+            StyledString::plain_text(" (can't hold in claw).".to_string()),
+        ]),
+        Message::LackOfOxygen => Text::new(vec![
+            StyledString::plain_text("You are damaged by a lack of ".to_string()),
+            StyledString {
+                string: "oxygen".to_string(),
+                style: Style::plain_text().with_foreground(
+                    colours::OXYGEN
+                        .to_rgba32(255)
+                        .saturating_scalar_mul_div(3, 2),
+                ),
+            },
+            StyledString::plain_text(format!(".")),
+        ]),
+        Message::Smoke => Text::new(vec![StyledString::plain_text(
+            "The smoke makes it hard to breath here.".to_string(),
+        )]),
+        Message::RadiationClose => Text::new(vec![
+            StyledString::plain_text("You absorb ".to_string()),
+            StyledString {
+                string: "radiation".to_string(),
+                style: Style::plain_text().with_foreground(colours::RADIATION.to_rgba32(255)),
+            },
+            StyledString::plain_text(" from a nearby source.".to_string()),
+        ]),
+        Message::RadiationVeryClose => Text::new(vec![
+            StyledString::plain_text("You absorb ".to_string()),
+            StyledString {
+                string: "radiation".to_string(),
+                style: Style::plain_text().with_foreground(colours::RADIATION.to_rgba32(255)),
+            },
+            StyledString::plain_text(" from a very nearby source.".to_string()),
+        ]),
+        Message::Poison => Text::new(vec![
+            StyledString::plain_text("You are being ".to_string()),
+            StyledString {
+                string: "poisoned".to_string(),
+                style: Style::plain_text().with_foreground(colours::POISON.to_rgba32(255)),
+            },
+            StyledString::plain_text(".".to_string()),
+        ]),
     }
 }
 

@@ -299,6 +299,25 @@ impl World {
         }
         ret
     }
+
+    pub fn line_distance_stopping_at_solid(&self, from: Coord, to: Coord) -> Option<usize> {
+        let mut count = 0;
+        for coord in line_2d::coords_between(from, to) {
+            if let Some(Layers {
+                feature: Some(feature),
+                ..
+            }) = self.spatial_table.layers_at(coord)
+            {
+                if self.components.solid.contains(*feature)
+                    && !self.components.difficult.contains(*feature)
+                {
+                    return None;
+                }
+            }
+            count += 1;
+        }
+        Some(count)
+    }
 }
 
 pub struct PlayerOrgan {

@@ -100,6 +100,30 @@ pub enum Message {
     FireOrgan(Organ),
     FireOrganDamage(u32),
     YouDie,
+    IrradiatedByOrgan(Organ),
+    OrganDuplication(Organ),
+    OrganDisappear(Organ),
+    OrganDamagedByPoison(Organ),
+    OrganDestroyedByPoison(Organ),
+    GrowTumor,
+    OrganGainsTrait {
+        organ: Organ,
+        trait_: OrganTrait,
+    },
+    OrganLosesTrait {
+        organ: Organ,
+        trait_: OrganTrait,
+    },
+    AmbientRadiation,
+    DigestFood {
+        health_gain: u32,
+    },
+    ClawDrop(Item),
+    LackOfOxygen,
+    Smoke,
+    RadiationClose,
+    RadiationVeryClose,
+    Poison,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -622,10 +646,21 @@ impl Game {
     }
 
     fn systems(&mut self) {
+        self.world.handle_poison(&mut self.message_log);
+        self.world.handle_radiation(&mut self.message_log);
+        self.world.handle_smoke(&mut self.message_log);
+        self.world.handle_asphyxiation(&mut self.message_log);
         self.world.handle_resurrection();
         self.world.handle_get_on_touch();
         self.world.handle_spread_poison();
-        self.world.handle_player_organs(&mut self.rng);
+        self.world
+            .handle_full_poison(&mut self.rng, &mut self.message_log);
+        self.world
+            .handle_full_radiation(&mut self.rng, &mut self.message_log);
+        self.world
+            .handle_player_organ_traits(&mut self.rng, &mut self.message_log);
+        self.world
+            .handle_player_organs(&mut self.rng, &mut self.message_log);
     }
 
     fn check_game_over(&mut self) -> Option<GameControlFlow> {
@@ -1719,5 +1754,9 @@ impl Game {
 
     pub fn player_organs(&self) -> Vec<PlayerOrgan> {
         self.world.player_organs()
+    }
+
+    pub fn current_level_index(&self) -> usize {
+        self.current_level_index
     }
 }
