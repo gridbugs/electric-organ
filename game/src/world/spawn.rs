@@ -112,7 +112,7 @@ pub fn make_player() -> EntityData {
         oxygen: Some(Meter::new(20, 20)),
         food: Some(Meter::new(50, 50)),
         poison: Some(Meter::new(0, 20)),
-        radiation: Some(Meter::new(0, 50)),
+        radiation: Some(Meter::new(0, 100)),
         inventory: Some(Inventory::new(16)),
         satiation: Some(Meter::new(0, 20)),
         power: Some(Meter::new(0, 0)),
