@@ -1200,7 +1200,7 @@ impl Map5 {
         corner: OrdinalDirection,
         tile: Tile5,
         rng: &mut R,
-    ) -> bool {
+    ) -> Option<Coord> {
         let bottom_right = self.grid.size().to_coord().unwrap();
         let corner_coord = match corner {
             OrdinalDirection::NorthEast => bottom_right.set_y(0),
@@ -1227,9 +1227,9 @@ impl Map5 {
             .collect::<Vec<_>>();
         if let Some(&stairs_coord) = candidate_coords.choose(rng) {
             *self.grid.get_checked_mut(stairs_coord) = tile;
-            true
+            Some(stairs_coord)
         } else {
-            false
+            None
         }
     }
 
@@ -1292,6 +1292,32 @@ impl Map5 {
         }
     }
 
+    fn is_path_between(&self, start: Coord, end: Coord) -> bool {
+        if start == end {
+            return true;
+        }
+        let mut seen = HashSet::new();
+        seen.insert(start);
+        let mut queue = VecDeque::new();
+        queue.push_front(start);
+        while let Some(coord) = queue.pop_back() {
+            for d in CardinalDirection::all() {
+                let coord = coord + d.coord();
+                if let Some(tile) = self.grid.get(coord) {
+                    if tile.is_open() {
+                        if seen.insert(coord) {
+                            if coord == end {
+                                return true;
+                            }
+                            queue.push_front(coord);
+                        }
+                    }
+                }
+            }
+        }
+        false
+    }
+
     pub fn generate<R: Rng>(tentacle_spec: &TentacleSpec, rng: &mut R) -> Self {
         loop {
             let map4 = Map4::generate(rng);
@@ -1300,10 +1326,22 @@ impl Map5 {
             corners.shuffle(rng);
             map5.add_tentacles(corners.pop().unwrap(), &tentacle_spec, rng);
             map5.clear_around_tentactle();
-            if !map5.add_stairs(corners.pop().unwrap(), Tile5::StairsDown, rng) {
+            let stairs_down =
+                if let Some(x) = map5.add_stairs(corners.pop().unwrap(), Tile5::StairsDown, rng) {
+                    x
+                } else {
+                    continue;
+                };
+            let stairs_up =
+                if let Some(x) = map5.add_stairs(corners.pop().unwrap(), Tile5::StairsUp, rng) {
+                    x
+                } else {
+                    continue;
+                };
+            if stairs_down == stairs_up {
                 continue;
             }
-            if !map5.add_stairs(corners.pop().unwrap(), Tile5::StairsUp, rng) {
+            if !map5.is_path_between(stairs_down, stairs_up) {
                 continue;
             }
             map5.add_debris_around_edge();
