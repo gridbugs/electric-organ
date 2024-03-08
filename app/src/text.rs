@@ -59,8 +59,7 @@ pub fn help2(width: u32) -> AppCF<()> {
             b("\nLiver: "),
             t("Each liver speeds up poison recovery."),
             b("\nLung: "),
-            t("With two or more your oxygen will increase over time. With one your oxygen will slowly decrease. \
-                With none your oxygen will quickly decrease. If your oxygen is zero then health decreases instead."),
+            t("Each lung increases the amount of oxygen you recover each turn."),
             b("\nStomach: "),
             t("Your food will decrease over time and increase your health by an amount determined by how many stomachs you have."),
             b("\nAppendix: "),
