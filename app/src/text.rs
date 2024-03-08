@@ -57,6 +57,7 @@ pub fn help_1_5(width: u32) -> AppCF<()> {
             t("- Walk into doors to open them.\n\n"),
             t("- Walk into the wall adjacent to a door to close it.\n\n"),
             t("- Walk into enemies to perform a melee attack.\n\n"),
+            t("- Your goal is to reach the 4th level of the city and defeat the CORRUPTOR.\n\n"),
         ],
     )
     .press_any_key()
