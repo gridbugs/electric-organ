@@ -722,11 +722,16 @@ impl GameInstance {
                             style: Style::new()
                                 .with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
                         }),
-                        Layer::Item => text.parts.push(StyledString {
-                            string: "\n\n(Press g to pick it up.)".to_string(),
-                            style: Style::new()
-                                .with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
-                        }),
+                        Layer::Item => {
+                            if let Tile::Corpse(_) = tile {
+                            } else {
+                                text.parts.push(StyledString {
+                                    string: "\n\n(Press g to pick it up.)".to_string(),
+                                    style: Style::new()
+                                        .with_foreground(Rgb24::new_grey(255).to_rgba32(127)),
+                                })
+                            }
+                        }
                         _ => (),
                     }
                     text.wrap_word().render(&(), ctx, fb);
@@ -1693,7 +1698,7 @@ fn describe_tile(tile: Tile) -> Description {
                     },
                 ]),
                 description: Some(Text::new(vec![StyledString::plain_text(
-                    "Remove the heart to prevent resurrection.".to_string(),
+                    "Destroy it to prevent resurrection.".to_string(),
                 )])),
             },
             NpcType::Climber => Description {

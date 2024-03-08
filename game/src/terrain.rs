@@ -266,7 +266,7 @@ impl Terrain {
             }
         }
 
-        for _ in 0..6 {
+        for _ in 0..8 {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_money(coord, rng);
             }
@@ -316,8 +316,8 @@ impl Terrain {
         let mut num_glowers = 0;
         match level_index {
             0 => {
-                num_zombies = rng.gen_range(1..=2);
-                num_climbers = rng.gen_range(1..=3);
+                num_zombies = rng.gen_range(1..=1);
+                num_climbers = rng.gen_range(1..=2);
                 num_trespassers = 1;
                 num_snatchers = 1;
                 let hard_enemy_choice = rng.gen::<f64>();
@@ -330,10 +330,10 @@ impl Terrain {
                 }
             }
             1 => {
-                num_zombies = rng.gen_range(2..=3);
-                num_climbers = rng.gen_range(2..=3);
-                num_trespassers = rng.gen_range(1..=2);
-                num_snatchers = rng.gen_range(1..=2);
+                num_zombies = rng.gen_range(0..=2);
+                num_climbers = rng.gen_range(0..=2);
+                num_trespassers = rng.gen_range(0..=2);
+                num_snatchers = rng.gen_range(0..=2);
                 num_boomers = 1;
                 num_dividers = 1;
                 num_poisoners = 1;
@@ -349,15 +349,15 @@ impl Terrain {
                 num_glowers = 1;
             }
             2 => {
-                num_zombies = rng.gen_range(1..=2);
-                num_climbers = rng.gen_range(1..=2);
-                num_trespassers = rng.gen_range(1..=2);
-                num_snatchers = rng.gen_range(1..=2);
-                num_boomers = rng.gen_range(1..=2);
-                num_dividers = rng.gen_range(1..=2);
-                num_poisoners = rng.gen_range(1..=2);
-                num_venters = rng.gen_range(1..=2);
-                num_glowers = rng.gen_range(1..=2);
+                num_zombies = rng.gen_range(0..=2);
+                num_climbers = rng.gen_range(0..=2);
+                num_trespassers = rng.gen_range(0..=2);
+                num_snatchers = rng.gen_range(0..=2);
+                num_boomers = rng.gen_range(0..=2);
+                num_dividers = rng.gen_range(0..=2);
+                num_poisoners = rng.gen_range(0..=2);
+                num_venters = rng.gen_range(0..=2);
+                num_glowers = rng.gen_range(0..=2);
             }
             3 => {
                 num_zombies = rng.gen_range(1..=2);

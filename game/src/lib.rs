@@ -1737,6 +1737,14 @@ impl Game {
                     Item::BloodVialEmpty => {
                         self.player_fill_blood_vial(item_entity);
                         self.message_log.push(Message::FillBloodVial);
+                        let player_coord = self.player_coord();
+                        if let Some(Layers {
+                            item: Some(entity), ..
+                        }) = self.world.spatial_table.layers_at(player_coord)
+                        {
+                            self.world.remove_entity(*entity);
+                            self.world.make_floor_bloody(player_coord);
+                        }
                     }
                     Item::Antidote => {
                         let poison = self
