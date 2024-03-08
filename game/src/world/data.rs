@@ -44,7 +44,7 @@ declare_entity_module! {
         explodes_on_death: (),
         npc_type: NpcType,
         item: Item,
-        money_item: (),
+        money_item: u32,
         inventory: Inventory,
         money: u32,
         leaves_corpse: (),
@@ -63,6 +63,7 @@ declare_entity_module! {
         radioactive: (),
         smoke: (),
         shop: Shop,
+        slow: u64,
     }
 }
 pub use components::{Components, EntityData, EntityUpdate};
@@ -95,12 +96,13 @@ pub enum Tile {
     Snatcher,
     Poisoner,
     Divider,
+    Glower,
     Corruptor,
     GunStore,
     ItemStore,
     OrganTrader,
     OrganClinic,
-    Money,
+    Money(u32),
     Item(Item),
     Corpse(NpcType),
 }
@@ -228,6 +230,7 @@ pub enum NpcType {
     Snatcher,
     Poisoner,
     Divider,
+    Glower,
     Corruptor,
     GunStore,
     ItemStore,
@@ -245,6 +248,7 @@ impl NpcType {
             Self::Snatcher => Tile::Snatcher,
             Self::Poisoner => Tile::Poisoner,
             Self::Divider => Tile::Divider,
+            Self::Glower => Tile::Glower,
             Self::Corruptor => Tile::Corruptor,
             Self::GunStore => Tile::Corruptor,
             Self::ItemStore => Tile::ItemStore,
@@ -460,10 +464,6 @@ impl Organs {
 
     pub fn get_mut(&mut self, i: usize) -> Option<&mut Organ> {
         self.organs[i].as_mut()
-    }
-
-    pub fn get_slot_mut(&mut self, i: usize) -> &mut Option<Organ> {
-        &mut self.organs[i]
     }
 
     pub fn remove(&mut self, i: usize) -> Option<Organ> {

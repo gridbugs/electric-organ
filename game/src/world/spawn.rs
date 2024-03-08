@@ -642,12 +642,13 @@ impl World {
         emitter_entity
     }
 
-    pub fn spawn_money(&mut self, coord: Coord) -> Entity {
+    pub fn spawn_money<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        let amount = rng.gen_range(1..=10);
         self.spawn_entity(
             (coord, Layer::Item),
             entity_data! {
-                tile: Tile::Money,
-                money_item: (),
+                tile: Tile::Money(amount),
+                money_item: amount,
                 destructible: (),
             },
         )
@@ -768,6 +769,7 @@ impl World {
                 health: Meter::new_full(2),
                 bump_damage: 1..=2,
                 explodes_on_death: (),
+                slow: 2,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -793,6 +795,7 @@ impl World {
                 simple_inventory: Vec::new(),
                 bump_damage: 1..=2,
                 get_on_touch: (),
+                slow: 3,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -849,6 +852,39 @@ impl World {
         )
     }
 
+    pub fn spawn_glower<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Glower,
+                npc: Npc { disposition: Disposition::Hostile,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::Glower,
+                health: Meter::new_full(10),
+                bump_damage: 1..=2,
+                radioactive: (),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
+                light: Light {
+                    colour: Rgb24::hex(0x009973),
+                    vision_distance: vision_distance::Circle::new_squared(200),
+                    diminish: Rational {
+                        numerator: 1,
+                        denominator: 400,
+                    },
+                },
+                slow: 2,
+            },
+        )
+    }
+
     pub fn spawn_corruptor<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
         let entity = self.spawn_entity(
             (coord, Layer::Character),
@@ -878,6 +914,14 @@ impl World {
                         }
                     }
                 ],
+              light: Light {
+                    colour: Rgb24::hex(0xffffff),
+                    vision_distance: vision_distance::Circle::new_squared(200),
+                    diminish: Rational {
+                        numerator: 1,
+                        denominator: 400,
+                    },
+                },
             },
         );
         self.realtime_components.particle_emitter.insert(entity, {
@@ -935,7 +979,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::GunStore,
                 health: Meter::new_full(50),
-                bump_damage: 5..=10,
+                bump_damage: 10..=20,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -977,7 +1021,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::ItemStore,
                 health: Meter::new_full(50),
-                bump_damage: 5..=10,
+                bump_damage: 10..=20,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -1004,7 +1048,7 @@ impl World {
                 character: (),
                 npc_type: NpcType::OrganClinic,
                 health: Meter::new_full(50),
-                bump_damage: 5..=10,
+                bump_damage: 10..=20,
                 simple_organs: vec![
                     random_basic_organ(rng),
                     random_basic_organ(rng),
@@ -1013,7 +1057,7 @@ impl World {
         )
     }
 
-    pub fn spawn_organ_trader<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+    pub fn _spawn_organ_trader<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
         self.spawn_entity(
             (coord, Layer::Character),
             entity_data! {

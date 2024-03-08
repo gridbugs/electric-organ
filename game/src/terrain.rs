@@ -20,6 +20,9 @@ impl Terrain {
                 let floor_entity = world.spawn_floor(coord);
                 match ch {
                     '.' => (),
+                    'C' => {
+                        world.spawn_organ_clinic(coord, &mut rng);
+                    }
                     'I' => {
                         world.spawn_item_store(coord, &mut rng);
                     }
@@ -34,6 +37,9 @@ impl Terrain {
                     }
                     'c' => {
                         world.spawn_climber(coord, &mut rng);
+                    }
+                    'g' => {
+                        world.spawn_glower(coord, &mut rng);
                     }
                     'p' => {
                         world.spawn_poisoner(coord, &mut rng);
@@ -60,7 +66,7 @@ impl Terrain {
                         world.spawn_stairs_up(coord);
                     }
                     '$' => {
-                        world.spawn_money(coord);
+                        world.spawn_money(coord, &mut rng);
                     }
                     '~' => {
                         world

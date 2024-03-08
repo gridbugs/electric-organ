@@ -288,7 +288,7 @@ impl GameInstance {
                         .with_foreground(Rgb24::new(187, 187, 187).to_rgba32(255)),
                 };
             }
-            Tile::Money => {
+            Tile::Money(_) => {
                 return RenderCell {
                     character: Some('$'),
                     style: Style::new()
@@ -465,6 +465,14 @@ impl GameInstance {
                         .with_foreground(colours::DIVIDER.to_rgba32(255)),
                 };
             }
+            Tile::Glower => {
+                return RenderCell {
+                    character: Some('g'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::GLOWER.to_rgba32(255)),
+                };
+            }
             Tile::Corruptor => {
                 return RenderCell {
                     character: Some('X'),
@@ -478,10 +486,8 @@ impl GameInstance {
                     character: Some('G'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255))
-                        .with_background(
-                            colours::SHOP.to_rgba32(255).saturating_scalar_mul_div(1, 4),
-                        ),
+                        .with_foreground(colours::SHOP_GUN.to_rgba32(255))
+                        .with_background(colours::SHOP_BG.to_rgba32(255)),
                 };
             }
             Tile::ItemStore => {
@@ -489,18 +495,14 @@ impl GameInstance {
                     character: Some('S'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255))
-                        .with_background(
-                            colours::SHOP.to_rgba32(255).saturating_scalar_mul_div(1, 4),
-                        ),
+                        .with_foreground(colours::SHOP_ITEM.to_rgba32(255))
+                        .with_background(colours::SHOP_BG.to_rgba32(255)),
                 };
             }
             Tile::OrganTrader => {
                 return RenderCell {
                     character: Some('T'),
-                    style: Style::new()
-                        .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                    style: Style::new(),
                 };
             }
             Tile::OrganClinic => {
@@ -508,10 +510,8 @@ impl GameInstance {
                     character: Some('C'),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255))
-                        .with_background(
-                            colours::SHOP.to_rgba32(255).saturating_scalar_mul_div(1, 4),
-                        ),
+                        .with_foreground(colours::SHOP_ORGAN_CLINIC.to_rgba32(255))
+                        .with_background(colours::SHOP_BG.to_rgba32(255)),
                 };
             }
             Tile::Corpse(npc_type) => {
@@ -523,11 +523,12 @@ impl GameInstance {
                     NpcType::Snatcher => colours::SNATCHER,
                     NpcType::Poisoner => colours::POISONER,
                     NpcType::Divider => colours::DIVIDER,
+                    NpcType::Glower => colours::GLOWER,
                     NpcType::Corruptor => colours::CORRUPTOR,
-                    NpcType::GunStore => colours::SHOP,
-                    NpcType::ItemStore => colours::SHOP,
-                    NpcType::OrganClinic => colours::SHOP,
-                    NpcType::OrganTrader => colours::SHOP,
+                    NpcType::GunStore => colours::SHOP_GUN,
+                    NpcType::ItemStore => colours::SHOP_ITEM,
+                    NpcType::OrganClinic => colours::SHOP_ORGAN_CLINIC,
+                    NpcType::OrganTrader => colours::SHOP_BG,
                 };
                 return RenderCell {
                     character: Some('?'),
@@ -1216,16 +1217,13 @@ fn describe_tile(tile: Tile) -> Description {
             name: Text::new(vec![StyledString::plain_text("a bullet".to_string())]),
             description: None,
         },
-        Tile::Money => Description {
-            name: Text::new(vec![
-                StyledString::plain_text("a ".to_string()),
-                StyledString {
-                    string: "CyberCoin™".to_string(),
-                    style: Style::new()
-                        .with_bold(true)
-                        .with_foreground(colours::MONEY.to_rgba32(255)),
-                },
-            ]),
+        Tile::Money(amount) => Description {
+            name: Text::new(vec![StyledString {
+                string: format!("{amount} CCz"),
+                style: Style::new()
+                    .with_bold(true)
+                    .with_foreground(colours::MONEY.to_rgba32(255)),
+            }]),
             description: Some(Text::new(vec![StyledString::plain_text(
                 "A unit of cybernetically-secure decentralized currency.".to_string(),
             )])),
@@ -1557,12 +1555,32 @@ fn describe_tile(tile: Tile) -> Description {
                     string: "divider".to_string(),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::ZOMBIE.to_rgba32(255)),
+                        .with_foreground(colours::DIVIDER.to_rgba32(255)),
                 },
             ]),
             description: Some(Text::new(vec![StyledString::plain_text(
                 "Splits when damaged".to_string(),
             )])),
+        },
+        Tile::Glower => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "glower".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::GLOWER.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![
+                StyledString::plain_text("Emits ".to_string()),
+                StyledString {
+                    string: "radiation".to_string(),
+                    style: Style::new()
+                        .with_bold(false)
+                        .with_foreground(colours::RADIATION.to_rgba32(255)),
+                },
+            ])),
         },
         Tile::Corruptor => Description {
             name: Text::new(vec![
@@ -1585,7 +1603,7 @@ fn describe_tile(tile: Tile) -> Description {
                     string: "gun vendor".to_string(),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                        .with_foreground(colours::SHOP_GUN.to_rgba32(255)),
                 },
             ]),
             description: Some(Text::new(vec![StyledString::plain_text(
@@ -1599,7 +1617,7 @@ fn describe_tile(tile: Tile) -> Description {
                     string: "item vendor".to_string(),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                        .with_foreground(colours::SHOP_ITEM.to_rgba32(255)),
                 },
             ]),
             description: Some(Text::new(vec![StyledString::plain_text(
@@ -1613,7 +1631,7 @@ fn describe_tile(tile: Tile) -> Description {
                     string: "organ trader".to_string(),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                        .with_foreground(colours::SHOP_BG.to_rgba32(255)),
                 },
             ]),
             description: Some(Text::new(vec![StyledString::plain_text(
@@ -1627,7 +1645,7 @@ fn describe_tile(tile: Tile) -> Description {
                     string: "organ clinic".to_string(),
                     style: Style::new()
                         .with_bold(true)
-                        .with_foreground(colours::SHOP.to_rgba32(255)),
+                        .with_foreground(colours::SHOP_ORGAN_CLINIC.to_rgba32(255)),
                 },
             ]),
             description: Some(Text::new(vec![StyledString::plain_text(
@@ -1721,6 +1739,26 @@ fn describe_tile(tile: Tile) -> Description {
                 ]),
                 description: None,
             },
+            NpcType::Glower => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "glower".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::GLOWER.to_rgba32(255)),
+                    },
+                ]),
+                description: Some(Text::new(vec![
+                    StyledString::plain_text("Emits ".to_string()),
+                    StyledString {
+                        string: "radiation".to_string(),
+                        style: Style::new()
+                            .with_bold(false)
+                            .with_foreground(colours::RADIATION.to_rgba32(255)),
+                    },
+                ])),
+            },
             NpcType::Corruptor => Description {
                 name: Text::new(vec![
                     StyledString::plain_text("the corpse of the ".to_string()),
@@ -1740,7 +1778,7 @@ fn describe_tile(tile: Tile) -> Description {
                         string: "gun vendor".to_string(),
                         style: Style::new()
                             .with_bold(true)
-                            .with_foreground(colours::SHOP.to_rgba32(255)),
+                            .with_foreground(colours::SHOP_GUN.to_rgba32(255)),
                     },
                 ]),
                 description: None,
@@ -1752,7 +1790,7 @@ fn describe_tile(tile: Tile) -> Description {
                         string: "item vendor".to_string(),
                         style: Style::new()
                             .with_bold(true)
-                            .with_foreground(colours::SHOP.to_rgba32(255)),
+                            .with_foreground(colours::SHOP_ITEM.to_rgba32(255)),
                     },
                 ]),
                 description: None,
@@ -1764,7 +1802,7 @@ fn describe_tile(tile: Tile) -> Description {
                         string: "organ clinician".to_string(),
                         style: Style::new()
                             .with_bold(true)
-                            .with_foreground(colours::SHOP.to_rgba32(255)),
+                            .with_foreground(colours::SHOP_ORGAN_CLINIC.to_rgba32(255)),
                     },
                 ]),
                 description: None,
@@ -1776,7 +1814,7 @@ fn describe_tile(tile: Tile) -> Description {
                         string: "organ trader".to_string(),
                         style: Style::new()
                             .with_bold(true)
-                            .with_foreground(colours::SHOP.to_rgba32(255)),
+                            .with_foreground(colours::SHOP_BG.to_rgba32(255)),
                     },
                 ]),
                 description: None,
@@ -1830,6 +1868,12 @@ fn npc_type_to_styled_string(npc_type: NpcType) -> text::StyledString {
                 .with_bold(true)
                 .with_foreground(colours::DIVIDER.to_rgba32(255)),
         },
+        NpcType::Glower => StyledString {
+            string: "glower".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::GLOWER.to_rgba32(255)),
+        },
         NpcType::Corruptor => StyledString {
             string: "CORRUPTOR".to_string(),
             style: Style::new()
@@ -1840,25 +1884,25 @@ fn npc_type_to_styled_string(npc_type: NpcType) -> text::StyledString {
             string: "gun vendor".to_string(),
             style: Style::new()
                 .with_bold(true)
-                .with_foreground(colours::SHOP.to_rgba32(255)),
+                .with_foreground(colours::SHOP_GUN.to_rgba32(255)),
         },
         NpcType::ItemStore => StyledString {
             string: "item vendor".to_string(),
             style: Style::new()
                 .with_bold(true)
-                .with_foreground(colours::SHOP.to_rgba32(255)),
+                .with_foreground(colours::SHOP_ITEM.to_rgba32(255)),
         },
         NpcType::OrganClinic => StyledString {
             string: "organ clinic".to_string(),
             style: Style::new()
                 .with_bold(true)
-                .with_foreground(colours::SHOP.to_rgba32(255)),
+                .with_foreground(colours::SHOP_ORGAN_CLINIC.to_rgba32(255)),
         },
         NpcType::OrganTrader => StyledString {
             string: "organ trader".to_string(),
             style: Style::new()
                 .with_bold(true)
-                .with_foreground(colours::SHOP.to_rgba32(255)),
+                .with_foreground(colours::SHOP_BG.to_rgba32(255)),
         },
     }
 }
@@ -1990,10 +2034,10 @@ pub fn message_to_text(message: Message) -> Text {
             },
             StyledString::plain_text(" damage.".to_string()),
         ]),
-        Message::GetMoney => Text::new(vec![
-            StyledString::plain_text("You pick up the ".to_string()),
+        Message::GetMoney(money) => Text::new(vec![
+            StyledString::plain_text("You pick up ".to_string()),
             StyledString {
-                string: format!("CyberCoin™"),
+                string: format!("{money} CCz"),
                 style: Style::plain_text()
                     .with_bold(true)
                     .with_foreground(colours::MONEY.to_rgba32(255)),

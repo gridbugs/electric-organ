@@ -89,7 +89,7 @@ pub enum Message {
         attacker_npc_type: NpcType,
         damage: u32,
     },
-    GetMoney,
+    GetMoney(u32),
     GetItem(Item),
     DropItem(Item),
     UnequipItem(Item),
@@ -320,9 +320,10 @@ pub struct Game {
     animation_context: AnimationContext,
     omniscient: bool,
     external_events: Vec<ExternalEvent>,
+    turn_count: u64,
 }
 
-pub const NUM_LEVELS: usize = 6;
+pub const NUM_LEVELS: usize = 4;
 
 impl Game {
     pub fn new<R: Rng>(config: &Config, _victories: Vec<Victory>, base_rng: &mut R) -> Self {
@@ -367,6 +368,7 @@ impl Game {
             animation_context: Default::default(),
             omniscient: config.omniscient.is_some(),
             external_events: Default::default(),
+            turn_count: 0,
         };
         game.systems();
         game.update_visibility();
@@ -679,6 +681,11 @@ impl Game {
             if self.world.components.corpse.contains(agent_entity) {
                 continue;
             }
+            if let Some(slow) = self.world.components.slow.get(agent_entity) {
+                if self.turn_count % slow != 0 {
+                    continue;
+                }
+            }
             let ai_input = self.agents.get_mut(agent_entity).unwrap().act(
                 agent_entity,
                 &self.world,
@@ -699,6 +706,7 @@ impl Game {
             }
         }
         self.systems();
+        self.turn_count += 1;
         self.check_game_over()
     }
 
@@ -806,7 +814,7 @@ impl Game {
             self.world.spawn_bullet(
                 start,
                 target,
-                ProjectileDamage { hit_points: 2..=4 },
+                ProjectileDamage { hit_points: 2..=3 },
                 &mut self.animation_rng,
             );
         }
@@ -887,7 +895,7 @@ impl Game {
             self.world.spawn_bullet(
                 start,
                 target,
-                ProjectileDamage { hit_points: 2..=4 },
+                ProjectileDamage { hit_points: 2..=3 },
                 &mut self.animation_rng,
             );
         }
@@ -1150,15 +1158,15 @@ impl Game {
         let player_coord = self.player_coord();
         let layers = self.world.spatial_table.layers_at_checked(player_coord);
         if let Some(item_entity) = layers.item {
-            if self.world.components.money_item.contains(item_entity) {
+            if let Some(money) = self.world.components.money_item.get(item_entity).cloned() {
                 *self
                     .world
                     .components
                     .money
                     .get_mut(self.player_entity)
-                    .unwrap() += 1;
+                    .unwrap() += money;
                 self.world.remove_entity(item_entity);
-                self.message_log.push(Message::GetMoney);
+                self.message_log.push(Message::GetMoney(money));
             }
             if let Some(&item) = self.world.components.item.get(item_entity) {
                 let inventry = self
