@@ -1370,7 +1370,11 @@ impl Game {
             MenuChoice::Empty => (),
             MenuChoice::Dummy => panic!(),
             MenuChoice::DropItem(i) => self.player_drop_item(i),
-            MenuChoice::ApplyItem(i) => return self.player_apply_item(i),
+            MenuChoice::ApplyItem(i) => {
+                if let Some(control_flow) = self.player_apply_item(i) {
+                    return Some(control_flow);
+                }
+            }
             MenuChoice::HarvestOrgan {
                 inventory_index,
                 organ,
@@ -1412,7 +1416,7 @@ impl Game {
             } => self.clinic_install_from_container(inventory_index, organ),
         }
         self.npc_turn();
-        None
+        self.check_game_over()
     }
 
     fn clinic_install_from_container(&mut self, inventory_index: usize, organ: Organ) {

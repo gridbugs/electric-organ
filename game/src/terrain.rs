@@ -22,7 +22,7 @@ impl Terrain {
                 match ch {
                     '.' => (),
                     'C' => {
-                        world.spawn_organ_clinic(coord, 0, &mut rng);
+                        world.spawn_organ_clinic(coord, 2, &mut rng);
                     }
                     'I' => {
                         world.spawn_item_store(coord, &mut rng);
@@ -83,7 +83,7 @@ impl Terrain {
                         world.components.floor_poison.insert(floor_entity, ());
                     }
                     '1' => {
-                        world.spawn_item(coord, Item::Pistol);
+                        world.spawn_item(coord, Item::Battery);
                     }
                     '2' => {
                         world.spawn_item(coord, Item::PistolAmmo);
@@ -129,7 +129,7 @@ impl Terrain {
     }
 
     pub fn generate<R: Rng>(level_index: usize, rng: &mut R) -> Self {
-        //return Self::generate_text();
+        return Self::generate_text();
         let tentacle_spec = TentacleSpec {
             num_tentacles: 2,
             segment_length: 2.,

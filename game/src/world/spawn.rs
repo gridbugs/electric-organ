@@ -116,7 +116,7 @@ pub fn make_player() -> EntityData {
         inventory: Some(Inventory::new(16)),
         satiation: Some(Meter::new(0, 20)),
         power: Some(Meter::new(0, 0)),
-        money: Some(0),
+        money: Some(200),
         organs: Some(player_starting_organs()),
         hands: Some(Hands {
             left: Hand::Empty,

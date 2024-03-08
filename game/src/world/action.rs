@@ -578,11 +578,13 @@ impl World {
             .get_mut(player_entity)
             .unwrap()
             .decrease(1);
-        self.components
-            .power
-            .get_mut(player_entity)
-            .unwrap()
-            .decrease(1);
+        if rng.gen::<f64>() < 0.1 {
+            self.components
+                .power
+                .get_mut(player_entity)
+                .unwrap()
+                .decrease(1);
+        }
         if rng.gen::<f64>() < 0.1 {
             self.components
                 .radiation
@@ -598,7 +600,6 @@ impl World {
         let mut num_claws = 0;
         for organ in &organs {
             match organ.type_ {
-                OrganType::Claw => num_claws += 1,
                 OrganType::Heart => {
                     let mut amount = 10;
                     if organ.cybernetic {
@@ -712,6 +713,11 @@ impl World {
                     }
                 }
                 _ => (),
+            }
+        }
+        for po in self.player_organs() {
+            if po.organ.type_ == OrganType::Claw {
+                num_claws += 1;
             }
         }
         if let Some(player_coord) = self.spatial_table.coord_of(player_entity) {
