@@ -1836,7 +1836,7 @@ impl Game {
                             .oxygen
                             .get_mut(self.player_entity)
                             .unwrap();
-                        if oxygen.is_full() && !vampiric {
+                        if oxygen.is_full() && !vampiric && false {
                             self.message_log
                                 .push(Message::ActionError(ActionError::OxygenIsFull));
                         } else {
