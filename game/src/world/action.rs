@@ -698,12 +698,12 @@ impl World {
                             }
                             let health = self.components.health.get_mut(player_entity).unwrap();
                             if health.is_full() {
-                                message_log.push(Message::DigestFoodNoHealthIncrease);
+                                //                                message_log.push(Message::DigestFoodNoHealthIncrease);
                             } else {
                                 health.increase(health_increase);
-                                message_log.push(Message::DigestFood {
-                                    health_gain: health_increase,
-                                });
+                                //                                message_log.push(Message::DigestFood {
+                                //                                    health_gain: health_increase,
+                                //                                });
                             }
                         } else {
                             let health = self.components.health.get_mut(player_entity).unwrap();

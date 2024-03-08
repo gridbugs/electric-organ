@@ -858,7 +858,7 @@ impl GameInstance {
         let num_floors = game::NUM_LEVELS;
         Text::new(vec![
             StyledString {
-                string: "Floor: ".to_string(),
+                string: "Level: ".to_string(),
                 style: Style::plain_text(),
             },
             StyledString {
@@ -2391,7 +2391,7 @@ pub fn message_to_text(message: Message) -> Text {
             StyledString::plain_text("!".to_string()),
         ]),
         Message::GetToTheEvacZone => Text::new(vec![StyledString::plain_text(
-            "Now get to the Evac Zone on Floor 1!".to_string(),
+            "Now get to the Evac Zone on Level 1!".to_string(),
         )]),
         Message::HungerDamage => Text::new(vec![StyledString::plain_text(
             "You take damage from starvation.".to_string(),
