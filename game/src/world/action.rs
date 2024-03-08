@@ -405,7 +405,7 @@ impl World {
     pub fn add_player_initial_items(&mut self) {
         let entities = vec![
             self.spawn_item_no_coord(Item::PistolAmmo),
-            self.spawn_item_no_coord(Item::OrganContainer(None)),
+            self.spawn_item_no_coord(Item::AntiRads),
         ];
         let player = self.components.player.entities().next().unwrap();
         let inventory = self.components.inventory.get_mut(player).unwrap();
