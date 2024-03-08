@@ -47,6 +47,9 @@ impl Terrain {
                     'd' => {
                         world.spawn_divider(coord, &mut rng);
                     }
+                    'v' => {
+                        world.spawn_venter(coord, &mut rng);
+                    }
                     '#' => {
                         world.spawn_wall(coord);
                     }

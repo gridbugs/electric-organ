@@ -473,6 +473,14 @@ impl GameInstance {
                         .with_foreground(colours::GLOWER.to_rgba32(255)),
                 };
             }
+            Tile::Venter => {
+                return RenderCell {
+                    character: Some('v'),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::VENTER.to_rgba32(255)),
+                };
+            }
             Tile::Corruptor => {
                 return RenderCell {
                     character: Some('X'),
@@ -524,6 +532,7 @@ impl GameInstance {
                     NpcType::Poisoner => colours::POISONER,
                     NpcType::Divider => colours::DIVIDER,
                     NpcType::Glower => colours::GLOWER,
+                    NpcType::Venter => colours::VENTER,
                     NpcType::Corruptor => colours::CORRUPTOR,
                     NpcType::GunStore => colours::SHOP_GUN,
                     NpcType::ItemStore => colours::SHOP_ITEM,
@@ -1582,6 +1591,26 @@ fn describe_tile(tile: Tile) -> Description {
                 },
             ])),
         },
+        Tile::Venter => Description {
+            name: Text::new(vec![
+                StyledString::plain_text("a ".to_string()),
+                StyledString {
+                    string: "venter".to_string(),
+                    style: Style::new()
+                        .with_bold(true)
+                        .with_foreground(colours::VENTER.to_rgba32(255)),
+                },
+            ]),
+            description: Some(Text::new(vec![
+                StyledString::plain_text("Emits ".to_string()),
+                StyledString {
+                    string: "smoke".to_string(),
+                    style: Style::new()
+                        .with_bold(false)
+                        .with_foreground(colours::VENTER.to_rgba32(255)),
+                },
+            ])),
+        },
         Tile::Corruptor => Description {
             name: Text::new(vec![
                 StyledString::plain_text("the ".to_string()),
@@ -1759,6 +1788,27 @@ fn describe_tile(tile: Tile) -> Description {
                     },
                 ])),
             },
+            NpcType::Venter => Description {
+                name: Text::new(vec![
+                    StyledString::plain_text("the corpse of a ".to_string()),
+                    StyledString {
+                        string: "venter".to_string(),
+                        style: Style::new()
+                            .with_bold(true)
+                            .with_foreground(colours::VENTER.to_rgba32(255)),
+                    },
+                ]),
+                description: Some(Text::new(vec![
+                    StyledString::plain_text("Emits ".to_string()),
+                    StyledString {
+                        string: "smoke".to_string(),
+                        style: Style::new()
+                            .with_bold(false)
+                            .with_foreground(colours::VENTER.to_rgba32(255)),
+                    },
+                ])),
+            },
+
             NpcType::Corruptor => Description {
                 name: Text::new(vec![
                     StyledString::plain_text("the corpse of the ".to_string()),
@@ -1873,6 +1923,12 @@ fn npc_type_to_styled_string(npc_type: NpcType) -> text::StyledString {
             style: Style::new()
                 .with_bold(true)
                 .with_foreground(colours::GLOWER.to_rgba32(255)),
+        },
+        NpcType::Venter => StyledString {
+            string: "venter".to_string(),
+            style: Style::new()
+                .with_bold(true)
+                .with_foreground(colours::VENTER.to_rgba32(255)),
         },
         NpcType::Corruptor => StyledString {
             string: "CORRUPTOR".to_string(),

@@ -865,7 +865,7 @@ impl World {
                 },
                 character: (),
                 npc_type: NpcType::Glower,
-                health: Meter::new_full(10),
+                health: Meter::new_full(8),
                 bump_damage: 1..=2,
                 radioactive: (),
                 simple_organs: vec![
@@ -883,6 +883,56 @@ impl World {
                 slow: 2,
             },
         )
+    }
+
+    pub fn spawn_venter<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
+        let entity = self.spawn_entity(
+            (coord, Layer::Character),
+            entity_data! {
+                tile: Tile::Venter,
+                npc: Npc { disposition: Disposition::Hostile,
+                    movement: NpcMovement {
+                        can_traverse_difficult: false,
+                        can_open_doors: false,
+                    },
+                },
+                character: (),
+                npc_type: NpcType::Venter,
+                health: Meter::new_full(8),
+                bump_damage: 1..=2,
+                smoke: (),
+                simple_organs: vec![
+                    random_basic_organ(rng),
+                    random_basic_organ(rng),
+                ],
+                realtime: (),
+            },
+        );
+        self.realtime_components.particle_emitter.insert(entity, {
+            use particle::spec::*;
+            let colour_range = UniformInclusiveRange {
+                low: Rgb24::new(0, 0, 0).to_rgba32(31),
+                high: Rgb24::new(255, 255, 255).to_rgba32(31),
+            };
+            ParticleEmitter {
+                emit_particle_every_period: Duration::from_millis(16),
+                fade_out_duration: None,
+                particle: Particle {
+                    colour_hint: Some(colour_range),
+                    movement: Some(Movement {
+                        angle_range: Radians::uniform_range_all(),
+                        cardinal_period_range: UniformInclusiveRange {
+                            low: Duration::from_millis(500),
+                            high: Duration::from_millis(1000),
+                        },
+                    }),
+                    fade_duration: Some(Duration::from_millis(5000)),
+                    ..Default::default()
+                },
+            }
+            .build(rng)
+        });
+        entity
     }
 
     pub fn spawn_corruptor<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {

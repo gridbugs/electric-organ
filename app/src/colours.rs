@@ -26,6 +26,7 @@ pub const FOOD: Rgb24 = Rgb24::hex(0x997300);
 pub const POISON: Rgb24 = Rgb24::hex(0x336600);
 pub const RADIATION: Rgb24 = Rgb24::hex(0x009973);
 pub const GLOWER: Rgb24 = Rgb24::hex(0x009973);
+pub const VENTER: Rgb24 = Rgb24::hex(0xcccccc);
 pub const POWER: Rgb24 = Rgb24::hex(0xff00ff);
 pub const SATIATION: Rgb24 = Rgb24::hex(0xff0000);
 pub const MONEY: Rgb24 = Rgb24::hex(0xffff66);
