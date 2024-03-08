@@ -111,12 +111,12 @@ pub fn make_player() -> EntityData {
         health: Some(Meter::new(20, 20)),
         oxygen: Some(Meter::new(20, 20)),
         food: Some(Meter::new(10, 10)),
-        poison: Some(Meter::new(0, 10)),
+        poison: Some(Meter::new(0, 20)),
         radiation: Some(Meter::new(0, 50)),
         inventory: Some(Inventory::new(12)),
         satiation: Some(Meter::new(0, 20)),
         power: Some(Meter::new(0, 0)),
-        money: Some(100),
+        money: Some(0),
         organs: Some(player_starting_organs()),
         hands: Some(Hands {
             left: Hand::Empty,
@@ -259,11 +259,11 @@ impl World {
                 difficult: (),
                 tentacle: (),
                 light: Light {
-                    colour: Rgb24::new(0, 255, 0),
+                    colour: Rgb24::new(0, 255, 255),
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
-                        denominator: 40,
+                        denominator: 200,
                     },
                 },
             },
@@ -647,7 +647,7 @@ impl World {
     }
 
     pub fn spawn_money<R: Rng>(&mut self, coord: Coord, rng: &mut R) -> Entity {
-        let amount = rng.gen_range(1..=10);
+        let amount = rng.gen_range(10..=20);
         self.spawn_entity(
             (coord, Layer::Item),
             entity_data! {

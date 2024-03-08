@@ -130,10 +130,10 @@ impl Terrain {
 
     pub fn generate<R: Rng>(level_index: usize, rng: &mut R) -> Self {
         let tentacle_spec = TentacleSpec {
-            num_tentacles: 3,
-            segment_length: 1.5,
+            num_tentacles: 2,
+            segment_length: 2.,
             distance_from_centre: 35.0,
-            spread: 0.3,
+            spread: 0.2,
         };
         let map = Map::generate(&tentacle_spec, rng);
         let mut world = World::new(map.grid.size());
@@ -208,6 +208,12 @@ impl Terrain {
             .collect::<Vec<_>>();
         npc_spawn_candidates.shuffle(rng);
 
+        if level_index == crate::NUM_LEVELS - 1 {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_corruptor(coord, rng);
+            }
+        }
+
         for (i, coord) in npc_spawn_candidates.iter().enumerate() {
             let mut good = true;
             for d in Direction::all() {
@@ -259,28 +265,279 @@ impl Terrain {
             }
         }
 
-        for _ in 0..0 {
+        for _ in 0..6 {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_money(coord, rng);
+            }
+        }
+
+        for _ in 0..4 {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                let roll = rng.gen::<f64>();
+                if roll < 0.3 {
+                    world.spawn_item(coord, Item::Antidote);
+                } else if roll < 0.6 {
+                    world.spawn_item(coord, Item::AntiRads);
+                } else {
+                    world.spawn_item(coord, Item::Stimpack);
+                }
+            }
+        }
+        if let Some(coord) = npc_spawn_candidates.pop() {
+            world.spawn_item(coord, Item::Stimpack);
+        }
+        if let Some(coord) = npc_spawn_candidates.pop() {
+            world.spawn_item(coord, Item::Antidote);
+        }
+        if let Some(coord) = npc_spawn_candidates.pop() {
+            world.spawn_item(coord, Item::AntiRads);
+        }
+        for _ in 0..2 {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_item(coord, Item::BloodVialEmpty);
+            }
+        }
+
+        for _ in 0..2 {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_item(coord, Item::Food);
+            }
+        }
+
+        let num_zombies;
+        let num_climbers;
+        let num_trespassers;
+        let num_snatchers;
+        let mut num_boomers = 0;
+        let mut num_dividers = 0;
+        let mut num_poisoners = 0;
+        let mut num_venters = 0;
+        let mut num_glowers = 0;
+        match level_index {
+            0 => {
+                num_zombies = rng.gen_range(1..=2);
+                num_climbers = rng.gen_range(1..=3);
+                num_trespassers = 1;
+                num_snatchers = 1;
+                let hard_enemy_choice = rng.gen::<f64>();
+                if hard_enemy_choice < 0.33 {
+                    num_boomers = 1;
+                } else if hard_enemy_choice < 0.66 {
+                    num_dividers = 1;
+                } else {
+                    num_poisoners = 1;
+                }
+            }
+            1 => {
+                num_zombies = rng.gen_range(2..=3);
+                num_climbers = rng.gen_range(2..=3);
+                num_trespassers = rng.gen_range(1..=2);
+                num_snatchers = rng.gen_range(1..=2);
+                num_boomers = 1;
+                num_dividers = 1;
+                num_poisoners = 1;
+                let hard_enemy_choice = rng.gen::<f64>();
+                if hard_enemy_choice < 0.33 {
+                    num_boomers = 0;
+                } else if hard_enemy_choice < 0.66 {
+                    num_dividers = 0;
+                } else {
+                    num_poisoners = 0;
+                }
+                num_venters = 1;
+                num_glowers = 1;
+            }
+            2 => {
+                num_zombies = rng.gen_range(1..=2);
+                num_climbers = rng.gen_range(1..=2);
+                num_trespassers = rng.gen_range(1..=2);
+                num_snatchers = rng.gen_range(1..=2);
+                num_boomers = rng.gen_range(1..=2);
+                num_dividers = rng.gen_range(1..=2);
+                num_poisoners = rng.gen_range(1..=2);
+                num_venters = rng.gen_range(1..=2);
+                num_glowers = rng.gen_range(1..=2);
+            }
+            3 => {
+                num_zombies = rng.gen_range(1..=2);
+                num_climbers = rng.gen_range(1..=2);
+                num_trespassers = 1;
+                num_snatchers = 1;
+                let hard_enemy_choice = rng.gen::<f64>();
+                if hard_enemy_choice < 0.33 {
+                    num_boomers = 1;
+                } else if hard_enemy_choice < 0.66 {
+                    num_dividers = 1;
+                } else {
+                    num_poisoners = 1;
+                }
+                num_venters = 1;
+                num_glowers = 1;
+            }
+            _ => panic!(),
+        }
+
+        for _ in 0..num_zombies {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_zombie(coord, rng);
             }
         }
-        for _ in 0..0 {
+        for _ in 0..num_climbers {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_climber(coord, rng);
             }
         }
-        for _ in 0..0 {
+        for _ in 0..num_trespassers {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_trespasser(coord, rng);
             }
         }
-        for _ in 0..0 {
+        for _ in 0..num_snatchers {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_snatcher(coord, rng);
+            }
+        }
+        for _ in 0..num_boomers {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_boomer(coord, rng);
             }
         }
-        if let Some(coord) = npc_spawn_candidates.pop() {
-            world.spawn_corruptor(coord, rng);
+        for _ in 0..num_dividers {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_divider(coord, rng);
+            }
+        }
+        for _ in 0..num_poisoners {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_poisoner(coord, rng);
+            }
+        }
+        for _ in 0..num_venters {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_venter(coord, rng);
+            }
+        }
+        for _ in 0..num_glowers {
+            if let Some(coord) = npc_spawn_candidates.pop() {
+                world.spawn_glower(coord, rng);
+            }
+        }
+        match level_index {
+            0 => {
+                let pool = vec![OrganType::Claw, OrganType::CronenbergPistol];
+                if let Some(coord) = npc_spawn_candidates.pop() {
+                    let organ = Organ {
+                        type_: *pool.choose(rng).unwrap(),
+                        cybernetic: false,
+                        original: false,
+                        traits: OrganTraits::with_one_random(rng),
+                    };
+                    world.spawn_item(coord, Item::OrganContainer(Some(organ)));
+                }
+                let pool = vec![
+                    Item::PistolAmmo,
+                    Item::PistolAmmo,
+                    Item::PistolAmmo,
+                    Item::ShotgunAmmo,
+                    Item::Rocket,
+                    Item::Pistol,
+                ];
+                for &item in pool.choose_multiple(rng, 4) {
+                    if let Some(coord) = npc_spawn_candidates.pop() {
+                        world.spawn_item(coord, item);
+                    }
+                }
+            }
+            1 => {
+                let pool = vec![
+                    OrganType::Claw,
+                    OrganType::CronenbergPistol,
+                    OrganType::CronenbergShotgun,
+                    OrganType::CyberCore,
+                ];
+                for &type_ in pool.choose_multiple(rng, 2) {
+                    if let Some(coord) = npc_spawn_candidates.pop() {
+                        let organ = Organ {
+                            type_,
+                            cybernetic: false,
+                            original: false,
+                            traits: OrganTraits::with_one_random(rng),
+                        };
+                        world.spawn_item(coord, Item::OrganContainer(Some(organ)));
+                    }
+                }
+                let pool = vec![
+                    Item::Battery,
+                    Item::Battery,
+                    Item::PistolAmmo,
+                    Item::PistolAmmo,
+                    Item::ShotgunAmmo,
+                    Item::ShotgunAmmo,
+                    Item::Rocket,
+                    Item::Rocket,
+                    Item::Shotgun,
+                    Item::Shotgun,
+                    Item::Pistol,
+                    Item::Pistol,
+                ];
+                for &item in pool.choose_multiple(rng, 6) {
+                    if let Some(coord) = npc_spawn_candidates.pop() {
+                        world.spawn_item(coord, item);
+                    }
+                }
+            }
+            2 => {
+                let pool = vec![
+                    OrganType::Claw,
+                    OrganType::CronenbergPistol,
+                    OrganType::CronenbergShotgun,
+                    OrganType::CyberCore,
+                ];
+                for &type_ in pool.choose_multiple(rng, 1) {
+                    if let Some(coord) = npc_spawn_candidates.pop() {
+                        let organ = Organ {
+                            type_,
+                            cybernetic: false,
+                            original: false,
+                            traits: OrganTraits::with_one_random(rng),
+                        };
+                        world.spawn_item(coord, Item::OrganContainer(Some(organ)));
+                    }
+                }
+                let pool = vec![
+                    Item::Battery,
+                    Item::Battery,
+                    Item::PistolAmmo,
+                    Item::PistolAmmo,
+                    Item::ShotgunAmmo,
+                    Item::ShotgunAmmo,
+                    Item::Rocket,
+                    Item::Rocket,
+                ];
+                for &item in pool.choose_multiple(rng, 4) {
+                    if let Some(coord) = npc_spawn_candidates.pop() {
+                        world.spawn_item(coord, item);
+                    }
+                }
+            }
+            3 => {
+                let pool = vec![
+                    Item::Battery,
+                    Item::Battery,
+                    Item::PistolAmmo,
+                    Item::PistolAmmo,
+                    Item::ShotgunAmmo,
+                    Item::ShotgunAmmo,
+                    Item::Rocket,
+                    Item::Rocket,
+                ];
+                for &item in pool.choose_multiple(rng, 8) {
+                    if let Some(coord) = npc_spawn_candidates.pop() {
+                        world.spawn_item(coord, item);
+                    }
+                }
+            }
+            _ => panic!(),
         }
         Self { world }
     }

@@ -230,8 +230,8 @@ pub enum NpcType {
     Zombie,
     Climber,
     Trespasser,
-    Boomer,
     Snatcher,
+    Boomer,
     Poisoner,
     Divider,
     Glower,
@@ -331,6 +331,13 @@ impl OrganTraits {
             embedded: false,
             transient: false,
         }
+    }
+
+    pub fn with_one_random<R: Rng>(rng: &mut R) -> Self {
+        let mut s = Self::none();
+        let trait_ = s.get_mut(OrganTrait::choose(rng));
+        *trait_ = true;
+        s
     }
 
     pub fn get_mut(&mut self, trait_: OrganTrait) -> &mut bool {

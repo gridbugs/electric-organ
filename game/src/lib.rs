@@ -1694,7 +1694,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::PoisonIsEmpty));
                         } else {
-                            poison.decrease(20);
+                            poison.clear();
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::ApplyAntidote);
@@ -1711,7 +1711,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::RadiationIsEmpty));
                         } else {
-                            radiation.decrease(20);
+                            radiation.clear();
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::ApplyAntiRads);
@@ -1745,7 +1745,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::FoodIsFull));
                         } else {
-                            food.increase(10);
+                            food.fill();
                             inventory.remove(i);
                             self.world.remove_entity(item_entity);
                             self.message_log.push(Message::EatFood);
@@ -1763,7 +1763,7 @@ impl Game {
                             self.message_log
                                 .push(Message::ActionError(ActionError::OxygenIsFull));
                         } else {
-                            oxygen.increase(10);
+                            oxygen.fill();
                             self.world
                                 .components
                                 .item

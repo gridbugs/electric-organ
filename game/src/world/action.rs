@@ -808,11 +808,11 @@ impl World {
                         {
                             let radiation = self.components.radiation.get_mut(entity).unwrap();
                             if distance < 5 {
-                                radiation.increase(4);
+                                radiation.increase(2);
                                 message_log.push(Message::RadiationVeryClose);
                             } else if distance < 10 {
                                 message_log.push(Message::RadiationClose);
-                                radiation.increase(2);
+                                radiation.increase(1);
                             }
                         }
                     }

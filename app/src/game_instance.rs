@@ -263,13 +263,13 @@ impl GameInstance {
             Tile::Tentacle => {
                 return RenderCell {
                     character: Some('▓'),
-                    style: Style::new().with_foreground(colours::BIO.to_rgba32(255)),
+                    style: Style::new().with_foreground(colours::CORRUPTION.to_rgba32(255)),
                 };
             }
             Tile::TentacleGlow => {
                 return RenderCell {
                     character: Some('▒'),
-                    style: Style::new().with_foreground(colours::BIO.to_rgba32(255)),
+                    style: Style::new().with_foreground(colours::CORRUPTION.to_rgba32(255)),
                 };
             }
             Tile::Exit => {
@@ -1234,7 +1234,7 @@ fn describe_tile(tile: Tile) -> Description {
                     .with_foreground(colours::MONEY.to_rgba32(255)),
             }]),
             description: Some(Text::new(vec![StyledString::plain_text(
-                "A unit of cybernetically-secure decentralized currency.".to_string(),
+                "Cybernetically-secure decentralized currency.".to_string(),
             )])),
         },
         Tile::Item(Item::Stimpack) => Description {
