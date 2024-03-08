@@ -578,7 +578,7 @@ impl World {
             .get_mut(player_entity)
             .unwrap()
             .decrease(1);
-        if rng.gen::<f64>() < 0.1 {
+        if rng.gen::<f64>() < 0.3 {
             self.components
                 .power
                 .get_mut(player_entity)

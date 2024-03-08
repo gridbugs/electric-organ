@@ -299,7 +299,7 @@ impl Terrain {
             }
         }
 
-        for _ in 0..4 {
+        for _ in 0..3 {
             if let Some(coord) = npc_spawn_candidates.pop() {
                 world.spawn_item(coord, Item::Food);
             }

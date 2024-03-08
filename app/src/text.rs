@@ -54,10 +54,12 @@ pub fn help_1_5(width: u32) -> AppCF<()> {
         width,
         vec![
             b("Tips\n\n\n"),
+            t("- Your goal is to reach the 4th level of the city and defeat the CORRUPTOR, then make it out alive.\n\n"),
             t("- Walk into doors to open them.\n\n"),
             t("- Walk into the wall adjacent to a door to close it.\n\n"),
             t("- Walk into enemies to perform a melee attack.\n\n"),
-            t("- Your goal is to reach the 4th level of the city and defeat the CORRUPTOR.\n\n"),
+            t("- You can dual-wield pistols.\n\n"),
+            t("- Enemies cannot follow you up or down the elevator shafts.\n\n"),
         ],
     )
     .press_any_key()
