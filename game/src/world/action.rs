@@ -685,7 +685,7 @@ impl World {
         for organ in &organs {
             match organ.type_ {
                 OrganType::Stomach => {
-                    if rng.gen::<f64>() < 0.1 {
+                    if rng.gen::<f64>() < 0.2 {
                         let food = self.components.food.get_mut(player_entity).unwrap();
                         if food.current() > 0 {
                             food.decrease(1);
