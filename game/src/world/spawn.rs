@@ -8,7 +8,7 @@ use direction::Direction;
 use entity_table::entity_data;
 use rand::{seq::SliceRandom, Rng};
 use rgb_int::Rgb24;
-use visible_area_detection::{vision_distance, Light, Rational};
+use visible_area_detection::{vision_distance, Diminish, Light};
 
 fn player_starting_organs() -> Organs {
     let mut ret = Organs::new(crate::MAX_ORGANS);
@@ -103,10 +103,7 @@ pub fn make_player() -> EntityData {
         light: Some(Light {
             colour: Rgb24::new(150, 150, 150),
             vision_distance: vision_distance::Circle::new_squared(200),
-            diminish: Rational {
-                numerator: 1,
-                denominator: 10,
-            },
+            diminish: Diminish::default().with_height(10.).with_focus(1.0),
         }),
         health: Some(Meter::new(20, 20)),
         oxygen: Some(Meter::new(20, 20)),
@@ -182,10 +179,7 @@ impl World {
                 light: Light {
                     colour: Rgb24::new(255, 87, 0),
                     vision_distance: vision_distance::Circle::new_squared(200),
-                    diminish: Rational {
-                        numerator: 1,
-                        denominator: 40,
-                    },
+                    diminish: Diminish::default().with_height(40.),
                 },
             },
         );
@@ -261,10 +255,7 @@ impl World {
                 light: Light {
                     colour: Rgb24::new(0, 255, 255),
                     vision_distance: vision_distance::Circle::new_squared(200),
-                    diminish: Rational {
-                        numerator: 1,
-                        denominator: 20,
-                    },
+                    diminish: Diminish::default().with_height(20.),
                 },
             },
         )
@@ -329,10 +320,7 @@ impl World {
                 light: Light {
                     colour: Rgb24::new(0, 255, 255),
                     vision_distance: vision_distance::Circle::new_squared(200),
-                    diminish: Rational {
-                        numerator: 1,
-                        denominator: 4,
-                    },
+                    diminish: Diminish::default().with_height(4.),
                 },
             },
         )
@@ -347,10 +335,7 @@ impl World {
                 light: Light {
                     colour: Rgb24::new(0, 255, 255),
                     vision_distance: vision_distance::Circle::new_squared(200),
-                    diminish: Rational {
-                        numerator: 1,
-                        denominator: 4,
-                    },
+                    diminish: Diminish::default().with_height(4.),
 
                 },
             },
@@ -366,10 +351,7 @@ impl World {
                 light: Light {
                     colour: Rgb24::new(0, 0, 255),
                     vision_distance: vision_distance::Circle::new_squared(200),
-                    diminish: Rational {
-                        numerator: 1,
-                        denominator: 4,
-                    },
+                    diminish: Diminish::default().with_height(4.),
 
                 },
             },
@@ -549,10 +531,7 @@ impl World {
             Light {
                 colour: Rgb24::new(255, 187, 63),
                 vision_distance: vision_distance::Circle::new_squared(90),
-                diminish: Rational {
-                    numerator: 1,
-                    denominator: 1,
-                },
+                diminish: Diminish::default().with_height(1.),
             },
         );
 
@@ -629,10 +608,7 @@ impl World {
             Light {
                 colour: Rgb24::new(255, 255, 63),
                 vision_distance: vision_distance::Circle::new_squared(900),
-                diminish: Rational {
-                    numerator: 1,
-                    denominator: 100,
-                },
+                diminish: Diminish::default().with_height(100.),
             },
         );
         self.realtime_components.light_colour_fade.insert(
@@ -879,10 +855,7 @@ impl World {
                 light: Light {
                     colour: Rgb24::hex(0x009973),
                     vision_distance: vision_distance::Circle::new_squared(200),
-                    diminish: Rational {
-                        numerator: 1,
-                        denominator: 10,
-                    },
+                    diminish: Diminish::default().with_height(10.),
                 },
                 slow: 2,
             },
@@ -972,10 +945,7 @@ impl World {
               light: Light {
                     colour: Rgb24::hex(0xf00ff),
                     vision_distance: vision_distance::Circle::new_squared(200),
-                    diminish: Rational {
-                        numerator: 1,
-                        denominator: 10,
-                    },
+                    diminish: Diminish::default().with_height(10.),
                 },
                 realtime: (),
                 boss: (),
