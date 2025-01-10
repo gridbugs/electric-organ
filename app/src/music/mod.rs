@@ -1,3 +1,4 @@
+use caw::prelude::*;
 use currawong::{prelude::*, signal_player::SignalPlayer};
 use std::{cell::RefCell, rc::Rc};
 
@@ -5,6 +6,7 @@ mod level1;
 mod level2;
 mod menu;
 mod sound_effects;
+mod sound_effects_;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Track {
@@ -16,6 +18,7 @@ pub enum Track {
 struct Control {
     volume: f64,
     signal: Sf64,
+    sig_stereo: Stereo<SigBoxed<f32>, SigBoxed<f32>>,
 }
 
 impl Control {
@@ -23,6 +26,7 @@ impl Control {
         Self {
             signal: const_(0.0),
             volume: 1.0,
+            sig_stereo: Stereo::new(Sig(0.0).boxed(), Sig(0.0).boxed()),
         }
     }
 }
@@ -30,12 +34,13 @@ impl Control {
 pub struct MusicState {
     control: Rc<RefCell<Control>>,
     sfx: Sfx,
-    signal: Sf64,
+    sig_stereo: Stereo<SigBoxed<f32>, SigBoxed<f32>>,
     // This starts as `None` becuse when running in a browser, an audio context can only be created
     // in response to IO.
-    signal_player: Option<SignalPlayer>,
+    player: Option<PlayerAsyncStereo>,
     sfx_signal: Sf64,
     sfx_signal_player: Option<SignalPlayer>,
+    sfx_player: Option<PlayerAsyncStereo>,
 }
 
 fn make_signal_player() -> SignalPlayer {
@@ -54,6 +59,21 @@ impl MusicState {
     pub fn new() -> Self {
         let (sfx, sfx_signal) = make_sfx();
         let control = Rc::new(RefCell::new(Control::new()));
+        let sig_stereo = Stereo::new_fn_channel({
+            let control = Rc::clone(&control);
+            move |channel| {
+                let control = Rc::clone(&control);
+                Sig::from_buf_fn(move |ctx, buf| {
+                    let mut control = control.borrow_mut();
+                    let sig = control.sig_stereo.get_mut(channel);
+                    sig.sample_into_buf(ctx, buf);
+                    for x in buf.iter_mut() {
+                        *x *= control.volume as f32;
+                    }
+                })
+                .boxed()
+            }
+        });
         let signal = Signal::from_fn({
             let control = Rc::clone(&control);
             move |ctx| {
@@ -69,21 +89,22 @@ impl MusicState {
         Self {
             sfx,
             control,
-            signal,
-            signal_player: None,
+            sig_stereo,
             sfx_signal,
             sfx_signal_player: None,
+            player: None,
+            sfx_player: None,
         }
     }
 
     pub fn set_track(&self, track: Option<Track>) {
         let mut control = self.control.borrow_mut();
-        control.signal = match track {
-            None => const_(0.0),
-            Some(Track::Level1) => level1::signal(),
-            Some(Track::Level2) => level2::signal(),
-            Some(Track::Menu) => menu::signal(),
-        }
+        control.sig_stereo = match track {
+            None => Stereo::new(Sig(0.0).boxed(), Sig(0.0).boxed()),
+            Some(Track::Level1) => level1::sig_stereo(),
+            Some(Track::Level2) => level2::sig_stereo(),
+            Some(Track::Menu) => menu::sig_stereo(),
+        };
     }
 
     pub fn set_volume(&self, volume: f64) {
@@ -91,13 +112,22 @@ impl MusicState {
     }
 
     pub fn tick(&mut self) {
-        if self.signal_player.is_none() {
-            self.signal_player = Some(make_signal_player());
+        if self.player.is_none() {
+            self.player = Some(
+                Player::new()
+                    .unwrap()
+                    .into_async_stereo(Default::default())
+                    .unwrap(),
+            );
         }
-        self.signal_player
-            .as_mut()
-            .unwrap()
-            .send_signal(&mut self.signal);
+        if self.sfx_player.is_none() {
+            self.sfx_player = Some(
+                Player::new()
+                    .unwrap()
+                    .into_async_stereo(Default::default())
+                    .unwrap(),
+            );
+        }
         if self.sfx_signal_player.is_none() {
             self.sfx_signal_player = Some(make_sfx_signal_player());
         }
@@ -105,6 +135,10 @@ impl MusicState {
             .as_mut()
             .unwrap()
             .send_signal(&mut self.sfx_signal);
+        self.player
+            .as_mut()
+            .unwrap()
+            .play_signal_stereo(&mut self.sig_stereo);
     }
 
     pub fn sfx_pistol(&self) {
