@@ -2281,9 +2281,9 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 
 [[package]]
 name = "rgb_int"
-version = "0.1.5"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90ad8971826a2fdc5be88634d3ee430a95354802f7fb98153e1e74958a408c59"
+checksum = "6ee4b487230121779b5b2815143adf0041742f1de0502485baccdcf0f23bdac1"
 dependencies = [
  "rand",
  "serde",
@@ -2721,9 +2721,9 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "visible_area_detection"
-version = "0.5.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "858d5a66747486d4de5ff0582213e50c01c45f5876f438fa23019dfe49a12cd7"
+checksum = "b054e2520310300f639f98a5b8ef6570f4022f3cf2353b2bc2b726d783c85610"
 dependencies = [
  "direction",
  "grid_2d",
