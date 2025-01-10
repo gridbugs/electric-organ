@@ -105,7 +105,7 @@ pub fn make_player() -> EntityData {
             vision_distance: vision_distance::Circle::new_squared(200),
             diminish: Rational {
                 numerator: 1,
-                denominator: 10,
+                denominator: 100,
             },
         }),
         health: Some(Meter::new(20, 20)),
@@ -263,7 +263,7 @@ impl World {
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
-                        denominator: 20,
+                        denominator: 200,
                     },
                 },
             },
@@ -331,7 +331,7 @@ impl World {
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
-                        denominator: 4,
+                        denominator: 40,
                     },
                 },
             },
@@ -349,7 +349,7 @@ impl World {
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
-                        denominator: 4,
+                        denominator: 40,
                     },
 
                 },
@@ -368,7 +368,7 @@ impl World {
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
-                        denominator: 4,
+                        denominator: 40,
                     },
 
                 },
@@ -551,7 +551,7 @@ impl World {
                 vision_distance: vision_distance::Circle::new_squared(90),
                 diminish: Rational {
                     numerator: 1,
-                    denominator: 1,
+                    denominator: 10,
                 },
             },
         );
@@ -631,7 +631,7 @@ impl World {
                 vision_distance: vision_distance::Circle::new_squared(900),
                 diminish: Rational {
                     numerator: 1,
-                    denominator: 100,
+                    denominator: 1000,
                 },
             },
         );
@@ -881,7 +881,7 @@ impl World {
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
-                        denominator: 10,
+                        denominator: 100,
                     },
                 },
                 slow: 2,
@@ -974,7 +974,7 @@ impl World {
                     vision_distance: vision_distance::Circle::new_squared(200),
                     diminish: Rational {
                         numerator: 1,
-                        denominator: 10,
+                        denominator: 100,
                     },
                 },
                 realtime: (),
