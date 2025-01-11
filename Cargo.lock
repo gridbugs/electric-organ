@@ -180,7 +180,6 @@ dependencies = [
  "caw",
  "chargrid",
  "coord_2d",
- "currawong",
  "direction",
  "game",
  "general_storage_static",
@@ -411,7 +410,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c8246ebbc7804dd77e37c9e0970af9793c0208877b1c76dc014f8c36ea7ec54"
 dependencies = [
- "caw_builder_proc_macros",
+ "caw_builder_proc_macros 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "caw_computer_keyboard",
  "caw_core",
  "caw_keyboard",
@@ -419,6 +418,16 @@ dependencies = [
  "caw_patches",
  "caw_player",
  "caw_utils",
+]
+
+[[package]]
+name = "caw_builder_proc_macros"
+version = "0.1.0"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -446,8 +455,6 @@ dependencies = [
 [[package]]
 name = "caw_core"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab0e40a2c63e66074dcb1ed6dca628d2843501a4eddad0be80affd2bd82624c6"
 
 [[package]]
 name = "caw_keyboard"
@@ -464,10 +471,8 @@ dependencies = [
 [[package]]
 name = "caw_modules"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "204572aa49f82b722b75953da55f0fe1f1ced82ce93531aee14b2f8204f3575d"
 dependencies = [
- "caw_builder_proc_macros",
+ "caw_builder_proc_macros 0.1.0",
  "caw_core",
  "itertools 0.14.0",
  "log",
@@ -481,7 +486,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e85956f77e368ad253e18fcae068ec11b674b9ff837823a200fa7d1de8f31fde"
 dependencies = [
- "caw_builder_proc_macros",
+ "caw_builder_proc_macros 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "caw_core",
  "caw_modules",
  "caw_utils",
@@ -490,8 +495,6 @@ dependencies = [
 [[package]]
 name = "caw_player"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "480451b4d6a37e981e7b0324173632117a583d62b5920b6994971621dc81159c"
 dependencies = [
  "anyhow",
  "caw_core",
@@ -839,29 +842,6 @@ name = "crossbeam-utils"
 version = "0.8.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "248e3bacc7dc6baa3b21e405ee045c3047101a49145e7e9eca583ab4c2ca5345"
-
-[[package]]
-name = "currawong"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "355ee0647adbf7486b4d02bb1b5adec84a61c84de057b801f596def793bf2d7b"
-dependencies = [
- "anyhow",
- "cpal",
- "currawong_core",
- "hound",
- "log",
-]
-
-[[package]]
-name = "currawong_core"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9aa775ec291ed3480f0251fff08875fb316cc5f06a8d8a92b81f2162d31635c7"
-dependencies = [
- "getrandom",
- "rand",
-]
 
 [[package]]
 name = "cursor-icon"
@@ -1438,12 +1418,6 @@ name = "hexf-parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
-
-[[package]]
-name = "hound"
-version = "3.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62adaabb884c94955b19907d60019f4e145d091c75345379e70d1ee696f7854f"
 
 [[package]]
 name = "humantime"

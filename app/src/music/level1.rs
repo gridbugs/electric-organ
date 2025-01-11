@@ -269,10 +269,6 @@ fn sig(channel: Channel) -> SigBoxed<f32> {
         .boxed()
 }
 
-pub fn signal() -> currawong::prelude::Sf64 {
-    currawong::prelude::const_(0.0)
-}
-
 pub fn sig_stereo() -> Stereo<SigBoxed<f32>, SigBoxed<f32>> {
     Stereo::new_fn_channel(sig)
 }

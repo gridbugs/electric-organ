@@ -1,10 +1,6 @@
 use caw::prelude::*;
 use rand::{rngs::StdRng, seq::SliceRandom, Rng, SeedableRng};
 
-pub fn signal() -> currawong::prelude::Sf64 {
-    currawong::prelude::const_(0.0)
-}
-
 struct Effects<T, DV, DLPF>
 where
     T: SigT<Item = f32>,

@@ -1,9 +1,5 @@
 use caw::prelude::*;
 
-pub fn signal() -> currawong::prelude::Sf64 {
-    currawong::prelude::const_(0.0)
-}
-
 struct Effects<DV, DLPF>
 where
     DV: SigT<Item = f32>,

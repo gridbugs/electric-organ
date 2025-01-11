@@ -1,107 +1,119 @@
-use currawong::prelude::*;
+use caw::prelude::*;
 
-pub fn melee(trigger: Trigger) -> Sf64 {
-    kick(trigger)
-        .build()
-        .filter(low_pass_moog_ladder(4000.0).build())
+pub fn melee(trig: impl FrameSigT<Item = bool> + 'static) -> Sig<impl SigT<Item = f32>> {
+    FrameSig(trig)
+        .trig(drum::kick())
+        .filter(low_pass::moog_ladder::oberheim(4000.0))
         * 2.0
 }
 
-pub fn death(trigger: Trigger) -> Sf64 {
-    let make_noise = || noise().filter(sample_and_hold(trigger.clone()).build());
+pub fn death(trig: impl FrameSigT<Item = bool> + 'static) -> Sig<impl SigT<Item = f32>> {
+    let trig = FrameSig(trig).shared();
+    let make_noise = || noise::white().filter(sample_and_hold(trig.clone()));
     let duration = 1.0;
-    let env = adsr_linear_01(trigger.to_gate())
-        .key_press(&trigger)
+    let env = adsr_linear_01(trig.clone())
+        .key_press_trig(trig.clone().gate_to_trig_rising_edge())
         .release_s(duration)
         .build()
-        .exp_01(1.0);
-    let osc = oscillator_hz(
-        Waveform::Pulse,
-        (&env * (200.0 + make_noise() * 100)) + 50.0,
-    )
-    .pulse_width_01(0.5)
-    .build();
+        .exp_01(1.0)
+        .shared();
+    let osc = oscillator(Pulse, (env.clone() * ((make_noise() * 100.) + 200.)) + 50.0)
+        .pulse_width_01(0.5)
+        .build();
     let filtered_osc = osc
-        .filter(down_sample(((1.0 - &env) * 100.0) + 1.0).build())
-        .filter(quantize(10.0 * &env).build());
-    filtered_osc.lazy_zero(&trigger.to_gate_with_duration_s(duration).to_01()) * 0.4
+        .filter(down_sample(((1.0 - env.clone()) * 100.0) + 1.0))
+        .filter(quantizer(10.0 * env.clone()));
+    filtered_osc * 0.1 * env.map(|x| (x * 100.0).min(1.0))
 }
 
-pub fn pistol(trigger: Trigger) -> Sf64 {
-    let make_noise = || noise().filter(sample_and_hold(trigger.clone()).build());
+pub fn pistol(trig: impl FrameSigT<Item = bool> + 'static) -> Sig<impl SigT<Item = f32>> {
+    let trig = FrameSig(trig).shared();
+    let make_noise = || noise::white().filter(sample_and_hold(trig.clone()));
     let duration = 0.2;
-    let env = adsr_linear_01(trigger.to_gate())
-        .key_press(&trigger)
+    let env = adsr_linear_01(trig.clone())
+        .key_press_trig(trig.clone().gate_to_trig_rising_edge())
         .release_s(duration)
         .build()
-        .exp_01(1.0);
-    let osc = oscillator_hz(
-        Waveform::Pulse,
-        (&env * (300.0 + make_noise() * 100)) + 20.0,
+        .exp_01(1.0)
+        .shared();
+    let osc = oscillator(
+        Pulse,
+        (env.clone() * ((make_noise() * 100.0) + 300.0)) + 20.0,
     )
     .pulse_width_01(0.1)
     .build();
-    let filtered_osc =
-        osc.filter(low_pass_moog_ladder(&env * (4000.0 + make_noise() * 2000)).build());
-    (filtered_osc * &env).lazy_zero(&env)
+    let filtered_osc = osc.filter(low_pass::moog_ladder::oberheim(
+        env.clone() * (4000.0 + make_noise() * 2000.0),
+    ));
+    filtered_osc * env.clone()
 }
 
-pub fn shotgun(trigger: Trigger) -> Sf64 {
-    let make_noise = || noise().filter(sample_and_hold(trigger.clone()).build());
+pub fn shotgun(trig: impl FrameSigT<Item = bool> + 'static) -> Sig<impl SigT<Item = f32>> {
+    let trig = FrameSig(trig).shared();
+    let make_noise = || noise::white().filter(sample_and_hold(trig.clone()));
     let duration = 0.2;
-    let env = adsr_linear_01(trigger.to_gate())
-        .key_press(&trigger)
+    let env = adsr_linear_01(trig.clone())
+        .key_press_trig(trig.clone().gate_to_trig_rising_edge())
         .release_s(duration)
         .build()
-        .exp_01(1.0);
-    let osc = oscillator_hz(Waveform::Sine, (&env * (100.0 + make_noise() * 100)) + 20.0)
-        .pulse_width_01(0.1)
-        .build();
-    let noise = noise().filter(low_pass_moog_ladder(2000.0).build()) * 10.0;
-    let filtered_osc = (osc + noise).filter(
-        low_pass_moog_ladder(&env * (10000.0 + make_noise() * 5000))
-            .resonance(2.0)
-            .build(),
-    );
-    filtered_osc.lazy_zero(&env)
+        .exp_01(1.0)
+        .shared();
+    let osc = oscillator(
+        Sine,
+        (env.clone() * ((make_noise() * 100.0) + 100.0)) + 20.0,
+    )
+    .build();
+    let noise = noise::white().filter(low_pass::moog_ladder::oberheim(2000.0)) * 10.0;
+    let filtered_osc = (osc + noise).filter(low_pass::moog_ladder::oberheim(
+        env.clone() * (10000.0 + make_noise() * 5000.0),
+    ));
+    filtered_osc
 }
 
-pub fn rocket(trigger: Trigger) -> Sf64 {
-    let make_noise = || noise().filter(sample_and_hold(trigger.clone()).build());
+pub fn rocket(trig: impl FrameSigT<Item = bool> + 'static) -> Sig<impl SigT<Item = f32>> {
+    let trig = FrameSig(trig).gate_to_trig_rising_edge().shared();
+    let make_noise = || noise::white().filter(sample_and_hold(trig.clone()));
     let duration = 0.4;
-    let env = adsr_linear_01(trigger.to_gate_with_duration_s(duration))
-        .key_press(&trigger)
-        .decay_s(duration)
-        .sustain_01(0.0)
+    let env = adsr_linear_01(trig.clone().trig_to_gate(duration))
+        .key_press_trig(trig.clone())
+        .attack_s(duration / 2.0)
+        .release_s(duration * 2.0)
         .build()
-        .exp_01(1.0);
-    let noise = noise().filter(low_pass_moog_ladder(8000.0).build()) * 10.0;
-    let filtered_osc =
-        noise.filter(low_pass_moog_ladder(&env * (5000.0 + make_noise() * 1000)).build());
-    filtered_osc.lazy_zero(&env)
+        .exp_01(1.0)
+        .shared();
+    let noise = noise::white().filter(low_pass::moog_ladder::oberheim(8000.0)) * 10.0;
+    let filtered_osc = noise.filter(low_pass::moog_ladder::oberheim(
+        env.clone() * (5000.0 + make_noise() * 1000.0),
+    ));
+    filtered_osc
 }
 
-pub fn explosion(trigger: Trigger) -> Sf64 {
-    let make_noise = || noise().filter(sample_and_hold(trigger.clone()).build());
+pub fn explosion(trig: impl FrameSigT<Item = bool> + 'static) -> Sig<impl SigT<Item = f32>> {
+    let trig = FrameSig(trig).gate_to_trig_rising_edge().shared();
+    let make_noise = || noise::white().filter(sample_and_hold(trig.clone()));
     let duration = 0.8;
-    let env = (adsr_linear_01(trigger.to_gate_with_duration_s(duration))
-        .key_press(&trigger)
+    let env = ((adsr_linear_01(trig.clone().trig_to_gate(duration))
+        .key_press_trig(trig.clone())
         .attack_s(duration / 4.0)
         .decay_s(3.0 * (duration / 4.0))
         .sustain_01(0.0)
         .build()
         .exp_01(1.0)
-        + adsr_linear_01(trigger.to_gate())
-            .key_press(&trigger)
+        + adsr_linear_01(trig.clone())
+            .key_press_trig(trig.clone())
             .release_s(duration)
             .build()
             .exp_01(1.0))
-        / 2.0;
-    let osc = oscillator_hz(Waveform::Sine, (&env * (100.0 + make_noise() * 100)) + 20.0)
-        .pulse_width_01(0.1)
-        .build();
-    let noise = noise().filter(low_pass_moog_ladder(2000.0).build()) * 10.0;
-    let filtered_osc =
-        (osc + noise).filter(low_pass_moog_ladder(&env * (10000.0 + make_noise() * 5000)).build());
-    filtered_osc.lazy_zero(&env)
+        / 2.0)
+        .shared();
+    let osc = oscillator(
+        Sine,
+        (env.clone() * ((make_noise() * 100.0) + 100.0)) + 20.0,
+    )
+    .build();
+    let noise = noise::white().filter(low_pass::moog_ladder::oberheim(2000.0)) * 10.0;
+    let filtered_osc = (osc + noise).filter(low_pass::moog_ladder::oberheim(
+        env.clone() * (10000.0 + make_noise() * 5000.0),
+    ));
+    filtered_osc
 }

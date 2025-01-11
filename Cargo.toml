@@ -18,3 +18,8 @@ members = [
 
 [profile.release]
 lto = true
+
+[patch.crates-io]
+caw_core = { path = "/Users/s/src/caw/core" }
+caw_player = { path = "/Users/s/src/caw/player" }
+caw_modules = { path = "/Users/s/src/caw/modules" }

@@ -1,12 +1,10 @@
 use caw::prelude::*;
-use currawong::{prelude::*, signal_player::SignalPlayer};
 use std::{cell::RefCell, rc::Rc};
 
 mod level1;
 mod level2;
 mod menu;
 mod sound_effects;
-mod sound_effects_;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Track {
@@ -17,14 +15,12 @@ pub enum Track {
 
 struct Control {
     volume: f64,
-    signal: Sf64,
     sig_stereo: Stereo<SigBoxed<f32>, SigBoxed<f32>>,
 }
 
 impl Control {
     fn new() -> Self {
         Self {
-            signal: const_(0.0),
             volume: 1.0,
             sig_stereo: Stereo::new(Sig(0.0).boxed(), Sig(0.0).boxed()),
         }
@@ -35,30 +31,16 @@ pub struct MusicState {
     control: Rc<RefCell<Control>>,
     sfx: Sfx,
     sig_stereo: Stereo<SigBoxed<f32>, SigBoxed<f32>>,
+    sfx_sig: SigBoxed<f32>,
     // This starts as `None` becuse when running in a browser, an audio context can only be created
     // in response to IO.
     player: Option<PlayerAsyncStereo>,
-    sfx_signal: Sf64,
-    sfx_sig: SigBoxed<f32>,
-    sfx_signal_player: Option<SignalPlayer>,
     sfx_player: Option<PlayerAsyncMono>,
-}
-
-fn make_signal_player() -> SignalPlayer {
-    let mut signal_player = SignalPlayer::new().unwrap();
-    signal_player.set_buffer_padding_sample_rate_ratio(0.25);
-    signal_player
-}
-
-fn make_sfx_signal_player() -> SignalPlayer {
-    let mut signal_player = SignalPlayer::new().unwrap();
-    signal_player.set_buffer_padding_sample_rate_ratio(0.05);
-    signal_player
 }
 
 impl MusicState {
     pub fn new() -> Self {
-        let (sfx, sfx_signal, sfx_sig) = make_sfx();
+        let (sfx, sfx_sig) = make_sfx();
         let control = Rc::new(RefCell::new(Control::new()));
         let sig_stereo = Stereo::new_fn_channel({
             let control = Rc::clone(&control);
@@ -75,25 +57,11 @@ impl MusicState {
                 .boxed()
             }
         });
-        let signal = Signal::from_fn({
-            let control = Rc::clone(&control);
-            move |ctx| {
-                let control = control.borrow();
-                let sample = control.signal.sample(ctx);
-                sample * control.volume
-            }
-        });
-        let sfx_signal = Signal::from_fn({
-            let control = Rc::clone(&control);
-            move |ctx| sfx_signal.sample(ctx) * control.borrow().volume
-        });
         Self {
             sfx,
             control,
             sig_stereo,
             sfx_sig,
-            sfx_signal,
-            sfx_signal_player: None,
             player: None,
             sfx_player: None,
         }
@@ -130,14 +98,6 @@ impl MusicState {
                     .unwrap(),
             );
         }
-        if self.sfx_signal_player.is_none() {
-            self.sfx_signal_player = Some(make_sfx_signal_player());
-        }
-        /*
-        self.sfx_signal_player
-            .as_mut()
-            .unwrap()
-            .send_signal(&mut self.sfx_signal); */
         self.player
             .as_mut()
             .unwrap()
@@ -181,16 +141,6 @@ impl SfxTrigger {
     fn fire(&self) {
         *self.state.borrow_mut() = true;
     }
-    fn _trigger(&self) -> Trigger {
-        let state = Rc::clone(&self.state);
-        Gate::from_fn(move |_| {
-            let mut state = state.borrow_mut();
-            let prev_state = *state;
-            *state = false;
-            prev_state
-        })
-        .to_trigger_rising_edge()
-    }
     fn trig(&self) -> FrameSig<impl FrameSigT<Item = bool>> {
         let state = Rc::clone(&self.state);
         FrameSig::from_fn(move |_ctx| {
@@ -211,7 +161,7 @@ struct Sfx {
     death: SfxTrigger,
 }
 
-fn make_sfx() -> (Sfx, Sf64, SigBoxed<f32>) {
+fn make_sfx() -> (Sfx, SigBoxed<f32>) {
     let sfx = Sfx {
         pistol: SfxTrigger::new(),
         shotgun: SfxTrigger::new(),
@@ -220,13 +170,12 @@ fn make_sfx() -> (Sfx, Sf64, SigBoxed<f32>) {
         melee: SfxTrigger::new(),
         death: SfxTrigger::new(),
     };
-    let sig = (sound_effects_::pistol(sfx.pistol.trig())
-        + sound_effects_::shotgun(sfx.shotgun.trig())
-        + sound_effects_::rocket(sfx.rocket.trig())
-        + sound_effects_::explosion(sfx.explosion.trig())
-        + sound_effects_::melee(sfx.melee.trig())
-        + sound_effects_::death(sfx.death.trig()))
+    let sig = (sound_effects::pistol(sfx.pistol.trig())
+        + sound_effects::shotgun(sfx.shotgun.trig())
+        + sound_effects::rocket(sfx.rocket.trig())
+        + sound_effects::explosion(sfx.explosion.trig())
+        + sound_effects::melee(sfx.melee.trig())
+        + sound_effects::death(sfx.death.trig()))
     .boxed();
-    let signal = const_(0.0);
-    (sfx, signal, sig)
+    (sfx, sig)
 }
