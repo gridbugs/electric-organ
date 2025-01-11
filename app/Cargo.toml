@@ -8,7 +8,7 @@ edition = "2021"
 print_stdout = []
 print_log = []
 native = ["general_storage_static/file"]
-web = ["getrandom/js", "general_storage_static/web"]
+web = ["getrandom/js", "general_storage_static/web", "caw/web"]
 
 [dependencies]
 general_storage_static = { version = "0.3", features = ["bincode", "json"] }

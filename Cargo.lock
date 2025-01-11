@@ -406,9 +406,9 @@ dependencies = [
 
 [[package]]
 name = "caw"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c8246ebbc7804dd77e37c9e0970af9793c0208877b1c76dc014f8c36ea7ec54"
+checksum = "42aff448f72ce586bb9a5055498ed4ab1d1602cf7553e35fd2dc6b1c780ee5fa"
 dependencies = [
  "caw_builder_proc_macros",
  "caw_computer_keyboard",
@@ -450,11 +450,12 @@ checksum = "026b17da4babe203d6bb29680a41e8eb2e5e9a6af607595ff9b6c9b8be92d774"
 
 [[package]]
 name = "caw_keyboard"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c104f936c196587ca6a468ea9521eca279efdb938e0f068871d94facf472260"
+checksum = "6bd2b8fe2b7d56fe42294927c53a1333d2ef7903133c0753cc4861f3b885a644"
 dependencies = [
  "caw_core",
+ "getrandom",
  "log",
  "rand",
  "smallvec",
@@ -462,12 +463,13 @@ dependencies = [
 
 [[package]]
 name = "caw_modules"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ef1a354c5d71c7f365f71853440bd8f3161cc243a2b116f1efa301862dd3453"
+checksum = "18aa070f6dff8e9fc12c58bed9effa978e911540833cb092e0222906d1f58c12"
 dependencies = [
  "caw_builder_proc_macros",
  "caw_core",
+ "getrandom",
  "itertools 0.14.0",
  "log",
  "rand",
@@ -488,9 +490,9 @@ dependencies = [
 
 [[package]]
 name = "caw_player"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d7deaa37f2e179888aceaa80482e6729b428ad4e36ac74d8a244936c301d1b2"
+checksum = "8c6416b10272935331eebbc354794a1725fac0f6e30d3548d4a41f9fd4dd61b1"
 dependencies = [
  "anyhow",
  "caw_core",
@@ -500,11 +502,12 @@ dependencies = [
 
 [[package]]
 name = "caw_utils"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1965761758ff44feb56f4abb3e12c60a78c07dc4231c091497e1e51e2116f1f"
+checksum = "183f8cf65f32275865227007ded377f02d99798c980bd331947e9019c3aeb33a"
 dependencies = [
  "caw_core",
+ "getrandom",
  "rand",
 ]
 
