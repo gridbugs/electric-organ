@@ -39,8 +39,9 @@ pub struct MusicState {
     // in response to IO.
     player: Option<PlayerAsyncStereo>,
     sfx_signal: Sf64,
+    sfx_sig: SigBoxed<f32>,
     sfx_signal_player: Option<SignalPlayer>,
-    sfx_player: Option<PlayerAsyncStereo>,
+    sfx_player: Option<PlayerAsyncMono>,
 }
 
 fn make_signal_player() -> SignalPlayer {
@@ -57,7 +58,7 @@ fn make_sfx_signal_player() -> SignalPlayer {
 
 impl MusicState {
     pub fn new() -> Self {
-        let (sfx, sfx_signal) = make_sfx();
+        let (sfx, sfx_signal, sfx_sig) = make_sfx();
         let control = Rc::new(RefCell::new(Control::new()));
         let sig_stereo = Stereo::new_fn_channel({
             let control = Rc::clone(&control);
@@ -90,6 +91,7 @@ impl MusicState {
             sfx,
             control,
             sig_stereo,
+            sfx_sig,
             sfx_signal,
             sfx_signal_player: None,
             player: None,
@@ -124,21 +126,26 @@ impl MusicState {
             self.sfx_player = Some(
                 Player::new()
                     .unwrap()
-                    .into_async_stereo(Default::default())
+                    .into_async_mono(Default::default())
                     .unwrap(),
             );
         }
         if self.sfx_signal_player.is_none() {
             self.sfx_signal_player = Some(make_sfx_signal_player());
         }
+        /*
         self.sfx_signal_player
             .as_mut()
             .unwrap()
-            .send_signal(&mut self.sfx_signal);
+            .send_signal(&mut self.sfx_signal); */
         self.player
             .as_mut()
             .unwrap()
             .play_signal_stereo(&mut self.sig_stereo);
+        self.sfx_player
+            .as_mut()
+            .unwrap()
+            .play_signal_mono(&mut self.sfx_sig);
     }
 
     pub fn sfx_pistol(&self) {
@@ -174,7 +181,7 @@ impl SfxTrigger {
     fn fire(&self) {
         *self.state.borrow_mut() = true;
     }
-    fn trigger(&self) -> Trigger {
+    fn _trigger(&self) -> Trigger {
         let state = Rc::clone(&self.state);
         Gate::from_fn(move |_| {
             let mut state = state.borrow_mut();
@@ -183,6 +190,15 @@ impl SfxTrigger {
             prev_state
         })
         .to_trigger_rising_edge()
+    }
+    fn trig(&self) -> FrameSig<impl FrameSigT<Item = bool>> {
+        let state = Rc::clone(&self.state);
+        FrameSig::from_fn(move |_ctx| {
+            let mut state = state.borrow_mut();
+            let prev_state = *state;
+            *state = false;
+            prev_state
+        })
     }
 }
 
@@ -195,7 +211,7 @@ struct Sfx {
     death: SfxTrigger,
 }
 
-fn make_sfx() -> (Sfx, Sf64) {
+fn make_sfx() -> (Sfx, Sf64, SigBoxed<f32>) {
     let sfx = Sfx {
         pistol: SfxTrigger::new(),
         shotgun: SfxTrigger::new(),
@@ -204,14 +220,13 @@ fn make_sfx() -> (Sfx, Sf64) {
         melee: SfxTrigger::new(),
         death: SfxTrigger::new(),
     };
-    let signal = sum([
-        sound_effects::pistol(sfx.pistol.trigger()),
-        sound_effects::shotgun(sfx.shotgun.trigger()),
-        sound_effects::rocket(sfx.rocket.trigger()),
-        sound_effects::explosion(sfx.explosion.trigger()),
-        sound_effects::melee(sfx.melee.trigger()),
-        sound_effects::death(sfx.death.trigger()),
-    ])
-    .mix(|dry| dry.filter(reverb().room_size(0.8).build()));
-    (sfx, signal)
+    let sig = (sound_effects_::pistol(sfx.pistol.trig())
+        + sound_effects_::shotgun(sfx.shotgun.trig())
+        + sound_effects_::rocket(sfx.rocket.trig())
+        + sound_effects_::explosion(sfx.explosion.trig())
+        + sound_effects_::melee(sfx.melee.trig())
+        + sound_effects_::death(sfx.death.trig()))
+    .boxed();
+    let signal = const_(0.0);
+    (sfx, signal, sig)
 }
