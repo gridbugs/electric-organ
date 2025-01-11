@@ -62,10 +62,6 @@ jobs:
       run: cargo build --target=aarch64-apple-darwin --manifest-path=wgpu/Cargo.toml --release
     - name: 'Build ansi-terminal version'
       run: cargo build --target=aarch64-apple-darwin --manifest-path=ansi-terminal/Cargo.toml --release
-    - name: 'Strip binaries'
-      run: |
-        strip -v target/aarch64-apple-darwin/release/frontend_wgpu
-        strip -v target/aarch64-apple-darwin/release/frontend_ansi_terminal
     - name: 'Make archives'
       run: MODE=aarch64-apple-darwin/release ARCHIVE_NAME=electric-organ-macos-aarch64-${{ github.ref_name }} scripts/make_archives_unix.sh
     - name: 'Make app and disk image'
@@ -100,10 +96,6 @@ jobs:
       run: cargo build --manifest-path=wgpu/Cargo.toml --release
     - name: 'Build ansi-terminal version'
       run: cargo build --manifest-path=ansi-terminal/Cargo.toml --release
-    - name: 'Strip binaries'
-      run: |
-        strip -v target/release/frontend_wgpu
-        strip -v target/release/frontend_ansi_terminal
     - name: 'Make archives'
       run: MODE=release ARCHIVE_NAME=electric-organ-${{ env.SYSTEM_NAME }}-x86_64-${{ github.ref_name }} scripts/make_archives_unix.sh
     - if: matrix.os == 'macOS-latest'
