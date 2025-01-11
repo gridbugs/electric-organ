@@ -176,6 +176,7 @@ fn make_sfx() -> (Sfx, SigBoxed<f32>) {
         + sound_effects::explosion(sfx.explosion.trig())
         + sound_effects::melee(sfx.melee.trig())
         + sound_effects::death(sfx.death.trig()))
+    .filter(reverb::default())
     .boxed();
     (sfx, sig)
 }
