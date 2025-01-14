@@ -406,9 +406,9 @@ dependencies = [
 
 [[package]]
 name = "caw"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42aff448f72ce586bb9a5055498ed4ab1d1602cf7553e35fd2dc6b1c780ee5fa"
+checksum = "986aa6ddbd65f1b6f01bf39be128458450a1d69e5139a104c00f79e015629542"
 dependencies = [
  "caw_builder_proc_macros",
  "caw_computer_keyboard",
@@ -490,9 +490,9 @@ dependencies = [
 
 [[package]]
 name = "caw_player"
-version = "0.2.2"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c6416b10272935331eebbc354794a1725fac0f6e30d3548d4a41f9fd4dd61b1"
+checksum = "9beebf79714178a97f81cd931b9eb95bd77743c87d69a75f8052a0cf555e1b92"
 dependencies = [
  "anyhow",
  "caw_core",
@@ -855,7 +855,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e16e44ab292b1dddfdaf7be62cfd8877df52f2f3fde5858d95bab606be259f20"
 dependencies = [
  "bitflags 2.4.2",
- "libloading 0.7.4",
+ "libloading 0.8.3",
  "winapi",
 ]
 
@@ -909,7 +909,7 @@ version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
- "libloading 0.7.4",
+ "libloading 0.8.3",
 ]
 
 [[package]]
@@ -1561,7 +1561,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.4",
 ]
 
 [[package]]
@@ -2998,7 +2998,7 @@ dependencies = [
  "js-sys",
  "khronos-egl",
  "libc",
- "libloading 0.7.4",
+ "libloading 0.8.3",
  "log",
  "metal",
  "naga",

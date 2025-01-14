@@ -101,11 +101,11 @@ impl MusicState {
         self.player
             .as_mut()
             .unwrap()
-            .play_signal_stereo(&mut self.sig_stereo);
+            .play_signal(&mut self.sig_stereo);
         self.sfx_player
             .as_mut()
             .unwrap()
-            .play_signal_mono(&mut self.sfx_sig);
+            .play_signal(&mut self.sfx_sig);
     }
 
     pub fn sfx_pistol(&self) {
